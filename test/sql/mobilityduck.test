@@ -1,0 +1,23 @@
+# name: test/sql/mobilityduck.test
+# description: test mobilityduck extension
+# group: [sql]
+
+# Before we load the extension, this will fail
+statement error
+SELECT mobilityduck('Sam');
+----
+Catalog Error: Scalar Function with name mobilityduck does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require mobilityduck
+
+# Confirm the extension works
+query I
+SELECT mobilityduck('Sam');
+----
+Mobilityduck Sam 🐥
+
+query I
+SELECT mobilityduck_openssl_version('Michael') ILIKE 'Mobilityduck Michael, my linked OpenSSL version is OpenSSL%';
+----
+true
