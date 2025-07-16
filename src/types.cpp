@@ -4,84 +4,126 @@
 #include "types.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 
+extern "C" {
+    #include "meos/meos.h"
+}
+
 namespace duckdb {
 
-LogicalType GeoTypes::POINT_2D() {
-    auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}});
-    type.SetAlias("POINT_2D");
-    return type;
-}
-
-LogicalType GeoTypes::TPOINT_2D() {
+LogicalType GeoTypes::TINSTANT() {
     auto type = LogicalType::STRUCT({
-        {"x", LogicalType::DOUBLE},
-        {"y", LogicalType::DOUBLE},
+        {"value", LogicalType::BIGINT},  // Using BIGINT for Datum for now
+        {"temptype", LogicalType::UTINYINT},
         {"t", LogicalType::TIMESTAMP_TZ}});
-    type.SetAlias("TPOINT_2D");
+    type.SetAlias("TINSTANT");
     return type;
 }
 
-inline void ExecutePoint2D(DataChunk &args, ExpressionState &state, Vector &result) {
+// SQL function implementations
+inline void ExecuteTInstantMake(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
-    auto &x = args.data[0];
-    auto &y = args.data[1];
-    x.Flatten(count);
-    y.Flatten(count);
+    auto &value_vec = args.data[0];
+    auto &temptype_vec = args.data[1];
+    auto &t_vec = args.data[2];
+
+    value_vec.Flatten(count);
+    temptype_vec.Flatten(count);
+    t_vec.Flatten(count);
 
     auto &children = StructVector::GetEntries(result);
-    auto &x_child = children[0];
-    auto &y_child = children[1];
-    x_child->Reference(x);
-    y_child->Reference(y);
+    auto &value_child = children[0];
+    auto &temptype_child = children[1];
+    auto &t_child = children[2];
 
+    for (idx_t i = 0; i < count; i++) {
+        auto value = value_vec.GetValue(i).GetValue<int64_t>();
+        auto temptype = temptype_vec.GetValue(i).GetValue<uint8_t>();
+        auto t = t_vec.GetValue(i).GetValue<timestamp_tz_t>();
+
+        TInstant *inst = tinstant_make((Datum)value, temptype, (TimestampTz)t.value);
+        value_child->SetValue(i, Value::BIGINT((int64_t)inst->value));
+        temptype_child->SetValue(i, Value::UTINYINT(inst->temptype));
+        t_child->SetValue(i, Value::TIMESTAMPTZ(timestamp_tz_t(inst->t)));
+        free(inst);
+    }
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
-inline void ExecuteTPoint2D(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void ExecuteTInstantValue(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
-    auto &x = args.data[0];
-    auto &y = args.data[1];
-    auto &t = args.data[2];
-    x.Flatten(count);
-    y.Flatten(count);
-    t.Flatten(count);
+    auto &tinstant_vec = args.data[0];
+    tinstant_vec.Flatten(count);
 
-    auto &children = StructVector::GetEntries(result);
-    auto &x_child = children[0];
-    auto &y_child = children[1];
+    auto &children = StructVector::GetEntries(tinstant_vec);
+    auto &value_child = children[0];
+    auto &temptype_child = children[1];
     auto &t_child = children[2];
-    x_child->Reference(x);
-    y_child->Reference(y);
-    t_child->Reference(t);
 
+    for (idx_t i = 0; i < count; i++) {
+        TInstant inst;
+        inst.value = value_child->GetValue(i).GetValue<int64_t>();
+        inst.temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+        inst.t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+        Datum val = tinstant_value(&inst);
+        result.SetValue(i, Value::BIGINT((int64_t)val));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline void ExecuteTInstantToString(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &tinstant_vec = args.data[0];
+    tinstant_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(tinstant_vec);
+    auto &value_child = children[0];
+    auto &temptype_child = children[1];
+    auto &t_child = children[2];
+
+    for (idx_t i = 0; i < count; i++) {
+        TInstant inst;
+        inst.value = value_child->GetValue(i).GetValue<int64_t>();
+        inst.temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+        inst.t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+        char *str = tinstant_to_string(&inst, 0, value_out_int);
+        result.SetValue(i, Value(str));
+        free(str);
+    }
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void GeoTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
-    // Register ST_Point2D function
-    auto point2d_scalar_function = ScalarFunction(
-        "ST_Point2D", // name
-        {LogicalType::DOUBLE, LogicalType::DOUBLE}, // arguments
-        GeoTypes::POINT_2D(), // return type
-        ExecutePoint2D); // function
-    ExtensionUtil::RegisterFunction(instance, point2d_scalar_function);
+    // Register TInstant functions
+    auto tinstant_make_function = ScalarFunction(
+        "TINSTANT_MAKE", // name
+        {LogicalType::BIGINT, LogicalType::UTINYINT, LogicalType::TIMESTAMP_TZ}, // arguments
+        GeoTypes::TINSTANT(), // return type
+        ExecuteTInstantMake); // function
+    ExtensionUtil::RegisterFunction(instance, tinstant_make_function);
 
-    // Register ST_TPoint2D function
-    auto tpoint2d_scalar_function = ScalarFunction(
-        "ST_TPoint2D", // name
-        {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, // arguments
-        GeoTypes::TPOINT_2D(), // return type
-        ExecuteTPoint2D); // function
-    ExtensionUtil::RegisterFunction(instance, tpoint2d_scalar_function);
+    auto tinstant_value_function = ScalarFunction(
+        "TINSTANT_VALUE", // name
+        {GeoTypes::TINSTANT()}, // arguments
+        LogicalType::BIGINT, // return type
+        ExecuteTInstantValue); // function
+    ExtensionUtil::RegisterFunction(instance, tinstant_value_function);
+
+    auto tinstant_to_string_function = ScalarFunction(
+        "TINSTANT_TO_STRING", // name
+        {GeoTypes::TINSTANT()}, // arguments
+        LogicalType::VARCHAR, // return type
+        ExecuteTInstantToString); // function
+    ExtensionUtil::RegisterFunction(instance, tinstant_to_string_function);
 }
 
-void GeoTypes::Register(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterType(instance, "POINT_2D", GeoTypes::POINT_2D());
-    ExtensionUtil::RegisterType(instance, "TPOINT_2D", GeoTypes::TPOINT_2D());
+void GeoTypes::RegisterTypes(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterType(instance, "TINSTANT", GeoTypes::TINSTANT());
 }
 
 } // namespace duckdb

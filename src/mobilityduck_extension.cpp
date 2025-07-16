@@ -30,46 +30,6 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 	});
 }
 
-// inline void ExecutePoint2D(DataChunk &args, ExpressionState &state, Vector &result) {
-//     auto count = args.size();
-//     auto &x = args.data[0];
-//     auto &y = args.data[1];
-//     x.Flatten(count);
-//     y.Flatten(count);
-
-//     auto &children = StructVector::GetEntries(result);
-//     auto &x_child = children[0];
-//     auto &y_child = children[1];
-//     x_child->Reference(x);
-//     y_child->Reference(y);
-
-//     if (count == 1) {
-//         result.SetVectorType(VectorType::CONSTANT_VECTOR);
-//     }
-// }
-
-// inline void ExecuteTPoint2D(DataChunk &args, ExpressionState &state, Vector &result) {
-// 	auto count = args.size();
-// 	auto &x = args.data[0];
-// 	auto &y = args.data[1];
-// 	auto &t = args.data[2];
-// 	x.Flatten(count);
-// 	y.Flatten(count);
-// 	t.Flatten(count);
-
-// 	auto &children = StructVector::GetEntries(result);
-// 	auto &x_child = children[0];
-// 	auto &y_child = children[1];
-// 	auto &t_child = children[2];
-// 	x_child->Reference(x);
-// 	y_child->Reference(y);
-// 	t_child->Reference(t);
-
-// 	if (count == 1) {
-// 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
-// 	}
-// }
-
 static void LoadInternal(DatabaseInstance &instance) {
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
@@ -82,6 +42,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	// Register geometry types
 	GeoTypes::RegisterScalarFunctions(instance);
+	GeoTypes::RegisterTypes(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {

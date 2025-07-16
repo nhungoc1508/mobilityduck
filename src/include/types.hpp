@@ -58,9 +58,8 @@ public:
 class ExtensionLoader;
 
 struct GeoTypes {
-    static LogicalType POINT_2D();
-    static LogicalType TPOINT_2D();
-    static void Register(DatabaseInstance &instance);
+    static LogicalType TINSTANT();
+    static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
 };
 
