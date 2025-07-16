@@ -19,6 +19,33 @@ LogicalType GeoTypes::TINSTANT() {
     return type;
 }
 
+inline void ExecuteTintMake(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    auto &t_vec = args.data[1];
+
+    value_vec.Flatten(count);
+    t_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(result);
+    auto &value_child = children[0];
+    auto &temptype_child = children[1];
+    auto &t_child = children[2];
+
+    for (idx_t i = 0; i < count; i++) {
+        auto value = value_vec.GetValue(i).GetValue<int64_t>();
+        auto t = t_vec.GetValue(i).GetValue<timestamp_tz_t>();
+        TInstant *inst = tinstant_make((Datum)value, T_TINT, (TimestampTz)t.value);
+        value_child->SetValue(i, Value::BIGINT((int64_t)inst->value));
+        temptype_child->SetValue(i, Value::UTINYINT(inst->temptype));
+        t_child->SetValue(i, Value::TIMESTAMPTZ(timestamp_tz_t(inst->t)));
+        free(inst);
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 // SQL function implementations
 inline void ExecuteTInstantMake(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
@@ -120,6 +147,14 @@ void GeoTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR, // return type
         ExecuteTInstantToString); // function
     ExtensionUtil::RegisterFunction(instance, tinstant_to_string_function);
+
+    // Register TINT function
+    auto tint_make_function = ScalarFunction(
+        "TINT", // name
+        {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, // arguments
+        GeoTypes::TINSTANT(), // return type
+        ExecuteTintMake); // function
+    ExtensionUtil::RegisterFunction(instance, tint_make_function);
 }
 
 void GeoTypes::RegisterTypes(DatabaseInstance &instance) {

@@ -10,6 +10,11 @@
 
 namespace duckdb {
 
+// Define the MEOS temptype for tint (should match meosType enum)
+#ifndef T_TINT
+#define T_TINT 6
+#endif
+
 enum class TemporalGeometryType: uint8_t {
     TGEOMPOINT = 0,
     TGEOGPOINT
