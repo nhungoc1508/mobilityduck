@@ -25,3 +25,14 @@ INSERT INTO tinst_table VALUES
 SELECT * FROM tinst_table;
 -- Show strings from tinst_table
 SELECT TINSTANT_TO_STRING(tinst) as str FROM tinst_table;
+
+-- UNIMPLEMENTED, FROM POSTGRES: Constructors for temporal types having constant values
+SELECT tbool(true, timestamptz '2001-01-01');
+SELECT tint(1, timestamptz '2001-01-01');
+SELECT tfloat(1.5, tstzset '{2001-01-01, 2001-01-02}');
+SELECT ttext('AAA', tstzset '{2001-01-01, 2001-01-02}');
+SELECT tfloat(1.5, tstzspan '[2001-01-01, 2001-01-02]');
+SELECT tfloat(1.5, tstzspan '[2001-01-01, 2001-01-02]', 'step');
+SELECT tgeompoint('Point(0 0)', tstzspan '[2001-01-01, 2001-01-02]');
+SELECT tgeography('SRID=7844;Point(0 0)', tstzspanset '{[2001-01-01, 2001-01-02],
+  [2001-01-03, 2001-01-04]}', 'step');

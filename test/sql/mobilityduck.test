@@ -2,22 +2,26 @@
 # description: test mobilityduck extension
 # group: [sql]
 
-# Before we load the extension, this will fail
-statement error
-SELECT mobilityduck('Sam');
-----
-Catalog Error: Scalar Function with name mobilityduck does not exist!
-
 # Require statement will ensure this test is run with this extension loaded
 require mobilityduck
 
-# Confirm the extension works
+# Test extension
 query I
-SELECT mobilityduck('Sam');
+SELECT TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ) as tint;
 ----
-Mobilityduck Sam 🐥
+{'value': 42, 'temptype': 35, 't': '2023-01-01 12:00:00+00'}
 
 query I
-SELECT mobilityduck_openssl_version('Michael') ILIKE 'Mobilityduck Michael, my linked OpenSSL version is OpenSSL%';
+SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
 ----
-true
+42
+
+query I
+SELECT asText(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as str;
+----
+42@2023-01-01 12:00:00+00
+
+query I
+SELECT asText(TINT(10000, '2025-07-18 15:30:00'::TIMESTAMPTZ)) as str;
+----
+10000@2025-07-18 15:30:00+00

@@ -15,7 +15,9 @@ project(${TARGET_NAME})
 include_directories(src/include)
 
 add_library(meos_lib STATIC
-  src/meos/meos.c
+  src/meos/meos_internal.c
+  src/meos/meos_catalog.c
+  src/meos/type_util.c
 )
 target_include_directories(meos_lib
   PUBLIC src/meos

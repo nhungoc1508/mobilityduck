@@ -11,9 +11,7 @@
 namespace duckdb {
 
 // Define the MEOS temptype for tint (should match meosType enum)
-#ifndef T_TINT
-#define T_TINT 6
-#endif
+// Removed #define T_TINT 6 to avoid conflict with meos_catalog.h
 
 enum class TemporalGeometryType: uint8_t {
     TGEOMPOINT = 0,
@@ -64,6 +62,7 @@ class ExtensionLoader;
 
 struct GeoTypes {
     static LogicalType TINSTANT();
+    static LogicalType TINT();
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
 };

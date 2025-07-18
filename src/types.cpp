@@ -5,7 +5,7 @@
 #include "duckdb/common/extension_type_info.hpp"
 
 extern "C" {
-    #include "meos/meos.h"
+    #include "meos/meos_internal.h"
 }
 
 namespace duckdb {
@@ -16,6 +16,15 @@ LogicalType GeoTypes::TINSTANT() {
         {"temptype", LogicalType::UTINYINT},
         {"t", LogicalType::TIMESTAMP_TZ}});
     type.SetAlias("TINSTANT");
+    return type;
+}
+
+LogicalType GeoTypes::TINT() {
+    auto type = LogicalType::STRUCT({
+        {"value", LogicalType::BIGINT},
+        {"temptype", LogicalType::UTINYINT},
+        {"t", LogicalType::TIMESTAMP_TZ}});
+    type.SetAlias("TINT");
     return type;
 }
 
@@ -67,7 +76,7 @@ inline void ExecuteTInstantMake(DataChunk &args, ExpressionState &state, Vector 
         auto temptype = temptype_vec.GetValue(i).GetValue<uint8_t>();
         auto t = t_vec.GetValue(i).GetValue<timestamp_tz_t>();
 
-        TInstant *inst = tinstant_make((Datum)value, temptype, (TimestampTz)t.value);
+        TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t.value);
         value_child->SetValue(i, Value::BIGINT((int64_t)inst->value));
         temptype_child->SetValue(i, Value::UTINYINT(inst->temptype));
         t_child->SetValue(i, Value::TIMESTAMPTZ(timestamp_tz_t(inst->t)));
@@ -93,6 +102,11 @@ inline void ExecuteTInstantValue(DataChunk &args, ExpressionState &state, Vector
         inst.value = value_child->GetValue(i).GetValue<int64_t>();
         inst.temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
         inst.t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+        bool typbyval = basetype_byvalue((meosType)inst.temptype);
+        MEOS_FLAGS_SET_BYVAL(inst.flags, typbyval);
+        MEOS_FLAGS_SET_CONTINUOUS(inst.flags, temptype_continuous((meosType)inst.temptype));
+        MEOS_FLAGS_SET_X(inst.flags, true);
+        MEOS_FLAGS_SET_T(inst.flags, true);
         Datum val = tinstant_value(&inst);
         result.SetValue(i, Value::BIGINT((int64_t)val));
     }
@@ -116,7 +130,14 @@ inline void ExecuteTInstantToString(DataChunk &args, ExpressionState &state, Vec
         inst.value = value_child->GetValue(i).GetValue<int64_t>();
         inst.temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
         inst.t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-        char *str = tinstant_to_string(&inst, 0, value_out_int);
+        bool typbyval = basetype_byvalue((meosType)inst.temptype);
+        MEOS_FLAGS_SET_BYVAL(inst.flags, typbyval);
+        MEOS_FLAGS_SET_CONTINUOUS(inst.flags, temptype_continuous((meosType)inst.temptype));
+        MEOS_FLAGS_SET_X(inst.flags, true);
+        MEOS_FLAGS_SET_T(inst.flags, true);
+        // char *str = tinstant_to_string(&inst, 0, value_out_int);
+        int maxdd = 15;
+        char *str = tinstant_out(&inst, maxdd);
         result.SetValue(i, Value(str));
         free(str);
     }
@@ -135,30 +156,45 @@ void GeoTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(instance, tinstant_make_function);
 
     auto tinstant_value_function = ScalarFunction(
-        "TINSTANT_VALUE", // name
-        {GeoTypes::TINSTANT()}, // arguments
-        LogicalType::BIGINT, // return type
-        ExecuteTInstantValue); // function
+        "TINSTANT_VALUE",
+        {GeoTypes::TINSTANT()},
+        LogicalType::BIGINT,
+        ExecuteTInstantValue);
     ExtensionUtil::RegisterFunction(instance, tinstant_value_function);
 
     auto tinstant_to_string_function = ScalarFunction(
-        "TINSTANT_TO_STRING", // name
-        {GeoTypes::TINSTANT()}, // arguments
-        LogicalType::VARCHAR, // return type
-        ExecuteTInstantToString); // function
+        "TINSTANT_TO_STRING",
+        {GeoTypes::TINSTANT()},
+        LogicalType::VARCHAR,
+        ExecuteTInstantToString);
     ExtensionUtil::RegisterFunction(instance, tinstant_to_string_function);
 
-    // Register TINT function
+    // Register TINT functions
     auto tint_make_function = ScalarFunction(
-        "TINT", // name
-        {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, // arguments
-        GeoTypes::TINSTANT(), // return type
-        ExecuteTintMake); // function
+        "TINT",
+        {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ},
+        GeoTypes::TINT(),
+        ExecuteTintMake);
     ExtensionUtil::RegisterFunction(instance, tint_make_function);
+
+    auto tint_value_function = ScalarFunction(
+        "getValue",
+        {GeoTypes::TINT()},
+        LogicalType::BIGINT,
+        ExecuteTInstantValue);
+    ExtensionUtil::RegisterFunction(instance, tint_value_function);
+
+    auto tint_to_string_function = ScalarFunction(
+        "asText",
+        {GeoTypes::TINT()},
+        LogicalType::VARCHAR,
+        ExecuteTInstantToString);
+    ExtensionUtil::RegisterFunction(instance, tint_to_string_function);
 }
 
 void GeoTypes::RegisterTypes(DatabaseInstance &instance) {
     ExtensionUtil::RegisterType(instance, "TINSTANT", GeoTypes::TINSTANT());
+    ExtensionUtil::RegisterType(instance, "TINT", GeoTypes::TINT());
 }
 
 } // namespace duckdb
