@@ -51,7 +51,7 @@ extern TSequence **tseqarr_normalize(const TSequence **sequences, int count,
 extern double datum_distance(Datum value1, Datum value2, meosType basetype,
   int16 flags);
 extern int *ensure_valid_tinstarr_gaps(const TInstant **instants, int count,
-  bool merge, double maxdist, const Interval *maxt, int *nsplits);
+  bool merge, double maxdist, const MeosInterval *maxt, int *nsplits);
 extern bool ensure_valid_tseqarr(const TSequence **sequences, int count);
 
 /* Synchronize functions */

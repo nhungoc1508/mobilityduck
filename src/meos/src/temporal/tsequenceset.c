@@ -453,7 +453,7 @@ tsequenceset_make_free(TSequence **sequences, int count, bool normalize)
  */
 int *
 ensure_valid_tinstarr_gaps(const TInstant **instants, int count, bool merge,
-  double maxdist, const Interval *maxt, int *nsplits)
+  double maxdist, const MeosInterval *maxt, int *nsplits)
 {
   meosType basetype = temptype_basetype(instants[0]->temptype);
   /* Ensure that zero-fill is done */
@@ -484,7 +484,7 @@ ensure_valid_tinstarr_gaps(const TInstant **instants, int count, bool merge,
     /* If there is not already a split by distance */
     if (maxt && ! split)
     {
-      Interval *duration = minus_timestamptz_timestamptz(instants[i]->t,
+      MeosInterval *duration = minus_timestamptz_timestamptz(instants[i]->t,
         instants[i - 1]->t);
       if (pg_interval_cmp(duration, maxt) > 0)
         split = true;
@@ -506,7 +506,7 @@ ensure_valid_tinstarr_gaps(const TInstant **instants, int count, bool merge,
 static int *
 tsequenceset_make_gaps_valid(const TInstant **instants, int count,
   bool lower_inc, bool upper_inc, interpType interp, double maxdist,
-  const Interval *maxt, int *nsplits)
+  const MeosInterval *maxt, int *nsplits)
 {
   assert(interp != DISCRETE);
   if (! ensure_valid_tinstarr_common(instants, count, lower_inc, upper_inc,
@@ -530,7 +530,7 @@ tsequenceset_make_gaps_valid(const TInstant **instants, int count,
  */
 TSequenceSet *
 tsequenceset_make_gaps(const TInstant **instants, int count, interpType interp,
-  const Interval *maxt, double maxdist)
+  const MeosInterval *maxt, double maxdist)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(instants, NULL);
@@ -940,7 +940,7 @@ tsequenceset_time(const TSequenceSet *ss)
  * @param[in] boundspan True when the potential time gaps are ignored
  * @csqlfn #Temporal_duration()
  */
-Interval *
+MeosInterval *
 tsequenceset_duration(const TSequenceSet *ss, bool boundspan)
 {
   assert(ss);
@@ -950,16 +950,16 @@ tsequenceset_duration(const TSequenceSet *ss, bool boundspan)
       DatumGetTimestampTz(ss->period.lower));
 
   const TSequence *seq = TSEQUENCESET_SEQ_N(ss, 0);
-  Interval *result = minus_timestamptz_timestamptz(
+  MeosInterval *result = minus_timestamptz_timestamptz(
     DatumGetTimestampTz(seq->period.upper),
     DatumGetTimestampTz(seq->period.lower));
   for (int i = 1; i < ss->count; i++)
   {
     seq = TSEQUENCESET_SEQ_N(ss, i);
-    Interval *interv1 = minus_timestamptz_timestamptz(
+    MeosInterval *interv1 = minus_timestamptz_timestamptz(
       DatumGetTimestampTz(seq->period.upper),
       DatumGetTimestampTz(seq->period.lower));
-    Interval *inter2 = add_interval_interval(result, interv1);
+    MeosInterval *inter2 = add_interval_interval(result, interv1);
     pfree(result); pfree(interv1);
     result = inter2;
   }
@@ -1701,15 +1701,15 @@ tnumberseqset_shift_scale_value(const TSequenceSet *ss, Datum shift,
  * @ingroup meos_internal_temporal_transf
  * @brief Return a temporal sequence set shifted and/or scaled by two intervals
  * @param[in] ss Temporal sequence set
- * @param[in] shift Interval for shift
- * @param[in] duration Interval for scale
+ * @param[in] shift MeosInterval for shift
+ * @param[in] duration MeosInterval for scale
  * @pre The duration is greater than 0 if it is not NULL
  * @csqlfn #Temporal_shift_time(), #Temporal_scale_time(),
  * #Temporal_shift_scale_time()
  */
 TSequenceSet *
-tsequenceset_shift_scale_time(const TSequenceSet *ss, const Interval *shift,
-  const Interval *duration)
+tsequenceset_shift_scale_time(const TSequenceSet *ss, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   assert(ss);
   assert(shift || duration);

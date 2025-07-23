@@ -1257,7 +1257,7 @@ trgeo_minus_tstzspanset(const Temporal *temp, const SpanSet *ss)
  */
 Temporal *
 trgeo_append_tinstant(Temporal *temp, const TInstant *inst, 
-  interpType interp, double maxdist, const Interval *maxt, bool expand)
+  interpType interp, double maxdist, const MeosInterval *maxt, bool expand)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_TRGEOMETRY(temp, NULL); VALIDATE_TRGEOMETRY(inst, NULL);

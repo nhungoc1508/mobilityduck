@@ -399,9 +399,9 @@ extern bool not_negative_datum(Datum size, meosType basetype);
 extern bool ensure_not_negative_datum(Datum size, meosType basetype);
 extern bool positive_datum(Datum size, meosType basetype);
 extern bool ensure_positive_datum(Datum size, meosType basetype);
-extern bool ensure_valid_day_duration(const Interval *duration);
-extern bool positive_duration(const Interval *duration);
-extern bool ensure_positive_duration(const Interval *duration);
+extern bool ensure_valid_day_duration(const MeosInterval *duration);
+extern bool positive_duration(const MeosInterval *duration);
+extern bool ensure_positive_duration(const MeosInterval *duration);
 
 /* General functions */
 

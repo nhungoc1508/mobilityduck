@@ -1023,7 +1023,7 @@ extern void tnumber_set_span(const Temporal *temp, Span *span);
 extern SpanSet *tnumberinst_valuespans(const TInstant *inst);
 extern SpanSet *tnumberseq_valuespans(const TSequence *seq);
 extern SpanSet *tnumberseqset_valuespans(const TSequenceSet *ss);
-extern Interval *tsequence_duration(const TSequence *seq);
+extern MeosInterval *tsequence_duration(const TSequence *seq);
 extern TimestampTz tsequence_end_timestamptz(const TSequence *seq);
 extern uint32 tsequence_hash(const TSequence *seq);
 extern const TInstant **tsequence_insts_p(const TSequence *seq);
@@ -1038,7 +1038,7 @@ extern SpanSet *tsequence_time(const TSequence *seq);
 extern TimestampTz *tsequence_timestamps(const TSequence *seq, int *count);
 extern bool tsequence_value_at_timestamptz(const TSequence *seq, TimestampTz t, bool strict, Datum *result);
 extern Datum *tsequence_values_p(const TSequence *seq, int *count);
-extern Interval *tsequenceset_duration(const TSequenceSet *ss, bool boundspan);
+extern MeosInterval *tsequenceset_duration(const TSequenceSet *ss, bool boundspan);
 extern TimestampTz tsequenceset_end_timestamptz(const TSequenceSet *ss);
 extern uint32 tsequenceset_hash(const TSequenceSet *ss);
 extern const TInstant *tsequenceset_inst_n(const TSequenceSet *ss, int n);
@@ -1066,7 +1066,7 @@ extern Datum *tsequenceset_values_p(const TSequenceSet *ss, int *count);
 extern void temporal_restart(Temporal *temp, int count);
 extern TSequence *temporal_tsequence(const Temporal *temp, interpType interp);
 extern TSequenceSet *temporal_tsequenceset(const Temporal *temp, interpType interp);
-extern TInstant *tinstant_shift_time(const TInstant *inst, const Interval *interv);
+extern TInstant *tinstant_shift_time(const TInstant *inst, const MeosInterval *interv);
 extern TSequence *tinstant_to_tsequence(const TInstant *inst, interpType interp);
 extern TSequence *tinstant_to_tsequence_free(TInstant *inst, interpType interp);
 extern TSequenceSet *tinstant_to_tsequenceset(const TInstant *inst, interpType interp);
@@ -1076,7 +1076,7 @@ extern TSequence *tnumberseq_shift_scale_value(const TSequence *seq, Datum shift
 extern TSequenceSet *tnumberseqset_shift_scale_value(const TSequenceSet *ss, Datum start, Datum width, bool hasshift, bool haswidth);
 extern void tsequence_restart(TSequence *seq, int count);
 extern Temporal *tsequence_set_interp(const TSequence *seq, interpType interp);
-extern TSequence *tsequence_shift_scale_time(const TSequence *seq, const Interval *shift, const Interval *duration);
+extern TSequence *tsequence_shift_scale_time(const TSequence *seq, const MeosInterval *shift, const MeosInterval *duration);
 extern TSequence *tsequence_subseq(const TSequence *seq, int from, int to, bool lower_inc, bool upper_inc);
 extern TInstant *tsequence_to_tinstant(const TSequence *seq);
 extern TSequenceSet *tsequence_to_tsequenceset(const TSequence *seq);
@@ -1084,7 +1084,7 @@ extern TSequenceSet *tsequence_to_tsequenceset_free(TSequence *seq);
 extern TSequenceSet *tsequence_to_tsequenceset_interp(const TSequence *seq, interpType interp);
 extern void tsequenceset_restart(TSequenceSet *ss, int count);
 extern Temporal *tsequenceset_set_interp(const TSequenceSet *ss, interpType interp);
-extern TSequenceSet *tsequenceset_shift_scale_time(const TSequenceSet *ss, const Interval *start, const Interval *duration);
+extern TSequenceSet *tsequenceset_shift_scale_time(const TSequenceSet *ss, const MeosInterval *start, const MeosInterval *duration);
 extern TSequence *tsequenceset_to_discrete(const TSequenceSet *ss);
 extern TSequenceSet *tsequenceset_to_linear(const TSequenceSet *ss);
 extern TSequenceSet *tsequenceset_to_step(const TSequenceSet *ss);
@@ -1097,7 +1097,7 @@ extern TSequence *tsequenceset_to_tsequence(const TSequenceSet *ss);
 
 extern Temporal *tinstant_merge(const TInstant *inst1, const TInstant *inst2);
 extern Temporal *tinstant_merge_array(const TInstant **instants, int count);
-extern Temporal *tsequence_append_tinstant(TSequence *seq, const TInstant *inst, double maxdist, const Interval *maxt, bool expand);
+extern Temporal *tsequence_append_tinstant(TSequence *seq, const TInstant *inst, double maxdist, const MeosInterval *maxt, bool expand);
 extern Temporal *tsequence_append_tsequence(const TSequence *seq1, const TSequence *seq2, bool expand);
 extern Temporal *tsequence_delete_timestamptz(const TSequence *seq, TimestampTz t, bool connect);
 extern Temporal *tsequence_delete_tstzset(const TSequence *seq, const Set *s, bool connect);
@@ -1106,7 +1106,7 @@ extern Temporal *tsequence_delete_tstzspanset(const TSequence *seq, const SpanSe
 extern Temporal *tsequence_insert(const TSequence *seq1, const TSequence *seq2, bool connect);
 extern Temporal *tsequence_merge(const TSequence *seq1, const TSequence *seq2);
 extern Temporal *tsequence_merge_array(const TSequence **sequences, int count);
-extern TSequenceSet *tsequenceset_append_tinstant(TSequenceSet *ss, const TInstant *inst, double maxdist, const Interval *maxt, bool expand);
+extern TSequenceSet *tsequenceset_append_tinstant(TSequenceSet *ss, const TInstant *inst, double maxdist, const MeosInterval *maxt, bool expand);
 extern TSequenceSet *tsequenceset_append_tsequence(TSequenceSet *ss, const TSequence *seq, bool expand);
 extern TSequenceSet *tsequenceset_delete_timestamptz(const TSequenceSet *ss, TimestampTz t);
 extern TSequenceSet *tsequenceset_delete_tstzset(const TSequenceSet *ss, const Set *s);
@@ -1249,7 +1249,7 @@ extern TSequenceSet *tsequenceset_compact(const TSequenceSet *ss);
 /* Aggregate functions for temporal types */
 
 extern void skiplist_free(SkipList *list);
-extern Temporal *temporal_app_tinst_transfn(Temporal *state, const TInstant *inst, interpType interp, double maxdist, const Interval *maxt);
+extern Temporal *temporal_app_tinst_transfn(Temporal *state, const TInstant *inst, interpType interp, double maxdist, const MeosInterval *maxt);
 extern Temporal *temporal_app_tseq_transfn(Temporal *state, const TSequence *seq);
 
 /*****************************************************************************/
@@ -1259,10 +1259,10 @@ extern Temporal *temporal_app_tseq_transfn(Temporal *state, const TSequence *seq
 extern Span *span_bins(const Span *s, Datum size, Datum origin, int *count);
 extern Span *spanset_bins(const SpanSet *ss, Datum size, Datum origin, int *count);
 extern Span *tnumber_value_bins(const Temporal *temp, Datum size, Datum origin, int *count);
-extern TBox *tnumber_value_time_boxes(const Temporal *temp, Datum vsize, const Interval *duration, Datum vorigin, TimestampTz torigin, int *count);
+extern TBox *tnumber_value_time_boxes(const Temporal *temp, Datum vsize, const MeosInterval *duration, Datum vorigin, TimestampTz torigin, int *count);
 extern Temporal **tnumber_value_split(const Temporal *temp, Datum vsize, Datum vorigin, Datum **bins, int *count);
-extern TBox *tbox_get_value_time_tile(Datum value, TimestampTz t, Datum vsize, const Interval *duration, Datum vorigin, TimestampTz torigin, meosType basetype, meosType spantype);
-extern Temporal **tnumber_value_time_split(const Temporal *temp, Datum size, const Interval *duration, Datum vorigin, TimestampTz torigin, Datum **value_bins, TimestampTz **time_bins, int *count);
+extern TBox *tbox_get_value_time_tile(Datum value, TimestampTz t, Datum vsize, const MeosInterval *duration, Datum vorigin, TimestampTz torigin, meosType basetype, meosType spantype);
+extern Temporal **tnumber_value_time_split(const Temporal *temp, Datum size, const MeosInterval *duration, Datum vorigin, TimestampTz torigin, Datum **value_bins, TimestampTz **time_bins, int *count);
 
 /*****************************************************************************/
 

@@ -1457,13 +1457,13 @@ stboxarr_round(const STBox *boxarr, int count, int maxdd)
  * @brief Return a spatiotemporal box with the time span expanded and/or scaled
  * by two intervals
  * @param[in] box Spatiotemporal box
- * @param[in] shift Interval to shift the value span, may be `NULL`
+ * @param[in] shift MeosInterval to shift the value span, may be `NULL`
  * @param[in] duration Duration of the result, may be `NULL`
  * @csqlfn #Stbox_shift_time(), #Stbox_scale_time(), #Stbox_shift_scale_time()
  */
 STBox *
-stbox_shift_scale_time(const STBox *box, const Interval *shift,
-  const Interval *duration)
+stbox_shift_scale_time(const STBox *box, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(box, NULL);
@@ -1547,11 +1547,11 @@ stbox_expand_space(const STBox *box, double d)
  * @brief Return a spatiotemporal box with the time span expanded/decreased by
  * an interval
  * @param[in] box Spatiotemporal box
- * @param[in] interv Interval for expanding
+ * @param[in] interv MeosInterval for expanding
  * @csqlfn #Stbox_expand_time()
  */
 STBox *
-stbox_expand_time(const STBox *box, const Interval *interv)
+stbox_expand_time(const STBox *box, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(box, NULL); VALIDATE_NOT_NULL(interv, NULL);

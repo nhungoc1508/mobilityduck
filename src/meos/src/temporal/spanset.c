@@ -642,7 +642,7 @@ numspanset_width(const SpanSet *ss, bool boundspan)
  * @param[in] boundspan True when the potential time gaps are ignored
  * @csqlfn #Datespanset_duration()
  */
-Interval *
+MeosInterval *
 datespanset_duration(const SpanSet *ss, bool boundspan)
 {
   /* Ensure the validity of the arguments */
@@ -657,7 +657,7 @@ datespanset_duration(const SpanSet *ss, bool boundspan)
     const Span *s = SPANSET_SP_N(ss, i);
     nodays += (int32) (s->upper - s->lower);
   }
-  Interval *result = palloc0(sizeof(Interval));
+  MeosInterval *result = palloc0(sizeof(MeosInterval));
   result->day = nodays;
   return result;
 }
@@ -669,7 +669,7 @@ datespanset_duration(const SpanSet *ss, bool boundspan)
  * @param[in] boundspan True when the potential time gaps are ignored
  * @csqlfn #Tstzspanset_duration()
  */
-Interval *
+MeosInterval *
 tstzspanset_duration(const SpanSet *ss, bool boundspan)
 {
   /* Ensure the validity of the arguments */
@@ -679,12 +679,12 @@ tstzspanset_duration(const SpanSet *ss, bool boundspan)
     return minus_timestamptz_timestamptz(ss->span.upper, ss->span.lower);
 
   const Span *s = SPANSET_SP_N(ss, 0);
-  Interval *result = minus_timestamptz_timestamptz(s->upper, s->lower);
+  MeosInterval *result = minus_timestamptz_timestamptz(s->upper, s->lower);
   for (int i = 1; i < ss->count; i++)
   {
     s = SPANSET_SP_N(ss, i);
-    Interval *interv1 = minus_timestamptz_timestamptz(s->upper, s->lower);
-    Interval *interv2 = add_interval_interval(result, interv1);
+    MeosInterval *interv1 = minus_timestamptz_timestamptz(s->upper, s->lower);
+    MeosInterval *interv2 = add_interval_interval(result, interv1);
     pfree(result); pfree(interv1);
     result = interv2;
   }
@@ -1226,13 +1226,13 @@ numspanset_shift_scale(const SpanSet *ss, Datum shift, Datum width,
  * @ingroup meos_setspan_transf
  * @brief Return a timestamptz span set shifted and/or scaled by two intervals
  * @param[in] ss Span set
- * @param[in] shift Interval to shift the span set, may be NULL
- * @param[in] duration Interval for the duration of the result, may be NULL
+ * @param[in] shift MeosInterval to shift the span set, may be NULL
+ * @param[in] duration MeosInterval for the duration of the result, may be NULL
  * @csqlfn #Numspanset_shift(), #Numspanset_scale(), #Numspanset_shift_scale()
  */
 SpanSet *
-tstzspanset_shift_scale(const SpanSet *ss, const Interval *shift,
-  const Interval *duration)
+tstzspanset_shift_scale(const SpanSet *ss, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_TSTZSPANSET(ss, NULL);
@@ -1296,9 +1296,9 @@ span_cmp_size(const Span *s1, const Span *s2)
   }
   else /* timespan_type(s1->spantype) */
   {
-    Interval *dur1 = (s1->spantype == T_DATESPAN) ?
+    MeosInterval *dur1 = (s1->spantype == T_DATESPAN) ?
       datespan_duration(s1) : tstzspan_duration(s1);
-    Interval *dur2 = (s2->spantype == T_DATESPAN) ?
+    MeosInterval *dur2 = (s2->spantype == T_DATESPAN) ?
       datespan_duration(s2) : tstzspan_duration(s2);
     result = pg_interval_cmp(dur1, dur2);
     pfree(dur1); pfree(dur2);

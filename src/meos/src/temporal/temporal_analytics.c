@@ -69,7 +69,7 @@
  * @param[in] torigin Time origin of the bins
  */
 TimestampTz
-timestamptz_tprecision(TimestampTz t, const Interval *duration,
+timestamptz_tprecision(TimestampTz t, const MeosInterval *duration,
   TimestampTz torigin)
 {
   /* Ensure the validity of the arguments */
@@ -87,7 +87,7 @@ timestamptz_tprecision(TimestampTz t, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 Set *
-tstzset_tprecision(const Set *s, const Interval *duration, TimestampTz torigin)
+tstzset_tprecision(const Set *s, const MeosInterval *duration, TimestampTz torigin)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(duration, NULL);
@@ -109,7 +109,7 @@ tstzset_tprecision(const Set *s, const Interval *duration, TimestampTz torigin)
  * @param[in] torigin Time origin of the bins
  */
 Span *
-tstzspan_tprecision(const Span *s, const Interval *duration,
+tstzspan_tprecision(const Span *s, const MeosInterval *duration,
   TimestampTz torigin)
 {
   /* Ensure the validity of the arguments */
@@ -136,7 +136,7 @@ tstzspan_tprecision(const Span *s, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 SpanSet *
-tstzspanset_tprecision(const SpanSet *ss, const Interval *duration,
+tstzspanset_tprecision(const SpanSet *ss, const MeosInterval *duration,
   TimestampTz torigin)
 {
   /* Ensure the validity of the arguments */
@@ -182,7 +182,7 @@ tstzspanset_tprecision(const SpanSet *ss, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 TInstant *
-tinstant_tprecision(const TInstant *inst, const Interval *duration,
+tinstant_tprecision(const TInstant *inst, const MeosInterval *duration,
   TimestampTz torigin)
 {
   assert(inst); assert(duration); assert(positive_duration(duration));
@@ -197,7 +197,7 @@ tinstant_tprecision(const TInstant *inst, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 TSequence *
-tsequence_tprecision(const TSequence *seq, const Interval *duration,
+tsequence_tprecision(const TSequence *seq, const MeosInterval *duration,
   TimestampTz torigin)
 {
   assert(seq); assert(duration); assert(positive_duration(duration));
@@ -345,7 +345,7 @@ tsequence_tprecision(const TSequence *seq, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 TSequenceSet *
-tsequenceset_tprecision(const TSequenceSet *ss, const Interval *duration,
+tsequenceset_tprecision(const TSequenceSet *ss, const MeosInterval *duration,
   TimestampTz torigin)
 {
   assert(ss); assert(duration); assert(positive_duration(duration));
@@ -429,7 +429,7 @@ tsequenceset_tprecision(const TSequenceSet *ss, const Interval *duration,
  * @csqlfn #Temporal_tprecision()
  */
 Temporal *
-temporal_tprecision(const Temporal *temp, const Interval *duration,
+temporal_tprecision(const Temporal *temp, const MeosInterval *duration,
   TimestampTz torigin)
 {
   /* Ensure the validity of the arguments */
@@ -463,7 +463,7 @@ temporal_tprecision(const Temporal *temp, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 TInstant *
-tinstant_tsample(const TInstant *inst, const Interval *duration,
+tinstant_tsample(const TInstant *inst, const MeosInterval *duration,
   TimestampTz torigin)
 {
   assert(inst); assert(duration); assert(positive_duration(duration));
@@ -572,7 +572,7 @@ tsequence_tsample_iter(const TSequence *seq, TimestampTz lower_bin,
  * @param[in] interp Interpolation
  */
 TSequence *
-tsequence_tsample(const TSequence *seq, const Interval *duration,
+tsequence_tsample(const TSequence *seq, const MeosInterval *duration,
   TimestampTz torigin, interpType interp)
 {
   assert(seq); assert(duration); assert(positive_duration(duration));
@@ -599,7 +599,7 @@ tsequence_tsample(const TSequence *seq, const Interval *duration,
  * @param[in] torigin Time origin of the bins
  */
 TSequence *
-tsequenceset_disc_tsample(const TSequenceSet *ss, const Interval *duration,
+tsequenceset_disc_tsample(const TSequenceSet *ss, const MeosInterval *duration,
   TimestampTz torigin)
 {
   assert(ss); assert(duration); assert(positive_duration(duration));
@@ -633,7 +633,7 @@ tsequenceset_disc_tsample(const TSequenceSet *ss, const Interval *duration,
  * @param[in] interp Interpolation
  */
 TSequenceSet *
-tsequenceset_cont_tsample(const TSequenceSet *ss, const Interval *duration,
+tsequenceset_cont_tsample(const TSequenceSet *ss, const MeosInterval *duration,
   TimestampTz torigin, interpType interp)
 {
   assert(ss); assert(duration); assert(positive_duration(duration));
@@ -659,7 +659,7 @@ tsequenceset_cont_tsample(const TSequenceSet *ss, const Interval *duration,
  * @param[in] interp Interpolation
  */
 Temporal *
-tsequenceset_tsample(const TSequenceSet *ss, const Interval *duration,
+tsequenceset_tsample(const TSequenceSet *ss, const MeosInterval *duration,
   TimestampTz torigin, interpType interp)
 {
   return (interp == DISCRETE) ?
@@ -677,7 +677,7 @@ tsequenceset_tsample(const TSequenceSet *ss, const Interval *duration,
  * @csqlfn #Temporal_tsample()
  */
 Temporal *
-temporal_tsample(const Temporal *temp, const Interval *duration,
+temporal_tsample(const Temporal *temp, const MeosInterval *duration,
   TimestampTz torigin, interpType interp)
 {
   /* Ensure the validity of the arguments */
@@ -1322,7 +1322,7 @@ temporal_simplify_min_dist(const Temporal *temp, double dist)
  * @param[in] mint Minimum time interval
  */
 TSequence *
-tsequence_simplify_min_tdelta(const TSequence *seq, const Interval *mint)
+tsequence_simplify_min_tdelta(const TSequence *seq, const MeosInterval *mint)
 {
   const TInstant *inst1 = TSEQUENCE_INST_N(seq, 0);
   /* Add first instant to the output sequence */
@@ -1334,7 +1334,7 @@ tsequence_simplify_min_tdelta(const TSequence *seq, const Interval *mint)
   for (int i = 1; i < seq->count; i++)
   {
     const TInstant *inst2 = TSEQUENCE_INST_N(seq, i);
-    Interval *duration = minus_timestamptz_timestamptz(inst2->t, inst1->t);
+    MeosInterval *duration = minus_timestamptz_timestamptz(inst2->t, inst1->t);
     if (pg_interval_cmp(duration, mint) > 0)
     {
       /* Add instant to output sequence */
@@ -1361,7 +1361,7 @@ tsequence_simplify_min_tdelta(const TSequence *seq, const Interval *mint)
  * @param[in] mint Minimum time interval
  */
 TSequenceSet *
-tsequenceset_simplify_min_tdelta(const TSequenceSet *ss, const Interval *mint)
+tsequenceset_simplify_min_tdelta(const TSequenceSet *ss, const MeosInterval *mint)
 {
   TSequence **sequences = palloc(sizeof(TSequence *) * ss->count);
   for (int i = 0; i < ss->count; i++)
@@ -1384,7 +1384,7 @@ tsequenceset_simplify_min_tdelta(const TSequenceSet *ss, const Interval *mint)
  * @csqlfn #Temporal_simplify_min_tdelta()
  */
 Temporal *
-temporal_simplify_min_tdelta(const Temporal *temp, const Interval *mint)
+temporal_simplify_min_tdelta(const Temporal *temp, const MeosInterval *mint)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(temp, NULL); VALIDATE_NOT_NULL(mint, NULL);

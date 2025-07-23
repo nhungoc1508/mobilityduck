@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * timestamp.h
- *    Timestamp and Interval typedefs and related macros.
+ *    Timestamp and MeosInterval typedefs and related macros.
  *
  * Note: this file must be includable in both frontend and backend contexts.
  *
@@ -18,7 +18,7 @@
 /*
  * Timestamp represents absolute time.
  *
- * Interval represents delta time. Keep track of months (and years), days,
+ * MeosInterval represents delta time. Keep track of months (and years), days,
  * and hours/minutes/seconds separately since the elapsed time spanned is
  * unknown until instantiated relative to an absolute time.
  *
@@ -35,7 +35,7 @@
  * if the value you need to store could be many seconds.
  */
 
-typedef int64 Timestamp;
+typedef int64 MeosTimestamp;
 typedef int32 fsec_t;      /* fractional seconds (in microseconds) */
 
 typedef int64 TimestampTz;
@@ -47,7 +47,7 @@ typedef struct
                  * years */
   int32    day;      /* days, after time for alignment */
   int32    month;      /* months and years, after time for alignment */
-} Interval;
+} MeosInterval;
 
 /* Limits on the "precision" option (typmod) for these data types */
 #define MAX_TIMESTAMP_PRECISION 6

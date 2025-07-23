@@ -1153,13 +1153,13 @@ tbox_shift_scale_float(const TBox *box, double shift, double width,
  * @brief Return a temporal box with the value span shifted and/or scaled by
  * the values
  * @param[in] box Temporal box
- * @param[in] shift Interval to shift the value span, may be NULL
+ * @param[in] shift MeosInterval to shift the value span, may be NULL
  * @param[in] duration Duration of the result, may be NULL
  * @csqlfn #Tbox_shift_time(), #Tbox_scale_time(), #Tbox_shift_scale_time()
  */
 TBox *
-tbox_shift_scale_time(const TBox *box, const Interval *shift,
-  const Interval *duration)
+tbox_shift_scale_time(const TBox *box, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(box, NULL);
@@ -1293,11 +1293,11 @@ tbox_expand_value(const TBox *box, Datum value, meosType basetype)
  * @brief Return a temporal box with the time span expanded/decreased by an
  * interval
  * @param[in] box Temporal box
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tbox_expand_time()
  */
 TBox *
-tbox_expand_time(const TBox *box, const Interval *interv)
+tbox_expand_time(const TBox *box, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(box, NULL); VALIDATE_NOT_NULL(interv, NULL);

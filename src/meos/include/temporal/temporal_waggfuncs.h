@@ -43,14 +43,14 @@
 /*****************************************************************************/
 
 extern TSequence **temporal_transform_wcount(const Temporal *temp,
-  const Interval *interval, int *count);
+  const MeosInterval *interval, int *count);
 extern TSequence **tnumber_transform_wavg(const Temporal *temp,
-  const Interval *interval, int *count);
+  const MeosInterval *interval, int *count);
 extern SkipList *temporal_wagg_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interval, datum_func2 func, bool min, bool crossings);
+  const MeosInterval *interval, datum_func2 func, bool min, bool crossings);
 extern SkipList *temporal_wagg_transform_transfn(SkipList *state,
-  const Temporal *temp, const Interval *interval, datum_func2 func,
-  TSequence ** (*transform)(const Temporal *, const Interval *, int *));
+  const Temporal *temp, const MeosInterval *interval, datum_func2 func,
+  TSequence ** (*transform)(const Temporal *, const MeosInterval *, int *));
 
 /*****************************************************************************/
 

@@ -110,12 +110,12 @@ floatspan_bins(const Span *s, double size, double origin, int *count)
  * @ingroup meos_setspan_bin
  * @brief Return the bins of a date span
  * @param[in] s Input span to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] origin Origin of the bins
  * @param[out] count Number of elements in the output array
  */
 Span *
-datespan_bins(const Span *s, const Interval *duration, DateADT origin,
+datespan_bins(const Span *s, const MeosInterval *duration, DateADT origin,
   int *count)
 {
   /* Ensure the validity of the arguments */
@@ -131,12 +131,12 @@ datespan_bins(const Span *s, const Interval *duration, DateADT origin,
  * @ingroup meos_setspan_bin
  * @brief Return the bins of a timestamptz span
  * @param[in] s Input span to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] origin Origin of the bins
  * @param[out] count Number of elements in the output array
  */
 Span *
-tstzspan_bins(const Span *s, const Interval *duration, TimestampTz origin,
+tstzspan_bins(const Span *s, const MeosInterval *duration, TimestampTz origin,
   int *count)
 {
   /* Ensure the validity of the arguments */
@@ -208,12 +208,12 @@ floatspanset_bins(const SpanSet *ss, double vsize, double vorigin,
  * @ingroup meos_setspan_bin
  * @brief Return the bins of a date span set
  * @param[in] ss Input span to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] torigin Origin of the bins
  * @param[out] count Number of elements in the output array
  */
 Span *
-datespanset_bins(const SpanSet *ss, const Interval *duration,
+datespanset_bins(const SpanSet *ss, const MeosInterval *duration,
   DateADT torigin, int *count)
 {
   /* Ensure the validity of the arguments */
@@ -226,12 +226,12 @@ datespanset_bins(const SpanSet *ss, const Interval *duration,
  * @ingroup meos_setspan_bin
  * @brief Return the bins of a timestamptz span set
  * @param[in] ss Input span to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] torigin Origin of the bins
  * @param[out] count Number of elements in the output array
  */
 Span *
-tstzspanset_bins(const SpanSet *ss, const Interval *duration,
+tstzspanset_bins(const SpanSet *ss, const MeosInterval *duration,
   TimestampTz torigin, int *count)
 {
   /* Ensure the validity of the arguments */

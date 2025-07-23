@@ -93,18 +93,18 @@ extern void stbox_tile_state_set(double x, double y, double z, TimestampTz t,
   bool hast, int32 srid, STBox *result);
 extern STboxGridState *stbox_tile_state_make(const Temporal *temp,
   const STBox *box, double xsize, double ysize, double zsize, 
-  const Interval *duration, POINT3DZ sorigin, TimestampTz torigin, 
+  const MeosInterval *duration, POINT3DZ sorigin, TimestampTz torigin, 
   bool border_inc);
 extern void stbox_tile_state_next(STboxGridState *state);
 extern bool stbox_tile_state_get(STboxGridState *state, STBox *box);
 
 extern STboxGridState *tgeo_space_time_tile_init(const Temporal *temp,
-  double xsize, double ysize, double zsize, const Interval *duration,
+  double xsize, double ysize, double zsize, const MeosInterval *duration,
   const GSERIALIZED *sorigin, TimestampTz torigin, bool bitmatrix, 
   bool border_inc, int *ntiles);
 
 extern STBox *stbox_space_time_tile(const GSERIALIZED *point, TimestampTz t,
-  double xsize, double ysize, double zsize, const Interval *duration,
+  double xsize, double ysize, double zsize, const MeosInterval *duration,
   const GSERIALIZED *sorigin, TimestampTz torigin, bool hasx, bool hast);
 
 /*****************************************************************************/

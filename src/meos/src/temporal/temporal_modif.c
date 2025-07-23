@@ -1739,7 +1739,7 @@ temporal_delete_tstzspanset(const Temporal *temp, const SpanSet *ss,
  */
 Temporal *
 tsequence_append_tinstant(TSequence *seq, const TInstant *inst, double maxdist,
-  const Interval *maxt, bool expand)
+  const MeosInterval *maxt, bool expand)
 {
   assert(seq); assert(inst); assert(seq->temptype == inst->temptype);
   interpType interp = MEOS_FLAGS_GET_INTERP(seq->flags);
@@ -1790,7 +1790,7 @@ tsequence_append_tinstant(TSequence *seq, const TInstant *inst, double maxdist,
     /* If there is not already a split by distance */
     if (maxt && ! split)
     {
-      Interval *duration = minus_timestamptz_timestamptz(inst->t, last->t);
+      MeosInterval *duration = minus_timestamptz_timestamptz(inst->t, last->t);
       if (pg_interval_cmp(duration, maxt) > 0)
         split = true;
       pfree(duration);
@@ -1971,7 +1971,7 @@ tsequence_append_tsequence(const TSequence *seq1, const TSequence *seq2,
  */
 TSequenceSet *
 tsequenceset_append_tinstant(TSequenceSet *ss, const TInstant *inst,
-  double maxdist, const Interval *maxt, bool expand)
+  double maxdist, const MeosInterval *maxt, bool expand)
 {
   assert(ss); assert(inst);
   assert(ss->temptype == inst->temptype);
@@ -2199,7 +2199,7 @@ tsequenceset_append_tsequence(TSequenceSet *ss, const TSequence *seq,
  */
 Temporal *
 temporal_append_tinstant(Temporal *temp, const TInstant *inst,
-  interpType interp, double maxdist, const Interval *maxt, bool expand)
+  interpType interp, double maxdist, const MeosInterval *maxt, bool expand)
 {
   /* Ensure the validity of the arguments */
   if (! ensure_valid_temporal_temporal(temp, (Temporal *) inst) ||

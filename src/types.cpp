@@ -5,11 +5,11 @@
 #include "duckdb/common/extension_type_info.hpp"
 
 extern "C" {
-    // #include <postgres.h>
-    // #include <utils/timestamp.h>
-    // #include <meos.h>
-    // #include <meos_rgeo.h>
-    // #include <meos_internal.h>
+    #include <postgres.h>
+    #include <utils/timestamp.h>
+    #include <meos.h>
+    #include <meos_rgeo.h>
+    #include <meos_internal.h>
 }
 
 namespace duckdb {

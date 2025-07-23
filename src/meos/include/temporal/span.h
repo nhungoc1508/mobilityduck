@@ -95,8 +95,8 @@ extern Span *spanarr_normalize(Span *spans, int count, bool sort,
   int *newcount);
 extern void span_bounds_shift_scale_value(Datum shift, Datum width,
   meosType type, bool hasshift, bool haswidth, Datum *lower, Datum *upper);
-extern void span_bounds_shift_scale_time(const Interval *shift,
-  const Interval *duration, TimestampTz *lower, TimestampTz *upper);
+extern void span_bounds_shift_scale_time(const MeosInterval *shift,
+  const MeosInterval *duration, TimestampTz *lower, TimestampTz *upper);
 extern void floatspan_floor_ceil_iter(Span *s, datum_func1 func);
 extern void numspan_delta_scale_iter(Span *s, Datum origin, Datum delta,
   bool hasdelta, double scale);
@@ -104,8 +104,8 @@ extern void tstzspan_delta_scale_iter(Span *s, TimestampTz origin,
   TimestampTz delta, double scale);
 extern void numspan_shift_scale_iter(Span *s, Datum shift, Datum width,
   bool hasshift, bool haswidth, Datum *delta, double *scale);
-extern void tstzspan_shift_scale1(Span *s, const Interval *shift,
-  const Interval *duration, TimestampTz *delta, double *scale);
+extern void tstzspan_shift_scale1(Span *s, const MeosInterval *shift,
+  const MeosInterval *duration, TimestampTz *delta, double *scale);
 
 extern int mi_span_span(const Span *s1, const Span *s2, Span *result);
 extern int mi_span_value(const Span *s, Datum value, Span *result);

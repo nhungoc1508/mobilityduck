@@ -27,7 +27,7 @@
 #define SAMESIGN(a,b) (((a) < 0) == ((b) < 0))
 
 static TimeOffset time2t(const int hour, const int min, const int sec, const fsec_t fsec);
-static Timestamp dt2local(Timestamp dt, int timezone);
+static MeosTimestamp dt2local(MeosTimestamp dt, int timezone);
 
 /* Needed for gettimeofday */
 #include <sys/time.h>
@@ -36,7 +36,7 @@ static Timestamp dt2local(Timestamp dt, int timezone);
  * Convert reserved timestamp data type to string.
  */
 void
-EncodeSpecialTimestamp(Timestamp dt, char *str)
+EncodeSpecialTimestamp(MeosTimestamp dt, char *str)
 {
   if (TIMESTAMP_IS_NOBEGIN(dt))
     strcpy(str, EARLY);
@@ -69,7 +69,7 @@ GetCurrentTimestamp(void)
 }
 
 void
-dt2time(Timestamp jd, int *hour, int *min, int *sec, fsec_t *fsec)
+dt2time(MeosTimestamp jd, int *hour, int *min, int *sec, fsec_t *fsec)
 {
   TimeOffset  time;
 
@@ -95,10 +95,10 @@ dt2time(Timestamp jd, int *hour, int *min, int *sec, fsec_t *fsec)
  * If attimezone is NULL, the global timezone setting will be used.
  */
 int
-timestamp2tm(Timestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const char **tzn, pg_tz *attimezone)
+timestamp2tm(MeosTimestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const char **tzn, pg_tz *attimezone)
 {
-  Timestamp  date;
-  Timestamp  time;
+  MeosTimestamp  date;
+  MeosTimestamp  time;
   pg_time_t  utime;
 
   /* Use session timezone if caller asks for default */
@@ -118,7 +118,7 @@ timestamp2tm(Timestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const char 
   date += POSTGRES_EPOCH_JDATE;
 
   /* Julian day routine does not work for negative Julian days */
-  if (date < 0 || date > (Timestamp) INT_MAX)
+  if (date < 0 || date > (MeosTimestamp) INT_MAX)
     return -1;
 
   j2date((int) date, &tm->tm_year, &tm->tm_mon, &tm->tm_mday);
@@ -148,7 +148,7 @@ timestamp2tm(Timestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const char 
   dt = (dt - *fsec) / USECS_PER_SEC +
     (POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY;
   utime = (pg_time_t) dt;
-  if ((Timestamp) utime == dt)
+  if ((MeosTimestamp) utime == dt)
   {
     struct pg_tm *tx = pg_localtime(&utime, attimezone);
 
@@ -190,7 +190,7 @@ timestamp2tm(Timestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const char 
  * Returns -1 on failure (value out of range).
  */
 int
-tm2timestamp(struct pg_tm *tm, fsec_t fsec, int *tzp, Timestamp *result)
+tm2timestamp(struct pg_tm *tm, fsec_t fsec, int *tzp, MeosTimestamp *result)
 {
   TimeOffset  date;
   TimeOffset  time;
@@ -237,7 +237,7 @@ tm2timestamp(struct pg_tm *tm, fsec_t fsec, int *tzp, Timestamp *result)
  * Convert an interval data type to a tm structure.
  */
 int
-interval2tm(Interval span, struct pg_tm *tm, fsec_t *fsec)
+interval2tm(MeosInterval span, struct pg_tm *tm, fsec_t *fsec)
 {
   TimeOffset  time;
   TimeOffset  tfrac;
@@ -267,7 +267,7 @@ interval2tm(Interval span, struct pg_tm *tm, fsec_t *fsec)
 }
 
 int
-tm2interval(struct pg_tm *tm, fsec_t fsec, Interval *span)
+tm2interval(struct pg_tm *tm, fsec_t fsec, MeosInterval *span)
 {
   double    total_months = (double) tm->tm_year * MONTHS_PER_YEAR + tm->tm_mon;
 
@@ -288,8 +288,8 @@ time2t(const int hour, const int min, const int sec, const fsec_t fsec)
   return (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + fsec;
 }
 
-static Timestamp
-dt2local(Timestamp dt, int tz)
+static MeosTimestamp
+dt2local(MeosTimestamp dt, int tz)
 {
   dt -= (tz * USECS_PER_SEC);
   return dt;
@@ -325,10 +325,10 @@ GetEpochTime(struct pg_tm *tm)
   tm->tm_mon++;
 }
 
-Timestamp
+MeosTimestamp
 SetEpochTimestamp(void)
 {
-  Timestamp  dt;
+  MeosTimestamp  dt;
   struct pg_tm tt,
          *tm = &tt;
 
@@ -346,7 +346,7 @@ SetEpochTimestamp(void)
  *    timestamp_relop - is timestamp1 relop timestamp2
  */
 int
-timestamp_cmp_internal(Timestamp dt1, Timestamp dt2)
+timestamp_cmp_internal(MeosTimestamp dt1, MeosTimestamp dt2)
 {
   return (dt1 < dt2) ? -1 : ((dt1 > dt2) ? 1 : 0);
 }

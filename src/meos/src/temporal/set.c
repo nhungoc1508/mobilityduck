@@ -969,8 +969,8 @@ numset_shift_scale(const Set *s, Datum shift, Datum width, bool hasshift,
  * @csqlfn #Tstzset_shift(), #Tstzset_scale(), #Tstzset_shift_scale()
  */
 Set *
-tstzset_shift_scale(const Set *s, const Interval *shift,
-  const Interval *duration)
+tstzset_shift_scale(const Set *s, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_TSTZSET(s, NULL);

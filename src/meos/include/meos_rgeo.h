@@ -118,7 +118,7 @@ extern GSERIALIZED *trgeo_traversed_area(const Temporal *temp);
  * Transformation functions
  *****************************************************************************/
 
-extern Temporal *trgeo_append_tinstant(Temporal *temp, const TInstant *inst, interpType interp, double maxdist, const Interval *maxt, bool expand);
+extern Temporal *trgeo_append_tinstant(Temporal *temp, const TInstant *inst, interpType interp, double maxdist, const MeosInterval *maxt, bool expand);
 extern Temporal *trgeo_append_tsequence(Temporal *temp, const TSequence *seq, bool expand);
 extern Temporal *trgeo_delete_timestamptz(const Temporal *temp, TimestampTz t, bool connect);
 extern Temporal *trgeo_delete_tstzset(const Temporal *temp, const Set *s, bool connect);

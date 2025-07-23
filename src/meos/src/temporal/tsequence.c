@@ -1645,15 +1645,15 @@ tnumberseq_shift_scale_value(const TSequence *seq, Datum shift, Datum width,
  * @ingroup meos_internal_temporal_transf
  * @brief Return a temporal sequence shifted and/or scaled by two intervals
  * @param[in] seq Temporal sequence
- * @param[in] shift Interval for shift
- * @param[in] duration Interval for scale
+ * @param[in] shift MeosInterval for shift
+ * @param[in] duration MeosInterval for scale
  * @pre The duration is greater than 0 if it is not NULL
  * @csqlfn #Temporal_shift_time(), #Temporal_scale_time(),
  * #Temporal_shift_scale_time()
  */
 TSequence *
-tsequence_shift_scale_time(const TSequence *seq, const Interval *shift,
-  const Interval *duration)
+tsequence_shift_scale_time(const TSequence *seq, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   assert(seq); assert(shift || duration);
 
@@ -1884,7 +1884,7 @@ tsequence_max_val(const TSequence *seq)
  * @param[in] seq Temporal sequence
  * @csqlfn #Temporal_duration()
  */
-Interval *
+MeosInterval *
 tsequence_duration(const TSequence *seq)
 {
   assert(seq);

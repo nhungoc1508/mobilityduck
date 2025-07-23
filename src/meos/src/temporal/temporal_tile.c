@@ -207,7 +207,7 @@ float_get_bin(double value, double size, double origin)
  * @brief Return the interval in the same representation as Postgres timestamps
  */
 inline int64
-interval_units(const Interval *interval)
+interval_units(const MeosInterval *interval)
 {
   return interval->time + (interval->day * USECS_PER_DAY);
 }
@@ -229,12 +229,12 @@ date_bin_start(DateADT d, int32 ndays, DateADT origin)
  * @ingroup meos_setspan_bin
  * @brief Return the initial date of the bin that contains a date
  * @param[in] d Input date
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] origin Origin of the bins
  * @return On error return @p DATEVAL_NOEND
  */
 DateADT
-date_get_bin(DateADT d, const Interval *duration, DateADT origin)
+date_get_bin(DateADT d, const MeosInterval *duration, DateADT origin)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(duration, DATEVAL_NOEND);
@@ -306,11 +306,11 @@ timestamptz_bin_start(TimestampTz t, int64 size, TimestampTz origin)
  * @ingroup meos_setspan_bin
  * @brief Return the initial timestamp of the bin that contains a timestamptz
  * @param[in] t Input timestamp
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] origin Origin of the bins
  */
 TimestampTz
-timestamptz_get_bin(TimestampTz t, const Interval *duration,
+timestamptz_get_bin(TimestampTz t, const MeosInterval *duration,
   TimestampTz origin)
 {
   /* Ensure the validity of the arguments */
@@ -429,7 +429,7 @@ Span *
 span_bins(const Span *s, Datum size, Datum origin, int *count)
 {
   assert(numspan_type(s->spantype) || timespan_type(s->spantype));
-  Interval *duration = NULL;
+  MeosInterval *duration = NULL;
   if (timespan_type(s->spantype))
     duration = DatumGetIntervalP(size);
   /* Ensure the validity of the arguments */
@@ -478,7 +478,7 @@ Span *
 spanset_bins(const SpanSet *ss, Datum size, Datum origin, int *count)
 {
   assert(numspan_type(ss->spantype) || timespan_type(ss->spantype));
-  Interval *duration = NULL;
+  MeosInterval *duration = NULL;
   if (timespan_type(ss->spantype))
     duration = DatumGetIntervalP(size);
   /* Ensure the validity of the arguments */
@@ -532,12 +532,12 @@ spanset_bins(const SpanSet *ss, Datum size, Datum origin, int *count)
  * @ingroup meos_temporal_analytics_tile
  * @brief Return the time bins of a temporal value
  * @param[in] temp Input span to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] torigin Origin of the bins
  * @param[out] count Number of elements in the output array
  */
 Span *
-temporal_time_bins(const Temporal *temp, const Interval *duration,
+temporal_time_bins(const Temporal *temp, const MeosInterval *duration,
   TimestampTz torigin, int *count)
 {
   /* Ensure the validity of the arguments */
@@ -617,14 +617,14 @@ tnumber_value_bins(const Temporal *temp, Datum vsize, Datum vorigin,
  * @param[in] temp Temporal number, may be @p NULL
  * @param[in] box Bounds of the multidimensional grid
  * @param[in] vsize Value size of the tiles, may be 0 for time tiles
- * @param[in] duration Interval defining the time size of the tile, may be
+ * @param[in] duration MeosInterval defining the time size of the tile, may be
  * @p NULL for value tiles
  * @param[in] vorigin Value origin of the tiles
  * @param[in] torigin Time origin of the tiles
  */
 TboxGridState *
 tbox_tile_state_make(const Temporal *temp, const TBox *box, Datum vsize,
-  const Interval *duration, Datum vorigin, TimestampTz torigin)
+  const MeosInterval *duration, Datum vorigin, TimestampTz torigin)
 {
   assert(box); assert(duration || datum_gt(vsize, 0, box->span.basetype));
 
@@ -805,7 +805,7 @@ tbox_tile_state_next(TboxGridState *state)
  * @param[in] value Value
  * @param[in] t Timestamp
  * @param[in] vsize Value size of the tiles
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] vorigin Value origin of the tiles
  * @param[in] torigin Time origin of the tiles
  * @param[in] basetype Type of the value
@@ -814,7 +814,7 @@ tbox_tile_state_next(TboxGridState *state)
  */
 TBox *
 tbox_get_value_time_tile(Datum value, TimestampTz t, Datum vsize,
-  const Interval *duration, Datum vorigin, TimestampTz torigin,
+  const MeosInterval *duration, Datum vorigin, TimestampTz torigin,
   meosType basetype, meosType spantype)
 {
   /* Ensure the validity of the arguments */
@@ -860,7 +860,7 @@ tbox_get_value_time_tile(Datum value, TimestampTz t, Datum vsize,
  */
 TboxGridState *
 tnumber_value_time_tile_init(const Temporal *temp, Datum vsize,
-  const Interval *duration, Datum vorigin, TimestampTz torigin, int *ntiles)
+  const MeosInterval *duration, Datum vorigin, TimestampTz torigin, int *ntiles)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_TNUMBER(temp, NULL); VALIDATE_NOT_NULL(ntiles, NULL);
@@ -893,7 +893,7 @@ tnumber_value_time_tile_init(const Temporal *temp, Datum vsize,
  */
 TBox *
 tnumber_value_time_boxes(const Temporal *temp, Datum vsize,
-  const Interval *duration, Datum vorigin, TimestampTz torigin, int *count)
+  const MeosInterval *duration, Datum vorigin, TimestampTz torigin, int *count)
 {
   VALIDATE_TNUMBER(temp, NULL); 
 

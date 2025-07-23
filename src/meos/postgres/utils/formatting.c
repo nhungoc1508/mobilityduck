@@ -101,7 +101,7 @@ extern char *text2cstring(const text *textptr);
 extern text *cstring2text(const char *cstring);
 extern char *pnstrdup(const char *in, Size size);
 
-extern void MEOSAdjustTimestampForTypmod(Timestamp *time, int32 typmod);
+extern void MEOSAdjustTimestampForTypmod(MeosTimestamp *time, int32 typmod);
 
 
 /* ----------
@@ -3183,7 +3183,7 @@ datetime_to_char_body(TmToChar *tmtc, text *fmt, bool is_interval, Oid collid)
  * @brief Output a timestamp as text.
  */
 text *
-pg_timestamp_to_char(Timestamp dt, text *fmt)
+pg_timestamp_to_char(MeosTimestamp dt, text *fmt)
 {
   text *res;
   TmToChar tmtc;
@@ -3255,7 +3255,7 @@ pg_timestamptz_to_char(TimestampTz dt, text *fmt)
  * @brief Output an interval as text.
  */
 text *
-pg_interval_to_char(Interval *it, text *fmt)
+pg_interval_to_char(MeosInterval *it, text *fmt)
 {
   text *res;
   TmToChar tmtc;

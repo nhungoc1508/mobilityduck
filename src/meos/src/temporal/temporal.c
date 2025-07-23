@@ -553,7 +553,7 @@ ensure_positive_datum(Datum d, meosType basetype)
  * @note Binning by months is currently not supported
  */
 bool
-ensure_not_month_duration(const Interval *duration)
+ensure_not_month_duration(const MeosInterval *duration)
 {
   if (! duration->month)
     return true;
@@ -569,7 +569,7 @@ ensure_not_month_duration(const Interval *duration)
  * @note Binning by months is currently not supported
  */
 bool
-ensure_valid_day_duration(const Interval *duration)
+ensure_valid_day_duration(const MeosInterval *duration)
 {
   if (! ensure_not_month_duration(duration))
     return false;
@@ -608,12 +608,12 @@ ensure_valid_day_duration(const Interval *duration)
  * @brief Return true if an interval is a positive duration
  */
 bool
-positive_duration(const Interval *duration)
+positive_duration(const MeosInterval *duration)
 {
   if (duration->month != 0)
     return false;
-  Interval intervalzero;
-  memset(&intervalzero, 0, sizeof(Interval));
+  MeosInterval intervalzero;
+  memset(&intervalzero, 0, sizeof(MeosInterval));
   if (pg_interval_cmp(duration, &intervalzero) <= 0)
     return false;
   return true;
@@ -623,7 +623,7 @@ positive_duration(const Interval *duration)
  * @brief Ensure that an interval is a positive duration
  */
 bool
-ensure_positive_duration(const Interval *duration)
+ensure_positive_duration(const MeosInterval *duration)
 {
   if (positive_duration(duration))
     return true;
@@ -1703,15 +1703,15 @@ tnumber_shift_scale_value(const Temporal *temp, Datum shift, Datum width,
  * @ingroup meos_temporal_transf
  * @brief Return a temporal value shifted and/or scaled by two intervals
  * @param[in] temp Temporal value
- * @param[in] shift Interval for shift
- * @param[in] duration Interval for scale
+ * @param[in] shift MeosInterval for shift
+ * @param[in] duration MeosInterval for scale
  * @pre The duration is greater than 0 if is not NULL
  * @csqlfn #Temporal_shift_time(), #Temporal_scale_time(),
  *   #Temporal_shift_scale_time()
  */
 Temporal *
-temporal_shift_scale_time(const Temporal *temp, const Interval *shift,
-  const Interval *duration)
+temporal_shift_scale_time(const Temporal *temp, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(temp, NULL);
@@ -1740,11 +1740,11 @@ temporal_shift_scale_time(const Temporal *temp, const Interval *shift,
  * @ingroup meos_temporal_transf
  * @brief Return a temporal value shifted by an interval
  * @param[in] temp Temporal value
- * @param[in] shift Interval for shifting the temporal value
+ * @param[in] shift MeosInterval for shifting the temporal value
  * @csqlfn #Temporal_shift_time()
  */
 Temporal *
-temporal_shift_time(const Temporal *temp, const Interval *shift)
+temporal_shift_time(const Temporal *temp, const MeosInterval *shift)
 {
   return temporal_shift_scale_time(temp, shift, NULL);
 }
@@ -1757,7 +1757,7 @@ temporal_shift_time(const Temporal *temp, const Interval *shift)
  * @csqlfn #Temporal_scale_time()
  */
 Temporal *
-temporal_scale_time(const Temporal *temp, const Interval *duration)
+temporal_scale_time(const Temporal *temp, const MeosInterval *duration)
 {
   return temporal_shift_scale_time(temp, NULL, duration);
 }
@@ -2166,7 +2166,7 @@ temporal_max_instant(const Temporal *temp)
  * @return On error return @p NULL
  * @csqlfn #Temporal_duration()
  */
-Interval *
+MeosInterval *
 temporal_duration(const Temporal *temp, bool boundspan)
 {
   /* Ensure the validity of the arguments */
@@ -2176,11 +2176,11 @@ temporal_duration(const Temporal *temp, bool boundspan)
   switch (temp->subtype)
   {
     case TINSTANT:
-      return palloc0(sizeof(Interval));
+      return palloc0(sizeof(MeosInterval));
     case TSEQUENCE:
     {
       if (MEOS_FLAGS_DISCRETE_INTERP(temp->flags) && ! boundspan)
-        return palloc0(sizeof(Interval));
+        return palloc0(sizeof(MeosInterval));
       else
         return tsequence_duration((TSequence *) temp);
     }
@@ -3011,7 +3011,7 @@ tsequenceset_stops(const TSequenceSet *ss, double maxdist, int64 mintunits)
  */
 TSequenceSet *
 temporal_stops(const Temporal *temp, double maxdist,
-  const Interval *minduration)
+  const MeosInterval *minduration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(temp, NULL); VALIDATE_NOT_NULL(minduration, NULL);
@@ -3019,8 +3019,8 @@ temporal_stops(const Temporal *temp, double maxdist,
     return NULL;
 
   /* We cannot call #ensure_positive_duration since the duration may be zero */
-  Interval intervalzero;
-  memset(&intervalzero, 0, sizeof(Interval));
+  MeosInterval intervalzero;
+  memset(&intervalzero, 0, sizeof(MeosInterval));
   int cmp = pg_interval_cmp(minduration, &intervalzero);
   if (cmp < 0)
   {

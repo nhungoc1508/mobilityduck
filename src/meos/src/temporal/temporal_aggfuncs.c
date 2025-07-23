@@ -1304,7 +1304,7 @@ tnumber_extent_transfn(TBox *state, const Temporal *temp)
  */
 Temporal *
 temporal_app_tinst_transfn(Temporal *state, const TInstant *inst,
-  interpType interp, double maxdist, const Interval *maxt)
+  interpType interp, double maxdist, const MeosInterval *maxt)
 {
   /* Null state: create a new temporal sequence with the instant */
   if (! state)

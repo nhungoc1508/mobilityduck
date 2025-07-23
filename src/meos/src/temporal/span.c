@@ -763,12 +763,12 @@ numspan_width(const Span *s)
  * @param[in] s Span
  * @csqlfn #Datespan_duration()
  */
-Interval *
+MeosInterval *
 datespan_duration(const Span *s)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_DATESPAN(s, NULL);
-  Interval *result = palloc0(sizeof(Interval));
+  MeosInterval *result = palloc0(sizeof(MeosInterval));
   result->day = DateADTGetDatum(s->upper) - DateADTGetDatum(s->lower);
   return result;
 }
@@ -779,7 +779,7 @@ datespan_duration(const Span *s)
  * @param[in] s Span
  * @csqlfn #Tstzspan_duration()
  */
-Interval *
+MeosInterval *
 tstzspan_duration(const Span *s)
 {
   /* Ensure the validity of the arguments */
@@ -1033,28 +1033,28 @@ floatspan_expand(const Span *s, double d)
  * @brief Return a timestamptz span with its bounds expanded/decreased by an
  * interval
  * @param[in] s Span
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tstzspan_expand()
  * @note This function can be seen as a 1-dimensional version of the PostGIS
  * function `ST_Buffer`
  */
 Span *
-tstzspan_expand(const Span *s, const Interval *interv)
+tstzspan_expand(const Span *s, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(s, NULL); VALIDATE_NOT_NULL(interv, NULL);
   /* When the interval is negative, return NULL if the span resulting by
    * shifting the bounds with the interval is empty */ 
-  Interval intervalzero;
-  memset(&intervalzero, 0, sizeof(Interval));
+  MeosInterval intervalzero;
+  memset(&intervalzero, 0, sizeof(MeosInterval));
   bool negative = pg_interval_cmp(interv, &intervalzero) <= 0;
-  Interval interv_neg;
+  MeosInterval interv_neg;
   if (negative)
   {
-    Interval *duration = tstzspan_duration(s);
+    MeosInterval *duration = tstzspan_duration(s);
     /* Negate the interval */
     interval_negate(interv, &interv_neg);
-    Interval *interv_neg2 = mul_interval_double(&interv_neg, 2.0);
+    MeosInterval *interv_neg2 = mul_interval_double(&interv_neg, 2.0);
     int cmp = pg_interval_cmp(duration, interv_neg2);
     pfree(duration); pfree(interv_neg2);
     if (cmp < 0 || (cmp == 0 && (! s->lower_inc || ! s->upper_inc)))
@@ -1111,12 +1111,12 @@ span_bounds_shift_scale_value(Datum shift, Datum width, meosType basetype,
 
 /**
  * @brief Shift and/or scale period bounds by two intervals
- * @param[in] shift Interval to shift the bounds, may be NULL
- * @param[in] duration Interval for the duration of the result, may be NULL
+ * @param[in] shift MeosInterval to shift the bounds, may be NULL
+ * @param[in] duration MeosInterval for the duration of the result, may be NULL
  * @param[in,out] lower,upper Bounds of the period
  */
 void
-span_bounds_shift_scale_time(const Interval *shift, const Interval *duration,
+span_bounds_shift_scale_time(const MeosInterval *shift, const MeosInterval *duration,
   TimestampTz *lower, TimestampTz *upper)
 {
   assert(shift || duration); assert(lower); assert(upper);
@@ -1267,7 +1267,7 @@ numspan_shift_scale_iter(Span *s, Datum shift, Datum width, bool hasshift,
  * @note Returns the delta and scale of the transformation
  */
 void
-tstzspan_shift_scale1(Span *s, const Interval *shift, const Interval *duration,
+tstzspan_shift_scale1(Span *s, const MeosInterval *shift, const MeosInterval *duration,
   TimestampTz *delta, double *scale)
 {
   assert(s); assert(delta); assert(scale);
@@ -1320,12 +1320,12 @@ numspan_shift_scale(const Span *s, Datum shift, Datum width, bool hasshift,
  * @ingroup meos_base_types
  * @brief Return a timestamptz shifted by an interval
  * @param[in] t Timestamp
- * @param[in] interv Interval to shift the instant
+ * @param[in] interv MeosInterval to shift the instant
  * @return On error return `DT_NOEND`
  * @csqlfn #Timestamptz_shift()
  */
 TimestampTz
-timestamptz_shift(TimestampTz t, const Interval *interv)
+timestamptz_shift(TimestampTz t, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv, DT_NOEND);
@@ -1336,13 +1336,13 @@ timestamptz_shift(TimestampTz t, const Interval *interv)
  * @ingroup meos_setspan_transf
  * @brief Return a timestamptz span shifted and/or scaled by two intervals
  * @param[in] s Span
- * @param[in] shift Interval to shift the bounds, may be NULL
+ * @param[in] shift MeosInterval to shift the bounds, may be NULL
  * @param[in] duration Duation of the result, may be NULL
  * @csqlfn #Tstzspan_shift(), #Tstzspan_scale(), #Tstzspan_shift_scale()
  */
 Span *
-tstzspan_shift_scale(const Span *s, const Interval *shift,
-  const Interval *duration)
+tstzspan_shift_scale(const Span *s, const MeosInterval *shift,
+  const MeosInterval *duration)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_TSTZSPAN(s, NULL);

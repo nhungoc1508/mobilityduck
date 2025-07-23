@@ -484,11 +484,11 @@ tnumberinst_shift_value(const TInstant *inst, Datum shift)
  * @ingroup meos_internal_temporal_transf
  * @brief Return a temporal instant shifted by an interval
  * @param[in] inst Temporal instant
- * @param[in] interv Interval to shift the instant
+ * @param[in] interv MeosInterval to shift the instant
  * @csqlfn #Temporal_shift_time()
  */
 TInstant *
-tinstant_shift_time(const TInstant *inst, const Interval *interv)
+tinstant_shift_time(const TInstant *inst, const MeosInterval *interv)
 {
   assert(inst); assert(interv);
   TInstant *result = tinstant_copy(inst);

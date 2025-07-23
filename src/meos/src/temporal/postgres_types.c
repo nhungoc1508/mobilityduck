@@ -894,14 +894,14 @@ minus_date_int(DateADT d, int32 days)
  * @param[in] d1,d2 Dates
  * @note PostgreSQL function: @p date_mi(PG_FUNCTION_ARGS)
  */
-Interval *
+MeosInterval *
 minus_date_date(DateADT d1, DateADT d2)
 {
   if (DATE_NOT_FINITE(d1) || DATE_NOT_FINITE(d2))
     meos_error(ERROR, MEOS_ERR_VALUE_OUT_OF_RANGE,
       "cannot subtract infinite dates");
 
-  Interval *result = palloc0(sizeof(Interval));
+  MeosInterval *result = palloc0(sizeof(MeosInterval));
   result->day = (int32) (d1 - d2);
   return result;
 }
@@ -921,10 +921,10 @@ minus_date_date(DateADT d1, DateADT d2)
  * Note: *overflow = -1 is actually not possible currently, since both
  * datatypes have the same lower bound, Julian day zero.
  */
-Timestamp
+MeosTimestamp
 date2timestamp_opt_overflow(DateADT dateVal, int *overflow)
 {
-  Timestamp  result;
+  MeosTimestamp  result;
 
   if (overflow)
     *overflow = 0;
@@ -977,10 +977,10 @@ date2timestamp(DateADT dateVal)
  * @param[in] d Date
  * @note PostgreSQL function: @p date_timestamp(PG_FUNCTION_ARGS)
  */
-Timestamp
+MeosTimestamp
 date_to_timestamp(DateADT d)
 {
-  Timestamp result;
+  MeosTimestamp result;
   result = date2timestamp(d);
   return result;
 }
@@ -992,7 +992,7 @@ date_to_timestamp(DateADT d)
  * @note PostgreSQL function: @p timestamp_date(PG_FUNCTION_ARGS)
  */
 DateADT
-timestamp_to_date(Timestamp t)
+timestamp_to_date(MeosTimestamp t)
 {
   DateADT result;
   struct pg_tm tt, *tm = &tt;
@@ -1161,7 +1161,7 @@ pg_timestamptz_in(const char *str, int32 prec)
  * Works for either timestamp or timestamptz.
  */
 bool
-MEOSAdjustTimestampForTypmodError(Timestamp *time, int32 typmod, bool *error)
+MEOSAdjustTimestampForTypmodError(MeosTimestamp *time, int32 typmod, bool *error)
 {
   static const int64 TimestampScales[MAX_TIMESTAMP_PRECISION + 1] = {
     INT64CONST(1000000),
@@ -1216,7 +1216,7 @@ MEOSAdjustTimestampForTypmodError(Timestamp *time, int32 typmod, bool *error)
 }
 
 void
-MEOSAdjustTimestampForTypmod(Timestamp *time, int32 typmod)
+MEOSAdjustTimestampForTypmod(MeosTimestamp *time, int32 typmod)
 {
   (void) MEOSAdjustTimestampForTypmodError(time, typmod, NULL);
   return;
@@ -1321,15 +1321,15 @@ timestamp_in_common(const char *str, int32 typmod, bool withtz)
  * @return On error return @p DT_NOEND
  * @note PostgreSQL function: @p timestamp_in(PG_FUNCTION_ARGS)
  */
-inline Timestamp
+inline MeosTimestamp
 timestamp_in(const char *str, int32 prec)
 {
-  return (Timestamp) timestamp_in_common(str, prec, false);
+  return (MeosTimestamp) timestamp_in_common(str, prec, false);
 }
-inline Timestamp
+inline MeosTimestamp
 pg_timestamp_in(const char *str, int32 prec)
 {
-  return (Timestamp) timestamp_in_common(str, prec, false);
+  return (MeosTimestamp) timestamp_in_common(str, prec, false);
 }
 
 /**
@@ -1404,12 +1404,12 @@ timestamp_out_common(TimestampTz t, bool withtz)
  * @note PostgreSQL function: @p timestamp_out(PG_FUNCTION_ARGS)
  */
 inline char *
-timestamp_out(Timestamp t)
+timestamp_out(MeosTimestamp t)
 {
   return timestamp_out_common((TimestampTz) t, false);
 }
 inline char *
-pg_timestamp_out(Timestamp t)
+pg_timestamp_out(MeosTimestamp t)
 {
   return timestamp_out_common((TimestampTz) t, false);
 }
@@ -1470,9 +1470,9 @@ timestamptz_to_date(TimestampTz t)
  *  range and sub-second precision.
  */
 static void
-AdjustIntervalForTypmod(Interval *interval, int32 typmod)
+AdjustIntervalForTypmod(MeosInterval *interval, int32 typmod)
 {
-  static const int64 IntervalScales[MAX_INTERVAL_PRECISION + 1] = {
+  static const int64 MeosIntervalScales[MAX_INTERVAL_PRECISION + 1] = {
     INT64CONST(1000000),
     INT64CONST(100000),
     INT64CONST(10000),
@@ -1482,7 +1482,7 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
     INT64CONST(1)
   };
 
-  static const int64 IntervalOffsets[MAX_INTERVAL_PRECISION + 1] = {
+  static const int64 MeosIntervalOffsets[MAX_INTERVAL_PRECISION + 1] = {
     INT64CONST(500000),
     INT64CONST(50000),
     INT64CONST(5000),
@@ -1624,16 +1624,16 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
       if (interval->time >= INT64CONST(0))
       {
         interval->time = ((interval->time +
-                   IntervalOffsets[precision]) /
-                  IntervalScales[precision]) *
-          IntervalScales[precision];
+                   MeosIntervalOffsets[precision]) /
+                  MeosIntervalScales[precision]) *
+          MeosIntervalScales[precision];
       }
       else
       {
         interval->time = -(((-interval->time +
-                   IntervalOffsets[precision]) /
-                  IntervalScales[precision]) *
-                   IntervalScales[precision]);
+                   MeosIntervalOffsets[precision]) /
+                  MeosIntervalScales[precision]) *
+                   MeosIntervalScales[precision]);
       }
     }
   }
@@ -1650,13 +1650,13 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
  * https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYPE-INTERVAL-INPUT
  * for a detailed account of the input syntax and the precision
  */
-Interval *
+MeosInterval *
 pg_interval_in(const char *str, int32 prec)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(str, NULL);
 
-  Interval *result;
+  MeosInterval *result;
   fsec_t fsec;
   struct pg_tm tt, *tm = &tt;
   int dtype;
@@ -1702,7 +1702,7 @@ pg_interval_in(const char *str, int32 prec)
     return NULL;
   }
 
-  result = palloc(sizeof(Interval));
+  result = palloc(sizeof(MeosInterval));
 
   switch (dtype)
   {
@@ -1728,7 +1728,7 @@ pg_interval_in(const char *str, int32 prec)
   return result;
 }
 
-inline Interval *
+inline MeosInterval *
 interval_in(const char *str, int32 prec)
 {
   return pg_interval_in(str, prec);
@@ -1746,11 +1746,11 @@ interval_in(const char *str, int32 prec)
  * @param[in] secs Seconds
  * @note PostgreSQL function: @p make_interval(PG_FUNCTION_ARGS)
  */
-Interval *
+MeosInterval *
 interval_make(int32 years, int32 months, int32 weeks, int32 days, int32 hours,
   int32 mins, double secs)
 {
-  Interval *result;
+  MeosInterval *result;
 
   /*
    * Reject out-of-range inputs.  We really ought to check the integer
@@ -1762,7 +1762,7 @@ interval_make(int32 years, int32 months, int32 weeks, int32 days, int32 hours,
     return NULL;
   }
 
-  result = palloc(sizeof(Interval));
+  result = palloc(sizeof(MeosInterval));
   result->month = years * MONTHS_PER_YEAR + months;
   result->day = weeks * 7 + days;
 
@@ -1781,7 +1781,7 @@ interval_make(int32 years, int32 months, int32 weeks, int32 days, int32 hours,
  * @note PostgreSQL function: @p interval_out(PG_FUNCTION_ARGS)
  */
 char *
-pg_interval_out(const Interval *interv)
+pg_interval_out(const MeosInterval *interv)
 {
   Datum d = PointerGetDatum(interv);
   return DatumGetCString(call_function1(interval_out, d));
@@ -1790,7 +1790,7 @@ pg_interval_out(const Interval *interv)
 /**
  * @ingroup meos_base_types
  * @brief Return the string representation of an interval
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @note PostgreSQL function: @p interval_out(PG_FUNCTION_ARGS)
  * @note Please refer to the PostgreSQL documentation
  * https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYPE-INTERVAL-OUTPUT
@@ -1799,7 +1799,7 @@ pg_interval_out(const Interval *interv)
  * default)
  */
 char *
-pg_interval_out(const Interval *interv)
+pg_interval_out(const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv, NULL);
@@ -1821,7 +1821,7 @@ pg_interval_out(const Interval *interv)
 }
 
 inline char *
-interval_out(const Interval *interv)
+interval_out(const MeosInterval *interv)
 {
   return pg_interval_out(interv);
 }
@@ -1834,16 +1834,16 @@ interval_out(const Interval *interv)
 /**
  * @ingroup meos_base_types
  * @brief Return the addition of two intervals
- * @param[in] interv1,interv2 Intervals
+ * @param[in] interv1,interv2 MeosIntervals
  * @note PostgreSQL function: @p interval_pl(PG_FUNCTION_ARGS)
  */
-Interval *
-add_interval_interval(const Interval *interv1, const Interval *interv2)
+MeosInterval *
+add_interval_interval(const MeosInterval *interv1, const MeosInterval *interv2)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv1, NULL); VALIDATE_NOT_NULL(interv2, NULL);
 
-  Interval *result = palloc(sizeof(Interval));
+  MeosInterval *result = palloc(sizeof(MeosInterval));
   result->month = interv1->month + interv2->month;
   /* overflow check copied from int4pl */
   if (SAMESIGN(interv1->month, interv2->month) &&
@@ -1886,17 +1886,17 @@ add_interval_interval(const Interval *interv1, const Interval *interv2)
  * To add a day, increment the mday, and use the same time of day.
  * Lastly, add in the "quantitative time".
  * @param[in] t Timestamp
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @return On error return DT_NOEND
  * @note PostgreSQL function: @p timestamp_pl_interval(PG_FUNCTION_ARGS)
  */
 TimestampTz
-add_timestamptz_interval(TimestampTz t, const Interval *interv)
+add_timestamptz_interval(TimestampTz t, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv, DT_NOEND);
 
-  Timestamp result;
+  MeosTimestamp result;
   if (TIMESTAMP_NOT_FINITE(t))
     result = t;
   else
@@ -1984,16 +1984,16 @@ add_timestamptz_interval(TimestampTz t, const Interval *interv)
  * @ingroup meos_base_types
  * @brief Return the subtraction of a timestamptz and an interval
  * @param[in] t Timestamp
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @note PostgreSQL function: @p timestamp_mi_interval(PG_FUNCTION_ARGS)
  */
 TimestampTz
-minus_timestamptz_interval(TimestampTz t, const Interval *interv)
+minus_timestamptz_interval(TimestampTz t, const MeosInterval *interv)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv, DT_NOEND);
 
-  Interval tinterv;
+  MeosInterval tinterv;
   tinterv.month = -interv->month;
   tinterv.day = -interv->day;
   tinterv.time = -interv->time;
@@ -2007,10 +2007,10 @@ minus_timestamptz_interval(TimestampTz t, const Interval *interv)
  * '1 day' = '24 hours' is valid, e.g. interval subtraction and division.
  * @note PostgreSQL function: @p interval_justify_hours(PG_FUNCTION_ARGS)
  */
-Interval *
-pg_interval_justify_hours(const Interval *interv)
+MeosInterval *
+pg_interval_justify_hours(const MeosInterval *interv)
 {
-  Interval *result = palloc(sizeof(Interval));
+  MeosInterval *result = palloc(sizeof(MeosInterval));
   result->month = interv->month;
   result->day = interv->day;
   result->time = interv->time;
@@ -2040,7 +2040,7 @@ pg_interval_justify_hours(const Interval *interv)
  * @note PostgreSQL function: @p timestamp_mi(PG_FUNCTION_ARGS). Notice that
  * the original code from PostgreSQL has @p Timestamp as arguments
  */
-Interval *
+MeosInterval *
 minus_timestamptz_timestamptz(TimestampTz t1, TimestampTz t2)
 {
   /* Ensure the validity of the arguments */
@@ -2051,7 +2051,7 @@ minus_timestamptz_timestamptz(TimestampTz t1, TimestampTz t2)
     return NULL;
   }
 
-  Interval interv;
+  MeosInterval interv;
   interv.time = t1 - t2;
   interv.month = 0;
   interv.day = 0;
@@ -2063,7 +2063,7 @@ minus_timestamptz_timestamptz(TimestampTz t1, TimestampTz t2)
  * @note The PostgreSQL function @p interval_um_internal is declared static
  */
 void
-interval_negate(const Interval *interval, Interval *result)
+interval_negate(const MeosInterval *interval, MeosInterval *result)
 {
   if (INTERVAL_IS_NOBEGIN(interval))
     INTERVAL_NOEND(result);
@@ -2085,14 +2085,14 @@ interval_negate(const Interval *interval, Interval *result)
 /*
  *    interval_relop  - is interval1 relop interval2
  *
- * Interval comparison is based on converting interval values to a linear
+ * MeosInterval comparison is based on converting interval values to a linear
  * representation expressed in the units of the time field (microseconds,
  * in the case of integer timestamps) with days assumed to be always 24 hours
  * and months assumed to be always 30 days.  To avoid overflow, we need a
  * wider-than-int64 datatype for the linear representation, so use INT128.
 */
 static inline INT128
-interval_cmp_value(const Interval *interval)
+interval_cmp_value(const MeosInterval *interval)
 {
   INT128 span;
   int64 days;
@@ -2116,13 +2116,13 @@ interval_cmp_value(const Interval *interval)
 /**
  * @ingroup meos_base_types
  * @brief Return the multiplication of an interval and a factor
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @param[in] factor Factor
  * @note PostgreSQL function: @p interval_mul(PG_FUNCTION_ARGS) taken from
  * PG version 17.2
  */
-Interval *
-mul_interval_double(const Interval *interv, double factor)
+MeosInterval *
+mul_interval_double(const MeosInterval *interv, double factor)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv, NULL);
@@ -2130,9 +2130,9 @@ mul_interval_double(const Interval *interv, double factor)
   double month_remainder_days, sec_remainder, result_double;
   int32 orig_month = interv->month,
     orig_day = interv->day;
-  Interval *result;
+  MeosInterval *result;
 
-  result = palloc(sizeof(Interval));
+  result = palloc(sizeof(MeosInterval));
 
   result_double = interv->month * factor;
   if (isnan(result_double) ||
@@ -2201,7 +2201,7 @@ mul_interval_double(const Interval *interv, double factor)
 }
 
 int
-pg_interval_cmp(const Interval *interv1, const Interval *interv2)
+pg_interval_cmp(const MeosInterval *interv1, const MeosInterval *interv2)
 {
   /* Ensure the validity of the arguments */
   VALIDATE_NOT_NULL(interv1, INT_MAX); VALIDATE_NOT_NULL(interv2, INT_MAX);
@@ -2214,11 +2214,11 @@ pg_interval_cmp(const Interval *interv1, const Interval *interv2)
 /**
  * @ingroup meos_base_types
  * @brief Return the comparison of two intervals
- * @param[in] interv1,interv2 Intervals
+ * @param[in] interv1,interv2 MeosIntervals
  * @note PostgreSQL function: @p interval_cmp(PG_FUNCTION_ARGS)
  */
 inline int
-interval_cmp(const Interval *interv1, const Interval *interv2)
+interval_cmp(const MeosInterval *interv1, const MeosInterval *interv2)
 {
   return pg_interval_cmp(interv1, interv2);
 }

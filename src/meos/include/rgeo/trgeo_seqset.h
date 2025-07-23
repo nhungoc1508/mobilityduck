@@ -59,7 +59,7 @@ extern TSequenceSet *trgeoseqset_make_free(const GSERIALIZED *geom,
   TSequence **sequences, int count, bool normalize);
 extern TSequenceSet *trgeoseqset_make_gaps(const GSERIALIZED *geom,
   const TInstant **instants, int count, interpType interp,
-  Interval *maxt, double maxdist);
+  MeosInterval *maxt, double maxdist);
 
 /* Transformation functions */
 

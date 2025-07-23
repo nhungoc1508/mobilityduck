@@ -536,11 +536,11 @@ extern bool stbox_zmin(const STBox *box, double *result);
 /* Transformation functions */
 
 extern STBox *stbox_expand_space(const STBox *box, double d);
-extern STBox *stbox_expand_time(const STBox *box, const Interval *interv);
+extern STBox *stbox_expand_time(const STBox *box, const MeosInterval *interv);
 extern STBox *stbox_get_space(const STBox *box);
 extern STBox *stbox_quad_split(const STBox *box, int *count);
 extern STBox *stbox_round(const STBox *box, int maxdd);
-extern STBox *stbox_shift_scale_time(const STBox *box, const Interval *shift, const Interval *duration);
+extern STBox *stbox_shift_scale_time(const STBox *box, const MeosInterval *shift, const MeosInterval *duration);
 extern STBox *stboxarr_round(const STBox *boxarr, int count, int maxdd);
 
 /* SRID functions */
@@ -725,7 +725,7 @@ extern Temporal *tne_tgeo_geo(const Temporal *temp, const GSERIALIZED *gs);
 extern STBox *tspatial_expand_space(const Temporal *temp, double d);
 extern STBox *tgeo_stboxes(const Temporal *temp, int *count);
 extern STBox *tgeo_space_boxes(const Temporal *temp, double xsize, double ysize, double zsize, const GSERIALIZED *sorigin, bool bitmatrix, bool border_inc, int *count);
-extern STBox *tgeo_space_time_boxes(const Temporal *temp, double xsize, double ysize, double zsize, const Interval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool bitmatrix, bool border_inc, int *count);
+extern STBox *tgeo_space_time_boxes(const Temporal *temp, double xsize, double ysize, double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool bitmatrix, bool border_inc, int *count);
 extern STBox *tgeo_split_each_n_stboxes(const Temporal *temp, int elem_count, int *count);
 extern STBox *tgeo_split_n_stboxes(const Temporal *temp, int box_count, int *count);
 
@@ -872,13 +872,13 @@ extern STBox *tspatial_extent_transfn(STBox *box, const Temporal *temp);
 /* Tile functions */
 
 extern STBox *stbox_get_space_tile(const GSERIALIZED *point, double xsize, double ysize, double zsize, const GSERIALIZED *sorigin);
-extern STBox *stbox_get_space_time_tile(const GSERIALIZED *point, TimestampTz t, double xsize, double ysize, double zsize, const Interval *duration, const GSERIALIZED *sorigin, TimestampTz torigin);
-extern STBox *stbox_get_time_tile(TimestampTz t, const Interval *duration, TimestampTz torigin);
+extern STBox *stbox_get_space_time_tile(const GSERIALIZED *point, TimestampTz t, double xsize, double ysize, double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin, TimestampTz torigin);
+extern STBox *stbox_get_time_tile(TimestampTz t, const MeosInterval *duration, TimestampTz torigin);
 extern STBox *stbox_space_tiles(const STBox *bounds, double xsize, double ysize, double zsize, const GSERIALIZED *sorigin, bool border_inc, int *count);
-extern STBox *stbox_space_time_tiles(const STBox *bounds, double xsize, double ysize, double zsize, const Interval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool border_inc, int *count);
-extern STBox *stbox_time_tiles(const STBox *bounds, const Interval *duration, TimestampTz torigin, bool border_inc, int *count);
+extern STBox *stbox_space_time_tiles(const STBox *bounds, double xsize, double ysize, double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool border_inc, int *count);
+extern STBox *stbox_time_tiles(const STBox *bounds, const MeosInterval *duration, TimestampTz torigin, bool border_inc, int *count);
 extern Temporal **tgeo_space_split(const Temporal *temp, double xsize, double ysize, double zsize, const GSERIALIZED *sorigin, bool bitmatrix, bool border_inc, GSERIALIZED ***space_bins, int *count);
-extern Temporal **tgeo_space_time_split(const Temporal *temp, double xsize, double ysize, double zsize, const Interval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool bitmatrix, bool border_inc, GSERIALIZED ***space_bins, TimestampTz **time_bins, int *count);
+extern Temporal **tgeo_space_time_split(const Temporal *temp, double xsize, double ysize, double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin, TimestampTz torigin, bool bitmatrix, bool border_inc, GSERIALIZED ***space_bins, TimestampTz **time_bins, int *count);
 
 /* Clustering functions */
 

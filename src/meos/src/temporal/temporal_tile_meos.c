@@ -63,14 +63,14 @@
  * @brief Generate a multidimensional grid for temporal numbers
  * @param[in] box Input box to split
  * @param[in] vsize Value size of the tiles
- * @param[in] duration Interval defining the size of the tiles on the time
+ * @param[in] duration MeosInterval defining the size of the tiles on the time
  * dimension, may be `NULL`
  * @param[in] vorigin Value origin of the tiles
  * @param[in] torigin Time origin of the tiles
  * @param[out] count Number of elements in the output array
  */
 TBox *
-tbox_value_time_tiles(const TBox *box, Datum vsize, const Interval *duration,
+tbox_value_time_tiles(const TBox *box, Datum vsize, const MeosInterval *duration,
   Datum vorigin, TimestampTz torigin, int *count)
 {
   assert(box); assert(count);
@@ -110,14 +110,14 @@ tbox_value_time_tiles(const TBox *box, Datum vsize, const Interval *duration,
  * @brief Return the tiles of a temporal integer box
  * @param[in] box Input box to split
  * @param[in] vsize Value size of the tiles
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] vorigin Value origin of the tiles
  * @param[in] torigin Time origin of the tiles
  * @param[out] count Number of elements in the output array
  * @csqlfn #Tbox_value_time_tiles()
  */
 TBox *
-tintbox_value_time_tiles(const TBox *box, int vsize, const Interval *duration,
+tintbox_value_time_tiles(const TBox *box, int vsize, const MeosInterval *duration,
   int vorigin, TimestampTz torigin, int *count)
 {
   /* Ensure validity of the arguments */
@@ -131,7 +131,7 @@ tintbox_value_time_tiles(const TBox *box, int vsize, const Interval *duration,
  * @brief Return the tiles of a temporal float box
  * @param[in] box Input box to split
  * @param[in] vsize Value size of the tiles
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] vorigin Value origin of the tiles
  * @param[in] torigin Time origin of the tiles
  * @param[out] count Number of elements in the output array
@@ -139,7 +139,7 @@ tintbox_value_time_tiles(const TBox *box, int vsize, const Interval *duration,
  */
 TBox *
 tfloatbox_value_time_tiles(const TBox *box, double vsize,
-  const Interval *duration, double vorigin, TimestampTz torigin, int *count)
+  const MeosInterval *duration, double vorigin, TimestampTz torigin, int *count)
 {
   /* Ensure validity of the arguments */
   VALIDATE_NOT_NULL(box, NULL); VALIDATE_NOT_NULL(count, NULL);
@@ -184,13 +184,13 @@ tfloatbox_value_tiles(const TBox *box, double vsize, double vorigin,
  * @ingroup meos_temporal_analytics_tile
  * @brief Return the time tiles of a temporal float box
  * @param[in] box Input box to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] torigin Time origin of the tiles
  * @param[out] count Number of elements in the output array
  * @csqlfn #Tbox_time_tiles()
  */
 TBox *
-tintbox_time_tiles(const TBox *box, const Interval *duration, 
+tintbox_time_tiles(const TBox *box, const MeosInterval *duration, 
   TimestampTz torigin, int *count)
 {
   return tbox_value_time_tiles(box, Int32GetDatum(0), duration,
@@ -201,13 +201,13 @@ tintbox_time_tiles(const TBox *box, const Interval *duration,
  * @ingroup meos_temporal_analytics_tile
  * @brief Return the time tiles of a temporal float box
  * @param[in] box Input box to split
- * @param[in] duration Interval defining the size of the bins
+ * @param[in] duration MeosInterval defining the size of the bins
  * @param[in] torigin Time origin of the tiles
  * @param[out] count Number of elements in the output array
  * @csqlfn #Tbox_time_tiles()
  */
 TBox *
-tfloatbox_time_tiles(const TBox *box, const Interval *duration, 
+tfloatbox_time_tiles(const TBox *box, const MeosInterval *duration, 
   TimestampTz torigin, int *count)
 {
   return tbox_value_time_tiles(box, Float8GetDatum(0.0), duration,
@@ -236,7 +236,7 @@ tint_value_boxes(const Temporal *temp, int vsize, int vorigin, int *count)
  * a time grid
  */
 TBox *
-tint_time_boxes(const Temporal *temp, const Interval *duration,
+tint_time_boxes(const Temporal *temp, const MeosInterval *duration,
   TimestampTz torigin, int *count)
 {
   return tnumber_value_time_boxes(temp, Int32GetDatum(0), duration,
@@ -250,7 +250,7 @@ tint_time_boxes(const Temporal *temp, const Interval *duration,
  */
 TBox *
 tint_value_time_boxes(const Temporal *temp, int vsize,
-  const Interval *duration, int vorigin, TimestampTz torigin, int *count)
+  const MeosInterval *duration, int vorigin, TimestampTz torigin, int *count)
 {
   return tnumber_value_time_boxes(temp, Int32GetDatum(vsize), duration,
     Int32GetDatum(vorigin), torigin, count);
@@ -277,7 +277,7 @@ tfloat_value_boxes(const Temporal *temp, double vsize, double vorigin,
  * a value and possibly a time grid
  */
 TBox *
-tfloat_time_boxes(const Temporal *temp, const Interval *duration, 
+tfloat_time_boxes(const Temporal *temp, const MeosInterval *duration, 
   TimestampTz torigin, int *count)
 {
   return tnumber_value_time_boxes(temp, Float8GetDatum(0.0), duration,
@@ -291,7 +291,7 @@ tfloat_time_boxes(const Temporal *temp, const Interval *duration,
  */
 TBox *
 tfloat_value_time_boxes(const Temporal *temp, double vsize,
-  const Interval *duration, double vorigin, TimestampTz torigin, int *count)
+  const MeosInterval *duration, double vorigin, TimestampTz torigin, int *count)
 {
   return tnumber_value_time_boxes(temp, Float8GetDatum(vsize), duration,
     Float8GetDatum(vorigin), torigin, count);
@@ -663,7 +663,7 @@ temporal_time_split_int(const Temporal *temp, TimestampTz start,
  * @csqlfn #Temporal_time_split()
  */
 Temporal **
-temporal_time_split(const Temporal *temp, const Interval *duration,
+temporal_time_split(const Temporal *temp, const MeosInterval *duration,
   TimestampTz torigin, TimestampTz **bins, int *count)
 {
   /* Ensure validity of the arguments */
@@ -1229,7 +1229,7 @@ tnumber_value_split(const Temporal *temp, Datum size, Datum vorigin,
  */
 Temporal **
 tnumber_value_time_split(const Temporal *temp, Datum size,
-  const Interval *duration, Datum vorigin, TimestampTz torigin,
+  const MeosInterval *duration, Datum vorigin, TimestampTz torigin,
   Datum **value_bins, TimestampTz **time_bins, int *count)
 {
   meosType basetype = temptype_basetype(temp->temptype);
@@ -1380,7 +1380,7 @@ tfloat_value_split(const Temporal *temp, double size, double origin,
  * @csqlfn #Tnumber_value_time_split()
  */
 Temporal **
-tint_value_time_split(const Temporal *temp, int size, const Interval *duration,
+tint_value_time_split(const Temporal *temp, int size, const MeosInterval *duration,
   int vorigin, TimestampTz torigin, int **value_bins,
   TimestampTz **time_bins, int *count)
 {
@@ -1423,7 +1423,7 @@ tint_value_time_split(const Temporal *temp, int size, const Interval *duration,
  */
 Temporal **
 tfloat_value_time_split(const Temporal *temp, double size,
-  const Interval *duration, double vorigin, TimestampTz torigin,
+  const MeosInterval *duration, double vorigin, TimestampTz torigin,
   double **value_bins, TimestampTz **time_bins, int *count)
 {
   /* Ensure validity of the arguments */

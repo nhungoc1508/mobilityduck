@@ -372,7 +372,7 @@ fastvoxel_bm(int *coords1, double *eps1, int *coords2, double *eps2,
  */
 STboxGridState *
 stbox_tile_state_make(const Temporal *temp, const STBox *box, double xsize,
-  double ysize, double zsize, const Interval *duration, POINT3DZ sorigin,
+  double ysize, double zsize, const MeosInterval *duration, POINT3DZ sorigin,
   TimestampTz torigin, bool border_inc)
 {
   assert(box); assert(xsize > 0 || duration);
@@ -660,7 +660,7 @@ stbox_tile_state_get(STboxGridState *state, STBox *box)
  */
 STBox *
 stbox_space_time_tiles(const STBox *bounds, double xsize, double ysize,
-  double zsize, const Interval *duration, const GSERIALIZED *sorigin,
+  double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin,
   TimestampTz torigin, bool border_inc, int *count)
 {
   /* Ensure the validity of the arguments
@@ -784,7 +784,7 @@ stbox_space_tiles(const STBox *bounds, double xsize, double ysize, double zsize,
  * @csqlfn #Stbox_time_tiles()
  */
 inline STBox *
-stbox_time_tiles(const STBox *bounds, const Interval *duration,
+stbox_time_tiles(const STBox *bounds, const MeosInterval *duration,
   TimestampTz torigin, bool border_inc, int *count)
 {
   return stbox_space_time_tiles(bounds, 0.0, 0.0, 0.0, duration, NULL, torigin,
@@ -806,7 +806,7 @@ stbox_time_tiles(const STBox *bounds, const Interval *duration,
  */
 STBox *
 stbox_space_time_tile(const GSERIALIZED *point, TimestampTz t,
-  double xsize, double ysize, double zsize, const Interval *duration,
+  double xsize, double ysize, double zsize, const MeosInterval *duration,
   const GSERIALIZED *sorigin, TimestampTz torigin, bool hasx, bool hast)
 {
   /* Ensure the validity of the arguments */
@@ -886,7 +886,7 @@ stbox_space_time_tile(const GSERIALIZED *point, TimestampTz t,
  */
 inline STBox *
 stbox_get_space_time_tile(const GSERIALIZED *point, TimestampTz t,
-  double xsize, double ysize, double zsize, const Interval *duration,
+  double xsize, double ysize, double zsize, const MeosInterval *duration,
   const GSERIALIZED *sorigin, TimestampTz torigin)
 {
   return stbox_space_time_tile(point, t, xsize, ysize, zsize, duration,
@@ -918,7 +918,7 @@ stbox_get_space_tile(const GSERIALIZED *point, double xsize, double ysize,
  * @csqlfn Stbox_get_time_tile()
  */
 inline STBox *
-stbox_get_time_tile(TimestampTz t, const Interval *duration,
+stbox_get_time_tile(TimestampTz t, const MeosInterval *duration,
   TimestampTz torigin)
 {
   return stbox_space_time_tile(NULL, t, 0, 0, 0, duration, NULL, torigin,
@@ -946,7 +946,7 @@ stbox_get_time_tile(TimestampTz t, const Interval *duration,
  */
 STBox *
 tgeo_space_time_boxes(const Temporal *temp, double xsize, double ysize,
-  double zsize, const Interval *duration, const GSERIALIZED *sorigin,
+  double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin,
   TimestampTz torigin, bool bitmatrix, bool border_inc, int *count)
 {
   /* Ensure the validity of the arguments */
@@ -1257,7 +1257,7 @@ tpoint_set_tiles(const Temporal *temp, const STboxGridState *state,
  */
 STboxGridState *
 tgeo_space_time_tile_init(const Temporal *temp, double xsize, double ysize,
-  double zsize, const Interval *duration, const GSERIALIZED *sorigin,
+  double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin,
   TimestampTz torigin, bool bitmatrix, bool border_inc, int *ntiles)
 {
   /* Ensure parameter validity */
@@ -1359,7 +1359,7 @@ tgeo_space_time_tile_init(const Temporal *temp, double xsize, double ysize,
  */
 Temporal **
 tgeo_space_time_split(const Temporal *temp, double xsize, double ysize,
-  double zsize, const Interval *duration, const GSERIALIZED *sorigin,
+  double zsize, const MeosInterval *duration, const GSERIALIZED *sorigin,
   TimestampTz torigin, bool bitmatrix, bool border_inc,
   GSERIALIZED ***space_bins, TimestampTz **time_bins, int *count)
 {

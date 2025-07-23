@@ -290,12 +290,12 @@ ttext_tmax_transfn(SkipList *state, const Temporal *temp)
  * @brief Transition function for temporal minimum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tint_wmin_transfn()
  */
 SkipList *
 tint_wmin_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -312,12 +312,12 @@ tint_wmin_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal minimum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tfloat_wmin_transfn()
  */
 SkipList *
 tfloat_wmin_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -334,12 +334,12 @@ tfloat_wmin_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal maximum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tint_wmax_transfn()
  */
 SkipList *
 tint_wmax_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -356,12 +356,12 @@ tint_wmax_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal maximum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tfloat_wmax_transfn()
  */
 SkipList *
 tfloat_wmax_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -378,12 +378,12 @@ tfloat_wmax_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal sum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tint_wsum_transfn()
  */
 SkipList *
 tint_wsum_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -400,12 +400,12 @@ tint_wsum_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal sum of temporal values
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tfloat_wsum_transfn()
  */
 SkipList *
 tfloat_wsum_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
@@ -422,12 +422,12 @@ tfloat_wsum_transfn(SkipList *state, const Temporal *temp,
  * @brief Transition function for temporal average of temporal numbers
  * @param[in,out] state Current aggregate state
  * @param[in] temp Temporal value
- * @param[in] interv Interval
+ * @param[in] interv MeosInterval
  * @csqlfn #Tnumber_wavg_transfn()
  */
 SkipList *
 tnumber_wavg_transfn(SkipList *state, const Temporal *temp,
-  const Interval *interv)
+  const MeosInterval *interv)
 {
   /* Null temporal: return state */
   if (! temp)
