@@ -14,6 +14,7 @@ extern "C" {
     #include <meos.h>
     #include <meos_rgeo.h>
     #include <meos_internal.h>
+    #include "temporal/type_inout.h"
 }
 
 namespace duckdb {
@@ -67,6 +68,30 @@ struct TIntFunctions {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
         }
         // TODO: handle properly
+        return true;
+    }
+
+    static bool ExecuteStringFromTInt(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+        source.Flatten(count);
+
+        auto &children = StructVector::GetEntries(source);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            char *str = temporal_out((Temporal*)inst, OUT_DEFAULT_DECIMAL_DIGITS);
+            result.SetValue(i, Value(str));
+            free(inst);
+            free(str);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
         return true;
     }
 };
@@ -186,6 +211,13 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR,
         GeoTypes::TINT(),
         TIntFunctions::ExecuteTIntInFromString
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        GeoTypes::TINT(),
+        LogicalType::VARCHAR,
+        TIntFunctions::ExecuteStringFromTInt
     );
 
     auto tint_value_function = ScalarFunction(
