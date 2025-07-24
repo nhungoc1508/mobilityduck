@@ -145,8 +145,10 @@ timestamp2tm(MeosTimestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const c
    * coding avoids hardwiring any assumptions about the width of pg_time_t,
    * so it should behave sanely on machines without int64.
    */
-  dt = (dt - *fsec) / USECS_PER_SEC +
-    (POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY;
+  // ATTENTION: [DuckDB] Adapted for DuckDB, which matches Unix timestamp
+  // dt = (dt - *fsec) / USECS_PER_SEC +
+  //   (POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY;
+  dt = (dt - *fsec) / USECS_PER_SEC;
   utime = (pg_time_t) dt;
   if ((MeosTimestamp) utime == dt)
   {
