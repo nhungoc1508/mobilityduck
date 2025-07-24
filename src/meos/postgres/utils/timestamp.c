@@ -204,7 +204,9 @@ tm2timestamp(struct pg_tm *tm, fsec_t fsec, int *tzp, MeosTimestamp *result)
     return -1;
   }
 
-  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  // ATTENTION: [DuckDB] Adapted for DuckDB, which matches Unix timestamp
+  // date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - UNIX_EPOCH_JDATE;
   time = time2t(tm->tm_hour, tm->tm_min, tm->tm_sec, fsec);
 
   *result = date * USECS_PER_DAY + time;

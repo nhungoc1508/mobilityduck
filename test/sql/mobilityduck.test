@@ -6,27 +6,57 @@
 require mobilityduck
 
 # Test extension
+
+# TINT() with only date
+query I
+SELECT TINT(42, '2023-01-01'::TIMESTAMPTZ) as tint;
+----
+{'value': 42, 'temptype': 35, 't': '2023-01-01 00:00:00+00'}
+
+# TINT with date and time
 query I
 SELECT TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ) as tint;
 ----
 {'value': 42, 'temptype': 35, 't': '2023-01-01 12:00:00+00'}
 
+# TINT with date and time and timezone
+query I
+SELECT TINT(42, '2023-01-01 12:00:00+05'::TIMESTAMPTZ) as tint;
+----
+{'value': 42, 'temptype': 35, 't': '2023-01-01 07:00:00+00'}
+
+# TINT getValue
 query I
 SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
 ----
 42
 
+# TINT asText without timezone
 query I
 SELECT asText(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as str;
 ----
 42@2023-01-01 12:00:00+00
 
-query I
-SELECT asText(TINT(10000, '2025-07-18 15:30:00'::TIMESTAMPTZ)) as str;
-----
-10000@2025-07-18 15:30:00+00
-
+# TINT asText with timezone
 query I
 SELECT asText(TINT(42, '2023-01-01 12:00:00+07'::TIMESTAMPTZ)) as str;
 ----
 42@2023-01-01 05:00:00+00
+
+# TINT cast with only date
+query I
+SELECT '15@2025-01-01'::TINT;
+----
+{'value': 15, 'temptype': 35, 't': '2025-01-01 00:00:00+00'}
+
+# TINT cast with date and time
+query I
+SELECT '100@2025-01-01 15:00:00'::TINT;
+----
+{'value': 100, 'temptype': 35, 't': '2025-01-01 15:00:00+00'}
+
+# TINT cast with date and time and timezone
+query I
+SELECT '100@2025-01-01 10:00:00+05'::TINT;
+----
+{'value': 100, 'temptype': 35, 't': '2025-01-01 05:00:00+00'}

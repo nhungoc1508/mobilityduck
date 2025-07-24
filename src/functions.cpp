@@ -45,6 +45,30 @@ struct TIntFunctions {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
         }
     }
+
+    static bool ExecuteTIntInFromString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+        source.Flatten(count);
+
+        auto &children = StructVector::GetEntries(result);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto input_str = source.GetValue(i).ToString();
+            Temporal *ret = temporal_in(input_str.c_str(), T_TINT);
+            TInstant *inst = (TInstant*)ret;
+            value_child->SetValue(i, Value::BIGINT((int64_t)inst->value));
+            temptype_child->SetValue(i, Value::UTINYINT(inst->temptype));
+            t_child->SetValue(i, Value::TIMESTAMPTZ(timestamp_tz_t(inst->t)));
+            free(inst);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+        // TODO: handle properly
+        return true;
+    }
 };
 
 struct TInstantFunctions {
@@ -90,17 +114,11 @@ struct TInstantFunctions {
         auto &t_child = children[2];
 
         for (idx_t i = 0; i < count; i++) {
-            TInstant inst;
-            inst.value = value_child->GetValue(i).GetValue<int64_t>();
-            inst.temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            inst.t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            // bool typbyval = basetype_byvalue((meosType)inst.temptype);
-            bool typbyval = 1;
-            MEOS_FLAGS_SET_BYVAL(inst.flags, typbyval);
-            MEOS_FLAGS_SET_CONTINUOUS(inst.flags, temptype_continuous((meosType)inst.temptype));
-            MEOS_FLAGS_SET_X(inst.flags, true);
-            MEOS_FLAGS_SET_T(inst.flags, true);
-            Datum val = tinstant_value(&inst);
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            Datum val = tinstant_value(inst);
             result.SetValue(i, Value::BIGINT((int64_t)val));
         }
         if (count == 1) {
@@ -162,6 +180,13 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         GeoTypes::TINT(),
         TIntFunctions::ExecuteTintMake);
     ExtensionUtil::RegisterFunction(instance, tint_make_function);
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        LogicalType::VARCHAR,
+        GeoTypes::TINT(),
+        TIntFunctions::ExecuteTIntInFromString
+    );
 
     auto tint_value_function = ScalarFunction(
         "getValue",
