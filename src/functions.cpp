@@ -94,6 +94,102 @@ struct TIntFunctions {
         }
         return true;
     }
+
+    static void ExecuteTempSubtype(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tinstant_vec = args.data[0];
+        tinstant_vec.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tinstant_vec);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            const char *str = temporal_subtype((Temporal*)inst);
+            result.SetValue(i, Value(str));
+            free(inst);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    static void ExecuteInterp(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tinstant_vec = args.data[0];
+        tinstant_vec.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tinstant_vec);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            const char *str = temporal_interp((Temporal*)inst);
+            result.SetValue(i, Value(str));
+            free(inst);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    static void ExecuteStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tinstant_vec = args.data[0];
+        tinstant_vec.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tinstant_vec);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            Datum val = temporal_start_value((Temporal*)inst);
+            result.SetValue(i, Value::BIGINT((int64_t)val));
+            free(inst);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    static void ExecuteEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tinstant_vec = args.data[0];
+        tinstant_vec.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tinstant_vec);
+        auto &value_child = children[0];
+        auto &temptype_child = children[1];
+        auto &t_child = children[2];
+
+        for (idx_t i = 0; i < count; i++) {
+            auto value = value_child->GetValue(i).GetValue<int64_t>();
+            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
+            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
+            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            Datum val = temporal_end_value((Temporal*)inst);
+            result.SetValue(i, Value::BIGINT((int64_t)val));
+            free(inst);
+        }
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
 };
 
 struct TInstantFunctions {
@@ -233,6 +329,34 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR,
         TInstantFunctions::ExecuteTInstantToString);
     ExtensionUtil::RegisterFunction(instance, tint_to_string_function);
+
+    auto tint_tempsubtype_function = ScalarFunction(
+        "tempSubtype",
+        {GeoTypes::TINT()},
+        LogicalType::VARCHAR,
+        TIntFunctions::ExecuteTempSubtype);
+    ExtensionUtil::RegisterFunction(instance, tint_tempsubtype_function);
+
+    auto tint_interp_function = ScalarFunction(
+        "interp",
+        {GeoTypes::TINT()},
+        LogicalType::VARCHAR,
+        TIntFunctions::ExecuteInterp);
+    ExtensionUtil::RegisterFunction(instance, tint_interp_function);
+
+    auto tint_startvalue_function = ScalarFunction(
+        "startValue",
+        {GeoTypes::TINT()},
+        LogicalType::BIGINT,
+        TIntFunctions::ExecuteStartValue);
+    ExtensionUtil::RegisterFunction(instance, tint_startvalue_function);
+
+    auto tint_endvalue_function = ScalarFunction(
+        "endValue",
+        {GeoTypes::TINT()},
+        LogicalType::BIGINT,
+        TIntFunctions::ExecuteEndValue);
+    ExtensionUtil::RegisterFunction(instance, tint_endvalue_function);
 }
 
 } // namespace duckdb
