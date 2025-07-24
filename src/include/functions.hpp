@@ -6,6 +6,8 @@ namespace duckdb {
 
 class ExtensionLoader;
 
-// void RegisterSpatialScalarFunctions(ExtensionLoader &loader);
+struct GeoFunctions {
+    static void RegisterScalarFunctions(DatabaseInstance &instance);
+};
 
 } // namespace duckdb
