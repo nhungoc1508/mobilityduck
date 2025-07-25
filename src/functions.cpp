@@ -190,6 +190,44 @@ struct TIntFunctions {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
         }
     }
+
+    static void ExecuteTIntSeq(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto &array_vector = args.data[0];
+        array_vector.Flatten(args.size());
+
+        for (idx_t row = 0; row < args.size(); row++) {
+            printf("Row: %ld\n", row);
+            auto *list_entries = ListVector::GetData(array_vector);
+            auto offset = list_entries[row].offset;
+            auto length = list_entries[row].length;
+
+            auto &child_vector = ListVector::GetEntry(array_vector);
+            auto &children = StructVector::GetEntries(child_vector);
+            auto &value_child = children[0];
+            auto &temptype_child = children[1];
+            auto &t_child = children[2];
+
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            for (idx_t i = 0; i < length; i++) {
+                idx_t child_idx = offset + i;
+                int64_t value = value_child->GetValue(child_idx).GetValue<int64_t>();
+                // uint8_t temptype = temptype_child->GetValue(child_idx).GetValue<uint8_t>();
+                TimestampTz t = t_child->GetValue(child_idx).GetValue<timestamp_tz_t>().value;
+                instants[i] = tinstant_make((Datum)value, T_TINT, (TimestampTz)t);
+            }
+            meosType temptype = meosType::T_TINT;
+            interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+            interp = interpType::DISCRETE; // hard coded for now
+            bool lower_inc = true;
+            bool upper_inc = true;
+            TSequence *seq = tsequence_make((const TInstant **) instants, length,
+                lower_inc, upper_inc, interp, true);
+            printf("Back in main\n");
+            // TODO: Return
+            free(instants);
+            free(seq);
+        }
+    }
 };
 
 struct TInstantFunctions {
@@ -309,12 +347,12 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         TIntFunctions::ExecuteTIntInFromString
     );
 
-    ExtensionUtil::RegisterCastFunction(
-        instance,
-        GeoTypes::TINT(),
-        LogicalType::VARCHAR,
-        TIntFunctions::ExecuteStringFromTInt
-    );
+    // ExtensionUtil::RegisterCastFunction(
+    //     instance,
+    //     GeoTypes::TINT(),
+    //     LogicalType::VARCHAR,
+    //     TIntFunctions::ExecuteStringFromTInt
+    // );
 
     auto tint_value_function = ScalarFunction(
         "getValue",
@@ -357,6 +395,13 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::BIGINT,
         TIntFunctions::ExecuteEndValue);
     ExtensionUtil::RegisterFunction(instance, tint_endvalue_function);
+
+    auto tint_seq_function = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(GeoTypes::TINT())},
+        GeoTypes::TINT(),
+        TIntFunctions::ExecuteTIntSeq);
+    ExtensionUtil::RegisterFunction(instance, tint_seq_function);
 }
 
 } // namespace duckdb
