@@ -19,6 +19,88 @@ extern "C" {
 
 namespace duckdb {
 
+struct TemporalHelper {
+    static TInstant* MakeInstant(const unique_ptr<Vector> &instant_child, idx_t i) {
+        auto &fields = StructVector::GetEntries(*instant_child);
+        // [0] - value, [1] - temptype, [2] - t
+        int64_t value = fields[0]->GetValue(i).GetValue<int64_t>();
+        uint8_t temptype = fields[1]->GetValue(i).GetValue<uint8_t>();
+        TimestampTz t = fields[2]->GetValue(i).GetValue<timestamp_tz_t>().value;
+        TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, t);
+        return inst;
+    }
+
+    static TSequence* MakeSequence(const unique_ptr<Vector> &sequence_child, idx_t i) {
+        auto &seq_fields = StructVector::GetEntries(*sequence_child);
+        // [0] - instants, [1] - interp, [2] - lower_inc, [3] - upper_inc
+        auto &instants_vector = *seq_fields[0];
+        auto &instants_list = ListVector::GetEntry(instants_vector);
+        auto &instant_fields = StructVector::GetEntries(instants_list);
+        // [0] - value, [1] - temptype, [2] - t
+
+        vector<TInstant*> instants;
+        auto *list_entries = ListVector::GetData(instants_vector);
+        auto list_offset = list_entries[i].offset;
+        auto list_length = list_entries[i].length;
+        for (idx_t j = 0; j < list_length; j++) {
+            idx_t child_idx = list_offset + j;
+            int64_t value = instant_fields[0]->GetValue(child_idx).GetValue<int64_t>();
+            uint8_t temptype = instant_fields[1]->GetValue(child_idx).GetValue<uint8_t>();
+            TimestampTz t = instant_fields[2]->GetValue(child_idx).GetValue<timestamp_tz_t>().value;
+            instants.push_back(tinstant_make((Datum)value, (meosType)temptype, t));
+        }
+        uint8_t interp = seq_fields[1]->GetValue(i).GetValue<uint8_t>();
+        bool lower_inc = seq_fields[2]->GetValue(i).GetValue<bool>();
+        bool upper_inc = seq_fields[3]->GetValue(i).GetValue<bool>();
+        TSequence *seq = tsequence_make((const TInstant**)instants.data(), instants.size(),
+            lower_inc, upper_inc,(interpType)interp, true);
+        for (auto inst : instants) free(inst);
+        return seq;
+    }
+
+    static TSequenceSet* MakeSequenceSet(const unique_ptr<Vector> &sequenceset_child, idx_t i) {
+        auto &seqset_fields = StructVector::GetEntries(*sequenceset_child);
+        // [0] - sequences
+        auto &seqs_vector = *seqset_fields[0];
+        auto &seqs_list = ListVector::GetEntry(seqs_vector);
+        auto &seq_fields = StructVector::GetEntries(seqs_list);
+
+        vector<TSequence*> sequences;
+        auto *seq_list_entries = ListVector::GetData(seqs_vector);
+        auto seq_list_offset = seq_list_entries[i].offset;
+        auto seq_list_length = seq_list_entries[i].length;
+        for (idx_t j = 0; j < seq_list_length; j++) {
+            idx_t seq_idx = seq_list_offset + j;
+            auto &instants_vector = *seq_fields[0];
+            auto &instants_list = ListVector::GetEntry(instants_vector);
+            auto &instant_fields = StructVector::GetEntries(instants_list);
+            // [0] - value, [1] - temptype, [2] - t
+
+            vector<TInstant*> instants;
+            auto *list_entries = ListVector::GetData(instants_vector);
+            auto list_offset = list_entries[seq_idx].offset;
+            auto list_length = list_entries[seq_idx].length;
+            for (idx_t k = 0; k < list_length; k++) {
+                idx_t child_idx = list_offset + k;
+                int64_t value = instant_fields[0]->GetValue(child_idx).GetValue<int64_t>();
+                uint8_t temptype = instant_fields[1]->GetValue(child_idx).GetValue<uint8_t>();
+                TimestampTz t = instant_fields[2]->GetValue(child_idx).GetValue<timestamp_tz_t>().value;
+                instants.push_back(tinstant_make((Datum)value, (meosType)temptype, t));
+            }
+            uint8_t interp = seq_fields[1]->GetValue(seq_idx).GetValue<uint8_t>();
+            bool lower_inc = seq_fields[2]->GetValue(seq_idx).GetValue<bool>();
+            bool upper_inc = seq_fields[3]->GetValue(seq_idx).GetValue<bool>();
+            TSequence* seq = tsequence_make((const TInstant**)instants.data(), instants.size(),
+                lower_inc, upper_inc, (interpType)interp, true);
+            sequences.push_back(seq);
+            for (auto inst : instants) free(inst);
+        }
+        TSequenceSet *seqset = tsequenceset_make((const TSequence**)sequences.data(), sequences.size(), true);
+        for (auto seq : sequences) free(seq);
+        return seqset;
+    }
+};
+
 struct TIntFunctions {
     static void ExecuteTintMake(DataChunk &args, ExpressionState &state, Vector &result) {
         auto count = args.size();
@@ -175,87 +257,22 @@ struct TIntFunctions {
             switch (subtype) {
                 case tempSubtype::TINSTANT:
                 {
-                    auto &fields = StructVector::GetEntries(*instant_child);
-                    // [0] - value, [1] - temptype, [2] - t
-                    int64_t value = fields[0]->GetValue(i).GetValue<int64_t>();
-                    uint8_t temptype = fields[1]->GetValue(i).GetValue<uint8_t>();
-                    TimestampTz t = fields[2]->GetValue(i).GetValue<timestamp_tz_t>().value;
-                    TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, t);
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
                     str = temporal_out((Temporal*)inst, OUT_DEFAULT_DECIMAL_DIGITS);
                     free(inst);
                     break;
                 }
                 case tempSubtype::TSEQUENCE:
                 {
-                    auto &seq_fields = StructVector::GetEntries(*sequence_child);
-                    // [0] - instants, [1] - interp, [2] - lower_inc, [3] - upper_inc
-                    auto &instants_vector = *seq_fields[0];
-                    auto &instants_list = ListVector::GetEntry(instants_vector);
-                    auto &instant_fields = StructVector::GetEntries(instants_list);
-                    // [0] - value, [1] - temptype, [2] - t
-
-                    vector<TInstant*> instants;
-                    auto *list_entries = ListVector::GetData(instants_vector);
-                    auto list_offset = list_entries[i].offset;
-                    auto list_length = list_entries[i].length;
-                    for (idx_t j = 0; j < list_length; j++) {
-                        idx_t child_idx = list_offset + j;
-                        int64_t value = instant_fields[0]->GetValue(child_idx).GetValue<int64_t>();
-                        uint8_t temptype = instant_fields[1]->GetValue(child_idx).GetValue<uint8_t>();
-                        TimestampTz t = instant_fields[2]->GetValue(child_idx).GetValue<timestamp_tz_t>().value;
-                        instants.push_back(tinstant_make((Datum)value, (meosType)temptype, t));
-                    }
-                    uint8_t interp = seq_fields[1]->GetValue(i).GetValue<uint8_t>();
-                    bool lower_inc = seq_fields[2]->GetValue(i).GetValue<bool>();
-                    bool upper_inc = seq_fields[3]->GetValue(i).GetValue<bool>();
-                    TSequence *seq = tsequence_make((const TInstant**)instants.data(), instants.size(),
-                        lower_inc, upper_inc,(interpType)interp, true);
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
                     str = temporal_out((Temporal*)seq, OUT_DEFAULT_DECIMAL_DIGITS);
-                    for (auto inst : instants) free(inst);
                     free(seq);
                     break;
                 }
                 case tempSubtype::TSEQUENCESET:
                 {
-                    auto &seqset_fields = StructVector::GetEntries(*sequenceset_child);
-                    // [0] - sequences
-                    auto &seqs_vector = *seqset_fields[0];
-                    auto &seqs_list = ListVector::GetEntry(seqs_vector);
-                    auto &seq_fields = StructVector::GetEntries(seqs_list);
-
-                    vector<TSequence*> sequences;
-                    auto *seq_list_entries = ListVector::GetData(seqs_vector);
-                    auto seq_list_offset = seq_list_entries[i].offset;
-                    auto seq_list_length = seq_list_entries[i].length;
-                    for (idx_t j = 0; j < seq_list_length; j++) {
-                        idx_t seq_idx = seq_list_offset + j;
-                        auto &instants_vector = *seq_fields[0];
-                        auto &instants_list = ListVector::GetEntry(instants_vector);
-                        auto &instant_fields = StructVector::GetEntries(instants_list);
-                        // [0] - value, [1] - temptype, [2] - t
-
-                        vector<TInstant*> instants;
-                        auto *list_entries = ListVector::GetData(instants_vector);
-                        auto list_offset = list_entries[seq_idx].offset;
-                        auto list_length = list_entries[seq_idx].length;
-                        for (idx_t k = 0; k < list_length; k++) {
-                            idx_t child_idx = list_offset + k;
-                            int64_t value = instant_fields[0]->GetValue(child_idx).GetValue<int64_t>();
-                            uint8_t temptype = instant_fields[1]->GetValue(child_idx).GetValue<uint8_t>();
-                            TimestampTz t = instant_fields[2]->GetValue(child_idx).GetValue<timestamp_tz_t>().value;
-                            instants.push_back(tinstant_make((Datum)value, (meosType)temptype, t));
-                        }
-                        uint8_t interp = seq_fields[1]->GetValue(seq_idx).GetValue<uint8_t>();
-                        bool lower_inc = seq_fields[2]->GetValue(seq_idx).GetValue<bool>();
-                        bool upper_inc = seq_fields[3]->GetValue(seq_idx).GetValue<bool>();
-                        TSequence* seq = tsequence_make((const TInstant**)instants.data(), instants.size(),
-                            lower_inc, upper_inc, (interpType)interp, true);
-                        sequences.push_back(seq);
-                        for (auto inst : instants) free(inst);
-                    }
-                    TSequenceSet *seqset = tsequenceset_make((const TSequence**)sequences.data(), sequences.size(), true);
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
                     str = temporal_out((Temporal*)seqset, OUT_DEFAULT_DECIMAL_DIGITS);
-                    for (auto seq : sequences) free(seq);
                     free(seqset);
                     break;
                 }
@@ -274,22 +291,19 @@ struct TIntFunctions {
 
     static void ExecuteTempSubtype(DataChunk &args, ExpressionState &state, Vector &result) {
         auto count = args.size();
-        auto &tinstant_vec = args.data[0];
-        tinstant_vec.Flatten(count);
-
-        auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
-            const char *str = temporal_subtype((Temporal*)inst);
+            auto &children = StructVector::GetEntries(tint_vector);
+            // [0] - subtype, [1] - instant, [2] - sequence, [3] - sequenceset
+            auto &subtype_child = children[0];
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            if (!temptype_subtype(subtype)) {
+                throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            const char *str = tempsubtype_name(subtype);
             result.SetValue(i, Value(str));
-            free(inst);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -298,22 +312,47 @@ struct TIntFunctions {
 
     static void ExecuteInterp(DataChunk &args, ExpressionState &state, Vector &result) {
         auto count = args.size();
-        auto &tinstant_vec = args.data[0];
-        tinstant_vec.Flatten(count);
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
 
-        auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
-            const char *str = temporal_interp((Temporal*)inst);
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                result.SetValue(i, Value());
+                continue;
+            }
+            const char *str = temporal_interp(temp);
             result.SetValue(i, Value(str));
-            free(inst);
+            free(temp);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -322,22 +361,47 @@ struct TIntFunctions {
 
     static void ExecuteStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
         auto count = args.size();
-        auto &tinstant_vec = args.data[0];
-        tinstant_vec.Flatten(count);
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
 
-        auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
-            Datum val = temporal_start_value((Temporal*)inst);
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                result.SetValue(i, Value());
+                continue;
+            }
+            Datum val = temporal_start_value(temp);
             result.SetValue(i, Value::BIGINT((int64_t)val));
-            free(inst);
+            free(temp);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -346,22 +410,47 @@ struct TIntFunctions {
 
     static void ExecuteEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
         auto count = args.size();
-        auto &tinstant_vec = args.data[0];
-        tinstant_vec.Flatten(count);
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
 
-        auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant* inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
-            Datum val = temporal_end_value((Temporal*)inst);
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                result.SetValue(i, Value());
+                continue;
+            }
+            Datum val = temporal_end_value(temp);
             result.SetValue(i, Value::BIGINT((int64_t)val));
-            free(inst);
+            free(temp);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -473,17 +562,13 @@ struct TInstantFunctions {
         tinstant_vec.Flatten(count);
 
         auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &instant_child = children[1];
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
             Datum val = tinstant_value(inst);
             result.SetValue(i, Value::BIGINT((int64_t)val));
+            free(inst);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -496,19 +581,15 @@ struct TInstantFunctions {
         tinstant_vec.Flatten(count);
 
         auto &children = StructVector::GetEntries(tinstant_vec);
-        auto &value_child = children[0];
-        auto &temptype_child = children[1];
-        auto &t_child = children[2];
+        auto &instant_child = children[1];
 
         for (idx_t i = 0; i < count; i++) {
-            auto value = value_child->GetValue(i).GetValue<int64_t>();
-            auto temptype = temptype_child->GetValue(i).GetValue<uint8_t>();
-            auto t = t_child->GetValue(i).GetValue<timestamp_tz_t>().value;
-            TInstant *inst = tinstant_make((Datum)value, (meosType)temptype, (TimestampTz)t);
+            TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
             int maxdd = 15;
             char *str = temporal_out((Temporal*)inst, maxdd);
             result.SetValue(i, Value(str));
             free(str);
+            free(inst);
         }
         if (count == 1) {
             result.SetVectorType(VectorType::CONSTANT_VECTOR);
