@@ -194,6 +194,19 @@ set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:ryu>")
 
 # Build the library: All
 add_library(${MEOS_LIB_NAME} ${PROJECT_OBJECTS})
+
+# library(${MEOS_LIB_NAME} SHARED
+# $<TARGET_OBJECTS:temporal>
+# $<TARGET_OBJECTS:geo>
+# $<TARGET_OBJECTS:temporal_meos>
+# $<TARGET_OBJECTS:common>
+# $<TARGET_OBJECTS:port>
+# $<TARGET_OBJECTS:timezone>
+# $<TARGET_OBJECTS:utils>
+# $<TARGET_OBJECTS:liblwgeom>
+# $<TARGET_OBJECTS:ryu>
+# )
+
 if(APPLE)
   set_target_properties(${MEOS_LIB_NAME} PROPERTIES
     LINK_FLAGS "-Wl,-undefined,dynamic_lookup")

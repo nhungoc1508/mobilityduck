@@ -145,8 +145,10 @@ timestamp2tm(MeosTimestamp dt, int *tzp, struct pg_tm *tm, fsec_t *fsec, const c
    * coding avoids hardwiring any assumptions about the width of pg_time_t,
    * so it should behave sanely on machines without int64.
    */
-  dt = (dt - *fsec) / USECS_PER_SEC +
-    (POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY;
+  // ATTENTION: [DuckDB] Adapted for DuckDB, which matches Unix timestamp
+  // dt = (dt - *fsec) / USECS_PER_SEC +
+  //   (POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY;
+  dt = (dt - *fsec) / USECS_PER_SEC;
   utime = (pg_time_t) dt;
   if ((MeosTimestamp) utime == dt)
   {
@@ -202,7 +204,10 @@ tm2timestamp(struct pg_tm *tm, fsec_t fsec, int *tzp, MeosTimestamp *result)
     return -1;
   }
 
-  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  // date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  // ATTENTION: [DuckDB] Adapted for DuckDB, which matches Unix timestamp
+  // date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - UNIX_EPOCH_JDATE;
   time = time2t(tm->tm_hour, tm->tm_min, tm->tm_sec, fsec);
 
   *result = date * USECS_PER_DAY + time;

@@ -8,6 +8,14 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "properties.hpp"
 
+extern "C" {
+    #include <postgres.h>
+    #include <utils/timestamp.h>
+    #include <meos.h>
+    #include <meos_rgeo.h>
+    #include <meos_internal.h>    
+}
+
 namespace duckdb {
 
 // Define the MEOS temptype for tint (should match meosType enum)
@@ -65,6 +73,11 @@ struct GeoTypes {
     static LogicalType TINT();
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
+};
+
+struct TypeMapping {
+    static meosType GetMeosTypeFromAlias(const std::string &alias);
+    static LogicalType GetChildType(const LogicalType &type);
 };
 
 } // namespace duckdb

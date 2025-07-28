@@ -2,6 +2,10 @@
 
 #include "mobilityduck_extension.hpp"
 #include "types.hpp"
+#include "intset.hpp"
+#include "set.hpp"
+#include "geomset.hpp"
+
 #include "functions.hpp"
 #include "duckdb.hpp"
 #include "duckdb/common/exception.hpp"
@@ -9,6 +13,12 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+
+extern "C"{
+	#include <postgres.h>
+    #include <utils/timestamp.h>
+    #include <meos.h>
+}
 
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
@@ -31,6 +41,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 }
 
 static void LoadInternal(DatabaseInstance &instance) {
+	meos_initialize();
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_scalar_function);
@@ -42,8 +53,33 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	// Register geometry types
 	GeoTypes::RegisterScalarFunctions(instance);
-	GeoTypes::RegisterTypes(instance);
+	GeoTypes::RegisterTypes(instance);		
+
+	//SetType
+	SetTypes::RegisterTypes(instance);
+	SetTypes::RegisterSet(instance);
+	SetTypes::RegisterSetAsText(instance);
+	SetTypes::RegisterSetConstructors(instance);
+	SetTypes::RegisterSetConversion(instance);
+	SetTypes::RegisterSetMemSize(instance);
+	SetTypes::RegisterSetNumValues(instance);
+	SetTypes::RegisterSetStartValue(instance);
+	SetTypes::RegisterSetEndValue(instance);
+	SetTypes::RegisterSetValueN(instance);
+	SetTypes::RegisterSetGetValues(instance);
+	SetTypes::RegisterSetUnnest(instance);
+
+	//Geometry
+	SpatialSetType::RegisterGeomSet(instance);
+	SpatialSetType::RegisterGeomSetAsText(instance);
+	SpatialSetType::RegisterMemSize(instance);
+	SpatialSetType::RegisterGeogSet(instance);
+	SpatialSetType::RegisterGeogSetAsText(instance);
+	
+	SpatialSetType::RegisterSRID(instance);
+	SpatialSetType::RegisterSetSRID(instance);
 }
+
 
 void MobilityduckExtension::Load(DuckDB &db) {
 	LoadInternal(*db.instance);

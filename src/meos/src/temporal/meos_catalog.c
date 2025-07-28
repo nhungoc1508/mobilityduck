@@ -973,7 +973,7 @@ span_type(meosType type)
   return false;
 }
 
-#ifndef NDEBUG
+// #ifndef NDEBUG
 /**
  * @brief Return true if the type has a span type as bounding box
  * @note This function is only used in the asserts
@@ -1012,7 +1012,7 @@ ensure_span_tbox_type(meosType type)
     "The span value must be an integer, a float, or a timestamptz span type");
   return false;
 }
-#endif
+// #endif
 
 /**
  * @brief Return true if the type is a number span type

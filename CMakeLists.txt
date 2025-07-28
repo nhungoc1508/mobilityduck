@@ -6,6 +6,12 @@ set(TARGET_NAME mobilityduck)
 # Set the module path for custom Find modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/cmake" ${CMAKE_MODULE_PATH})
 
+option(MEOS
+  "Set MEOS (default=ON)
+  "
+  ON
+)
+
 project(${TARGET_NAME})
 
 set(MOBILITYDB_VERSION "${PROJECT_VERSION}")
@@ -77,22 +83,31 @@ include_directories(SYSTEM /usr/include/json-c)
 include_directories("${CMAKE_BINARY_DIR}/extension/mobilityduck/meos/postgres")
 include_directories("${CMAKE_BINARY_DIR}/extension/mobilityduck/src/meos/postgres")
 
+
 # --- Add MEOS as a subdirectory ---
 add_subdirectory(src/meos)
 
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    src/types.cpp)
+    src/types.cpp    
+    src/set.cpp
+    src/geomset.cpp
+    )
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
 # --- Link against MEOS library (adjust name if needed) ---
-target_link_libraries(${EXTENSION_NAME} OpenSSL::SSL OpenSSL::Crypto)
-target_link_libraries(${LOADABLE_EXTENSION_NAME} OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(${EXTENSION_NAME} meos OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(${LOADABLE_EXTENSION_NAME} meos OpenSSL::SSL OpenSSL::Crypto)
 
 install(
   TARGETS ${EXTENSION_NAME}
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}")
+
+install(TARGETS meos
+    EXPORT DuckDBExports
+    DESTINATION lib
+)

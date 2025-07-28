@@ -201,6 +201,39 @@ void GeoTypes::RegisterTypes(DatabaseInstance &instance) {
     ExtensionUtil::RegisterType(instance, "TINT", GeoTypes::TINT());
 }
 
+meosType TypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, meosType> alias_to_type = {
+        {"INTSET", T_INTSET},
+        {"BIGINTSET", T_BIGINTSET},
+        {"FLOATSET", T_FLOATSET},
+        {"TEXTSET", T_TEXTSET},
+        {"DATESET", T_DATESET},
+        {"TSTZSET", T_TSTZSET}        
+        // {"GEOMSET", T_GEOMSET},
+        // {"GEOGSET", T_GEOGSET},
+        // {"NPOINTSET", T_NPOINTSET}
+    };
+
+    auto it = alias_to_type.find(alias);
+    if (it != alias_to_type.end()) {
+        return it->second;
+    } else {
+        return T_UNKNOWN;
+    }
+}
+
+LogicalType TypeMapping::GetChildType(const LogicalType &type) {
+    auto alias = type.ToString();
+    if (alias == "INTSET") return LogicalType::INTEGER;
+    if (alias == "BIGINTSET") return LogicalType::BIGINT;
+    if (alias == "FLOATSET") return LogicalType::DOUBLE;
+    if (alias == "TEXTSET") return LogicalType::VARCHAR;
+    if (alias == "DATESET") return LogicalType::DATE;
+    if (alias == "TSTZSET") return LogicalType::TIMESTAMP_TZ;    
+    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
+}
+
+
 } // namespace duckdb
 
 #ifndef MOBILITYDUCK_EXTENSION_TYPES
