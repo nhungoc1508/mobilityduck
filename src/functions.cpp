@@ -457,6 +457,104 @@ struct TIntFunctions {
         }
     }
 
+    static void ExecuteMinValue(DataChunk &args, ExpressionState &state, Vector &results) {
+        auto count = args.size();
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
+
+        for (idx_t i = 0; i < count; i++) {
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                results.SetValue(i, Value());
+                continue;
+            }
+            Datum val = temporal_min_value(temp);
+            results.SetValue(i, Value::BIGINT((int64_t)val));
+            free(temp);
+        }
+        if (count == 1) {
+            results.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    static void ExecuteMaxValue(DataChunk &args, ExpressionState &state, Vector &results) {
+        auto count = args.size();
+        auto &tint_vector = args.data[0];
+        tint_vector.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
+
+        for (idx_t i = 0; i < count; i++) {
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                results.SetValue(i, Value());
+                continue;
+            }
+            Datum val = temporal_max_value(temp);
+            results.SetValue(i, Value::BIGINT((int64_t)val));
+            free(temp);
+        }
+        if (count == 1) {
+            results.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
     static void ExecuteTIntSeq(DataChunk &args, ExpressionState &state, Vector &result) {
         auto &array_vector = args.data[0];
         array_vector.Flatten(args.size());
@@ -730,6 +828,20 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::BIGINT,
         TIntFunctions::ExecuteEndValue);
     ExtensionUtil::RegisterFunction(instance, tint_endvalue_function);
+
+    auto tint_minvalue_function = ScalarFunction(
+        "minValue",
+        {GeoTypes::TINT()},
+        LogicalType::BIGINT,
+        TIntFunctions::ExecuteMinValue);
+    ExtensionUtil::RegisterFunction(instance, tint_minvalue_function);
+
+    auto tint_maxvalue_function = ScalarFunction(
+        "maxValue",
+        {GeoTypes::TINT()},
+        LogicalType::BIGINT,
+        TIntFunctions::ExecuteMaxValue);
+    ExtensionUtil::RegisterFunction(instance, tint_maxvalue_function);
 
     auto tint_seq_function = ScalarFunction(
         "tintSeq",
