@@ -492,9 +492,21 @@ struct TIntFunctions {
             }
             meosType temptype = meosType::T_TINT;
             interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
-            interp = interpType::DISCRETE; // TODO: hard coded for now, should handle input string
-            bool lower_inc = true; // TODO: hard coded for now
-            bool upper_inc = true; // TODO: hard coded for now
+            if (args.size() > 1) {
+                auto &interp_child = args.data[1];
+                const char* interp_str = interp_child.GetValue(row).ToString().c_str();
+                interp = interptype_from_string(interp_str);
+            }
+            bool lower_inc = true;
+            bool upper_inc = true;
+            if (args.size() > 2) {
+                auto &lower_inc_child = args.data[2];
+                lower_inc = lower_inc_child.GetValue(row).GetValue<bool>();
+            }
+            if (args.size() > 3) {
+                auto &upper_inc_child = args.data[3];
+                upper_inc = upper_inc_child.GetValue(row).GetValue<bool>();
+            }
             TSequence *seq = tsequence_make((const TInstant **) instants, length,
                 lower_inc, upper_inc, interp, true);
 
@@ -520,6 +532,43 @@ struct TIntFunctions {
 
             free(instants);
             free(seq);
+        }
+    }
+
+    static void ExecuteTIntSeqSet(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto &array_vector = args.data[0];
+        array_vector.Flatten(args.size());
+
+        for (idx_t row = 0; row < args.size(); row++) {
+            auto *list_entries = ListVector::GetData(array_vector);
+            auto offset = list_entries[row].offset;
+            auto length = list_entries[row].length;
+            auto &child_vector = ListVector::GetEntry(array_vector);
+            auto &children = StructVector::GetEntries(child_vector);
+
+            // [0] - subtype, [1] - instant, [2] - sequence, [3] - sequenceset
+            auto &subtype_child = children[0];
+            auto &sequence_child = children[2];
+
+            vector<Value> sequences;
+            for (idx_t i = 0; i < length; i++) {
+                idx_t child_idx = offset + i;
+                uint8_t subtype = subtype_child->GetValue(child_idx).GetValue<uint8_t>();
+                if (subtype != tempSubtype::TSEQUENCE)
+                    throw InternalException("Expected TINT with sequence subtype");
+                Value sequence_value = sequence_child->GetValue(child_idx);
+                sequences.push_back(sequence_value);
+            }
+
+            // Build the output TINT struct
+            result.SetValue(row, Value::STRUCT({
+                {"subtype", Value::UTINYINT(tempSubtype::TSEQUENCESET)},
+                {"instant", Value()},
+                {"sequence", Value()},
+                {"sequenceset", Value::STRUCT({
+                    {"sequences", Value::LIST(GeoTypes::TSequenceType(), sequences)}
+                })}
+            }));
         }
     }
 };
@@ -688,6 +737,13 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         GeoTypes::TINT(),
         TIntFunctions::ExecuteTIntSeq);
     ExtensionUtil::RegisterFunction(instance, tint_seq_function);
+
+    auto tint_seqset_function = ScalarFunction(
+        "tintSeqSet",
+        {LogicalType::LIST(GeoTypes::TINT())},
+        GeoTypes::TINT(),
+        TIntFunctions::ExecuteTIntSeqSet);
+    ExtensionUtil::RegisterFunction(instance, tint_seqset_function);
 }
 
 } // namespace duckdb
