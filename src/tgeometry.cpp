@@ -287,20 +287,32 @@ namespace duckdb {
 
 
     inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result){
-        char iterp_text =  'step';
+        const char* default_iterp =  "step";
 
         auto count = args.size();
-        auto &tgeometry_vec = args.data[0];    
-        auto &interp_vec = args.data[1];
-
-        tgeometry_vec.Flatten(count);
-        interp_vec.Flatten(count);
+        auto &tgeometry_vec = args.data[0];  
         
+        tgeometry_vec.Flatten(count);
+        
+
+        Vector *interp_vec = nullptr;
+        if (args.data.size() > 1){
+            interp_vec = &args.data[1];
+            interp_vec->Flatten(count);
+        }  
 
         for(idx_t i = 0; i < count; i++){
             std::string tgeometry_str = tgeometry_vec.GetValue(i).ToString();
             Temporal *temp = tgeometry_in(tgeometry_str.c_str());
-            std::string interp_str = interp_vec.GetValue(i).ToString();
+            std::string interp_str;
+
+            if (interp_vec && !interp_vec->GetValue(i).IsNull()){
+                interp_str = interp_vec->GetValue(i).ToString();
+            }
+            else{
+                interp_str = default_iterp;
+            }
+            
             interpType interp = interptype_from_string(interp_str.c_str());
 
             TSequence *seq = temporal_to_tsequence(temp, interp);
@@ -352,6 +364,330 @@ namespace duckdb {
             free(temp);
         }
 
+    }
+
+
+    inline void ExecuteTGeometrySetInterp(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+        auto &interp_vec = args.data[1];
+
+        tgeom_vec.Flatten(count);
+        interp_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            std::string interp_str = interp_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            interpType new_interp = interptype_from_string(interp_str.c_str());
+            
+            Temporal *result_temp = temporal_set_interp(temp, new_interp);
+            
+            char *str = temporal_out(result_temp, 0);
+            result.SetValue(i, Value(str));
+            
+            free(str);
+            free(temp);
+            free(result_temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+
+
+    inline void ExecuteTGeometryMerge(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom1_vec = args.data[0];
+        auto &tgeom2_vec = args.data[1];
+
+        tgeom1_vec.Flatten(count);
+        tgeom2_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom1_str = tgeom1_vec.GetValue(i).ToString();
+            std::string tgeom2_str = tgeom2_vec.GetValue(i).ToString();
+            
+            Temporal *temp1 = tgeometry_in(tgeom1_str.c_str());
+            Temporal *temp2 = tgeometry_in(tgeom2_str.c_str());
+            
+            Temporal *result_temp = temporal_merge(temp1, temp2);
+            
+            char *str = temporal_out(result_temp, 0);
+            result.SetValue(i, Value(str));
+            
+            free(str);
+            free(temp1);
+            free(temp2);
+            free(result_temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryTempSubtype(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            const char *subtype_str = temporal_subtype(temp);
+
+            text *subtype = cstring2text(subtype_str);
+            
+            result.SetValue(i, Value(subtype));
+            
+            free(subtype);
+            // free(subtype_str);
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryInterp(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            const char *interp_str = temporal_interp(temp);
+
+            text *interp = cstring2text(interp_str);
+            
+            result.SetValue(i, Value(interp));
+            
+            // free(interp_str);
+            free(interp);
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            size_t mem_size = temporal_mem_size(temp);
+            
+            result.SetValue(i, Value::INTEGER(static_cast<int32_t>(mem_size)));
+            
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+
+    inline void ExecuteTGeometryGetValue(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &input_vec = args.data[0];
+
+        input_vec.Flatten(count);
+        for (idx_t i = 0; i < count; i++) {
+            std::string input = input_vec.GetValue(i).ToString();
+            TInstant *tinst = (TInstant *)tgeometry_in(input.c_str());
+
+            Datum geo = tinstant_value(tinst);
+
+            char *str = geo_as_text(DatumGetGserializedP(geo), 0);
+
+            result.SetValue(i, Value(str));
+            free(str);
+            free(tinst);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryValueN(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+        auto &n_vec = args.data[1];
+
+        tgeom_vec.Flatten(count);
+        n_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            int32_t n = n_vec.GetValue(i).GetValue<int32_t>();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            Datum geo_result;
+            bool found = temporal_value_n(temp, n, &geo_result);
+            
+            if (!found) {
+                result.SetValue(i, Value());  // Set NULL value
+            } else {
+                char *str = geo_as_text(DatumGetGserializedP(geo_result), 0);
+                result.SetValue(i, Value(str));
+                free(str);
+            }
+            
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &input_vec = args.data[0];
+
+        input_vec.Flatten(count);
+        for (idx_t i = 0; i < count; i++) {
+            std::string input = input_vec.GetValue(i).ToString();
+            Temporal *temp = tgeometry_in(input.c_str());
+
+            Datum geo = temporal_end_value(temp);
+
+            char *str = geo_as_text(DatumGetGserializedP(geo), 0);
+
+            result.SetValue(i, Value(str));
+            free(str);
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryLowerInc(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            bool lower_inc = temporal_lower_inc(temp);
+            
+            result.SetValue(i, Value::BOOLEAN(lower_inc));
+            
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryUpperInc(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            bool upper_inc = temporal_upper_inc(temp);
+            
+            result.SetValue(i, Value::BOOLEAN(upper_inc));
+            
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryStartInstant(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+
+        tgeom_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            TInstant *start_inst = temporal_start_instant(temp);
+            
+            char *str = tinstant_out(start_inst, 0);
+            
+            result.SetValue(i, Value(str));
+            
+            free(str);
+            free(start_inst);
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
+
+    inline void ExecuteTGeometryInstantN(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
+        auto &tgeom_vec = args.data[0];
+        auto &n_vec = args.data[1];
+
+        tgeom_vec.Flatten(count);
+        n_vec.Flatten(count);
+
+        for (idx_t i = 0; i < count; i++) {
+            std::string tgeom_str = tgeom_vec.GetValue(i).ToString();
+            int32_t n = n_vec.GetValue(i).GetValue<int32_t>();
+            
+            Temporal *temp = tgeometry_in(tgeom_str.c_str());
+            
+            TInstant *inst_n = temporal_instant_n(temp, n);
+            
+            char *str = tinstant_out(inst_n, 0);
+            
+            result.SetValue(i, Value(str));
+            
+            free(str);
+            free(inst_n);
+            free(temp);
+        }
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
     }
 
 
@@ -417,13 +753,21 @@ namespace duckdb {
         ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_function);
 
 
-        auto tgeometryseq_function = ScalarFunction(
+        auto tgeometryseq_function_2params = ScalarFunction(
             "tgeometrySeq", 
             {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
             TGeometryTypes::TGEOMETRY(),
             ExecuteTGeometrySeq
         );
-        ExtensionUtil::RegisterFunction(instance, tgeometryseq_function);
+        ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_2params);
+
+        auto tgeometryseq_function_1param = ScalarFunction(
+            "tgeometrySeq", 
+            {TGeometryTypes::TGEOMETRY()},
+            TGeometryTypes::TGEOMETRY(),
+            ExecuteTGeometrySeq
+        );
+        ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_1param);
 
         auto tgeometry_start_value_function = ScalarFunction(
             "startValue", 
@@ -440,6 +784,104 @@ namespace duckdb {
             ExecuteTGeometryAsEWKT
         );
         ExtensionUtil::RegisterFunction(instance,TgeometryAsEWKT);
+
+
+        auto setInterp_function = ScalarFunction(
+            "setInterp",
+            {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
+            TGeometryTypes::TGEOMETRY(),
+            ExecuteTGeometrySetInterp
+        );
+        ExtensionUtil::RegisterFunction(instance, setInterp_function);
+
+
+        auto merge_function = ScalarFunction(
+            "merge",
+            {TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()},
+            TGeometryTypes::TGEOMETRY(),
+            ExecuteTGeometryMerge
+        );
+        ExtensionUtil::RegisterFunction(instance, merge_function);
+
+        auto tempSubtype_function = ScalarFunction(
+            "tempSubtype",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::VARCHAR,
+            ExecuteTGeometryTempSubtype
+        );
+        ExtensionUtil::RegisterFunction(instance, tempSubtype_function);
+
+        auto interp_function = ScalarFunction(
+            "interp",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::VARCHAR,
+            ExecuteTGeometryInterp
+        );
+        ExtensionUtil::RegisterFunction(instance, interp_function);
+
+        auto memSize_function = ScalarFunction(
+            "memSize",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::INTEGER,
+            ExecuteTGeometryMemSize
+        );
+        ExtensionUtil::RegisterFunction(instance, memSize_function);
+
+        auto getValue_function = ScalarFunction(
+            "getValue",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::VARCHAR,  // Returns geometry as text
+            ExecuteTGeometryGetValue
+        );
+        ExtensionUtil::RegisterFunction(instance, getValue_function);
+
+        auto valueN_function = ScalarFunction(
+            "valueN",
+            {TGeometryTypes::TGEOMETRY(), LogicalType::INTEGER},
+            LogicalType::VARCHAR,  // Returns geometry as text
+            ExecuteTGeometryValueN
+        );
+        ExtensionUtil::RegisterFunction(instance, valueN_function);
+
+        auto endValue_function = ScalarFunction(
+            "endValue",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::VARCHAR,  // Returns geometry as text
+            ExecuteTGeometryEndValue
+        );
+        ExtensionUtil::RegisterFunction(instance, endValue_function);
+
+        auto lowerInc_function = ScalarFunction(
+            "lowerInc",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::BOOLEAN,
+            ExecuteTGeometryLowerInc
+        );
+        ExtensionUtil::RegisterFunction(instance, lowerInc_function);
+
+        auto upperInc_function = ScalarFunction(
+            "upperInc",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::BOOLEAN,
+            ExecuteTGeometryUpperInc
+        );
+        ExtensionUtil::RegisterFunction(instance, upperInc_function);
+
+        auto startInstant_function = ScalarFunction(
+            "startInstant",
+            {TGeometryTypes::TGEOMETRY()},
+            TGeometryTypes::TGEOMETRY(),  // Returns tgeometry
+            ExecuteTGeometryStartInstant
+        );
+        ExtensionUtil::RegisterFunction(instance, startInstant_function);
+
+        auto instantN_function = ScalarFunction(
+            "instantN",
+            {TGeometryTypes::TGEOMETRY(), LogicalType::INTEGER},
+            TGeometryTypes::TGEOMETRY(),  // Returns tgeometry
+            ExecuteTGeometryInstantN
+        );
+        ExtensionUtil::RegisterFunction(instance, instantN_function);
 
     }
 
