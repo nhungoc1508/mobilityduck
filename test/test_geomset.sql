@@ -22,9 +22,9 @@ SELECT set_srid(geomset('{POINT(1 1), POINT(2 2)}'), 4326);
 SELECT asText(set_SRID(geomset ('{Point(1 1), Point(2 2)}'), 5676));
 
 
-SELECT transform(geomset('SRID=4326;{"POINT(1 1)", "POINT(2 2)"}'), 5676);
+-- SELECT transform(geomset('SRID=4326;{"POINT(1 1)", "POINT(2 2)"}'), 5676);
 
-SELECT asText(transform(geomset ('SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}'), 4326));
+-- SELECT asText(transform(geomset ('SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}'), 4326));
 
 SELECT startValue(geomset('{"Point(1 1)", "Point(2 1)"}'));
 

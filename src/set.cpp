@@ -1,5 +1,4 @@
 #include "set.hpp"
-#include "types.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -53,9 +52,42 @@ const std::vector<LogicalType> &SetTypes::AllTypes() {
     return types;
 }
 
+meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, meosType> alias_to_type = {
+        {"INTSET", T_INTSET},
+        {"BIGINTSET", T_BIGINTSET},
+        {"FLOATSET", T_FLOATSET},
+        {"TEXTSET", T_TEXTSET},
+        {"DATESET", T_DATESET},
+        {"TSTZSET", T_TSTZSET}        
+        // {"GEOMSET", T_GEOMSET},
+        // {"GEOGSET", T_GEOGSET},
+        // {"NPOINTSET", T_NPOINTSET}
+    };
+
+    auto it = alias_to_type.find(alias);
+    if (it != alias_to_type.end()) {
+        return it->second;
+    } else {
+        return T_UNKNOWN;
+    }
+}
+
+LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
+    auto alias = type.ToString();
+    if (alias == "INTSET") return LogicalType::INTEGER;
+    if (alias == "BIGINTSET") return LogicalType::BIGINT;
+    if (alias == "FLOATSET") return LogicalType::DOUBLE;
+    if (alias == "TEXTSET") return LogicalType::VARCHAR;
+    if (alias == "DATESET") return LogicalType::DATE;
+    if (alias == "TSTZSET") return LogicalType::TIMESTAMP_TZ;    
+    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
+}
+
+
 static void GenericSetFromString(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    auto set_type = TypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
+    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
     UnaryExecutor::Execute<string_t, string_t>(
         input, result, args.size(),
@@ -82,7 +114,7 @@ void SetTypes::RegisterSet(DatabaseInstance &db) {
 static void GenericAsText(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
-    auto meos_type = TypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
+    auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
 
     UnaryExecutor::Execute<string_t, string_t>(
         input, result, args.size(),
@@ -108,7 +140,7 @@ void SetTypes::RegisterSetAsText(DatabaseInstance &db) {
 // Set constructor from list 
 static void GenericSetFromList(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
-    auto meos_type = TypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
+    auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
     UnaryExecutor::Execute<list_entry_t, string_t>(
         list_input, result, args.size(),
@@ -173,7 +205,7 @@ static void GenericSetFromList(DataChunk &args, ExpressionState &state, Vector &
 
 void SetTypes::RegisterSetConstructors(DatabaseInstance &db) {
     for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = TypeMapping::GetChildType(t); 
+        auto child_type = SetTypeMapping::GetChildType(t); 
         ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("set", {LogicalType::LIST(child_type)}, t, GenericSetFromList)                    
@@ -184,7 +216,7 @@ void SetTypes::RegisterSetConstructors(DatabaseInstance &db) {
 // Conversion function: base type -> set 
 static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    auto set_type = TypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
+    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
     auto base_type = settype_basetype(set_type);
 
     switch (base_type) {
@@ -278,7 +310,7 @@ static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result)
 
 void SetTypes::RegisterSetConversion(DatabaseInstance &db) {
     for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = TypeMapping::GetChildType(t); 
+        auto child_type = SetTypeMapping::GetChildType(t); 
         ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("set", {child_type}, t, SetFromBase)                    
@@ -293,7 +325,7 @@ static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) 
     UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
         [&](string_t input_str) -> int32_t {            
-            auto meos_type = TypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
+            auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
             Set *s = set_in(input_str.GetString().c_str(), meos_type);
             int size = VARSIZE_ANY(s);  // Get memory size
             free(s);
@@ -318,7 +350,7 @@ static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result
     UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
         [&](string_t input_str) -> int32_t {
-            auto meos_type = TypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
+            auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
             Set *s = set_in(input_str.GetString().c_str(), meos_type);
             int count = set_num_values(s);
             free(s);
@@ -340,7 +372,7 @@ void SetTypes::RegisterSetNumValues(DatabaseInstance &db){
 //startValue 
 static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    auto set_type = TypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
+    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
 
     switch (base_type) {
@@ -421,7 +453,7 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
 
 void SetTypes::RegisterSetStartValue(DatabaseInstance &db) {
     for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = TypeMapping::GetChildType(set_type); 
+        auto child_type = SetTypeMapping::GetChildType(set_type); 
 
         ExtensionUtil::RegisterFunction(
             db,
@@ -433,7 +465,7 @@ void SetTypes::RegisterSetStartValue(DatabaseInstance &db) {
 //endValue 
 static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    auto set_type = TypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
+    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
 
     switch (base_type) {
@@ -513,7 +545,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
 
 void SetTypes::RegisterSetEndValue(DatabaseInstance &db) {
     for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = TypeMapping::GetChildType(set_type); 
+        auto child_type = SetTypeMapping::GetChildType(set_type); 
 
         ExtensionUtil::RegisterFunction(
             db,
@@ -527,7 +559,7 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
     auto &set_vec = args.data[0];
     auto &index_vec = args.data[1];
 
-    const auto set_type = TypeMapping::GetMeosTypeFromAlias(set_vec.GetType().ToString());
+    const auto set_type = SetTypeMapping::GetMeosTypeFromAlias(set_vec.GetType().ToString());
     const auto base_type = settype_basetype(set_type);
 
     result_vec.SetVectorType(VectorType::FLAT_VECTOR);
@@ -586,7 +618,7 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
 
 void SetTypes::RegisterSetValueN(DatabaseInstance &db) {
     for (auto &set_type : SetTypes::AllTypes()) {
-        LogicalType base_type = TypeMapping::GetChildType(set_type);
+        LogicalType base_type = SetTypeMapping::GetChildType(set_type);
         ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetValueN)
@@ -629,8 +661,8 @@ static unique_ptr<FunctionData> SetUnnestBind(ClientContext &context,
 
     auto set_str = input.inputs[0].ToString();    
     auto in_type = input.inputs[0].type();    
-    auto duck_type = TypeMapping::GetChildType(in_type);    
-    auto set_type = TypeMapping::GetMeosTypeFromAlias(in_type.ToString());
+    auto duck_type = SetTypeMapping::GetChildType(in_type);    
+    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(in_type.ToString());
 
     return_types.emplace_back(duck_type);
     names.emplace_back("unnest");
