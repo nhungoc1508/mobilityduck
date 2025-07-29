@@ -89,6 +89,9 @@ add_subdirectory(src/meos)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/types.cpp
+    src/span.cpp
+    src/tgeometry.cpp
+    src/tgeompoint.cpp
     src/functions.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})

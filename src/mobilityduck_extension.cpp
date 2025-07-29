@@ -4,6 +4,9 @@
 #include "types.hpp"
 #include "functions.hpp"
 #include "duckdb.hpp"
+#include "tgeometry.hpp"
+#include "tgeompoint.hpp"
+#include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -53,6 +56,12 @@ static void LoadInternal(DatabaseInstance &instance) {
 	// Register geometry types
 	GeoFunctions::RegisterScalarFunctions(instance);
 	GeoTypes::RegisterTypes(instance);
+	SpanType::RegisterScalarFunctions(instance);
+	SpanType::RegisterTypes(instance);
+	PointTypes::RegisterScalarFunctions(instance);
+	PointTypes::RegisterTypes(instance);
+	TGeometryTypes::RegisterScalarFunctions(instance);
+	TGeometryTypes::RegisterTypes(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
