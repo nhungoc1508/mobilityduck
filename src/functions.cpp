@@ -755,6 +755,64 @@ struct TIntFunctions {
             results.SetVectorType(VectorType::CONSTANT_VECTOR);
         }
     }
+    
+    static void ExecuteDuration(DataChunk &args, ExpressionState &state, Vector &results) {
+        auto count = args.size();
+        auto &tint_vector = args.data[0];
+        auto &boundspan_vector = args.data[1];
+        tint_vector.Flatten(count);
+        boundspan_vector.Flatten(count);
+
+        auto &children = StructVector::GetEntries(tint_vector);
+        auto &subtype_child = children[0];
+        auto &instant_child = children[1];
+        auto &sequence_child = children[2];
+        auto &sequenceset_child = children[3];
+
+        for (idx_t i = 0; i < count; i++) {
+            tempSubtype subtype = (tempSubtype)subtype_child->GetValue(i).GetValue<uint8_t>();
+            Temporal *temp = nullptr;
+            switch (subtype) {
+                case tempSubtype::TINSTANT:
+                {
+                    TInstant *inst = TemporalHelper::MakeInstant(instant_child, i);
+                    temp = (Temporal*)inst;
+                    break;
+                }
+                case tempSubtype::TSEQUENCE:
+                {
+                    TSequence *seq = TemporalHelper::MakeSequence(sequence_child, i);
+                    temp = (Temporal*)seq;
+                    break;
+                }
+                case tempSubtype::TSEQUENCESET:
+                {
+                    TSequenceSet *seqset = TemporalHelper::MakeSequenceSet(sequenceset_child, i);
+                    temp = (Temporal*)seqset;
+                    break;
+                }
+                default:
+                    throw InternalException("Unknown temporal subtype: %d", subtype);
+            }
+            if (!temp) {
+                results.SetValue(i, Value());
+                continue;
+            }
+            bool boundspan = boundspan_vector.GetValue(i).GetValue<bool>();
+            MeosInterval *ret = temporal_duration(temp, boundspan);
+            // Convert MEOS Interval to DuckDB Interval
+            interval_t duckdb_interval;
+            duckdb_interval.months = ret->month;
+            duckdb_interval.days = ret->day;
+            duckdb_interval.micros = ret->time;
+            results.SetValue(i, Value::INTERVAL(duckdb_interval));
+            free(ret);
+            free(temp);
+        }
+        if (count == 1) {
+            results.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
+    }
 
     static void ExecuteTIntSeq(DataChunk &args, ExpressionState &state, Vector &result) {
         auto &array_vector = args.data[0];
@@ -1071,6 +1129,13 @@ void GeoFunctions::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::TIMESTAMP_TZ,
         TIntFunctions::ExecuteGetTimestamp);
     ExtensionUtil::RegisterFunction(instance, tint_gettimestamp_function);
+
+    auto tint_duration_function = ScalarFunction(
+        "duration",
+        {GeoTypes::TINT(), LogicalType::BOOLEAN},
+        LogicalType::INTERVAL,
+        TIntFunctions::ExecuteDuration);
+    ExtensionUtil::RegisterFunction(instance, tint_duration_function);
 
     auto tint_seq_function = ScalarFunction(
         "tintSeq",

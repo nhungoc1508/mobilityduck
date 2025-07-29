@@ -1,4 +1,4 @@
-# name: test/sql/mobilityduck.test
+# name: test/sql/temporal.test
 # description: test mobilityduck extension
 # group: [sql]
 
@@ -100,11 +100,6 @@ Discrete
 
 query I
 SELECT interp('[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]'::TINT) as interp;
-----
-Step
-
-query I
-SELECT interp('{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}'::TINT) as interp;
 ----
 Step
 
@@ -237,6 +232,26 @@ query I
 SELECT getTimestamp('1@2000-01-01'::TINT) as ts;
 ----
 2000-01-01 00:00:00+00
+
+query I
+SELECT duration('1@2000-01-01'::TINT, true) as duration;
+----
+00:00:00
+
+query I
+SELECT duration('{1@2000-01-01 12:00:00, 2@2000-01-01 13:00:00}'::TINT, true) as duration;
+----
+01:00:00
+
+query I
+SELECT duration('{1@2000-01-01, 2@2000-01-02, 1@2000-01-03}'::TINT, true) as duration;
+----
+2 days
+
+query I
+SELECT duration('{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03], [3@2000-01-04, 3@2000-01-05]}'::TINT, true) as duration;
+----
+4 days
 
 query I
 SELECT tintSeq(['50@2025-01-01 08:00:00'::TINT]) as tint_seq;

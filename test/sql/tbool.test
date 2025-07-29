@@ -1,0 +1,11 @@
+# name: test/sql/tbool.test
+# description: test tbool type of mobilityduck extension
+# group: [sql]
+
+# Require statement will ensure this test is run with this extension loaded
+require mobilityduck
+
+# Test extension
+
+query I
+SELECT tbool(true, '2012-01-01 08:00:00'::TIMESTAMPTZ) as tbool;

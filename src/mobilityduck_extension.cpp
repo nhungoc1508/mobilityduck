@@ -3,6 +3,10 @@
 #include "mobilityduck_extension.hpp"
 #include "types.hpp"
 #include "functions.hpp"
+#include "temporal/temporal_types.hpp"
+#include "temporal/temporal_functions.hpp"
+#include "temporal/tint.hpp"
+#include "temporal/tbool.hpp"
 #include "duckdb.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
@@ -50,9 +54,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
-	// Register geometry types
-	GeoFunctions::RegisterScalarFunctions(instance);
-	GeoTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterCastFunctions(instance);
+	TemporalTypes::RegisterScalarFunctions(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
