@@ -6,9 +6,9 @@ SELECT FLOATSET('{-1.2,-3.1,3}');
 
 SELECT tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'); 
 
-SELECT textset('{"highway"}');
+SELECT textset('{"highway", "car"}');
 
-SELECT dateset('{2001-02-01}');
+SELECT dateset('{2001-02-01, 2018-02-01}');
 
 
 -- Test table creating
@@ -29,13 +29,17 @@ SELECT asText(FLOATSET('{-1.2,-3.1,3}'));
 
 SELECT asText(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}')); 
 
-SELECT asText(textset('{"highway"}'));
+SELECT asText(textset('{"highway", "car", "bike"}'));
+
+SELECT asText(dateset('{2001-02-01, 2018-02-01}'));
 
 
 -- Test set Constructor from List:
 SELECT set([1, 2, 3]);
 SELECT set([1.2,1.5]);
--- SELECT set(DATE[2001-01-01, 2001-01-03]); // double check again 
+SELECT set([DATE'2001-01-02', DATE '2025-01-01']);
+SELECT set([TIMESTAMPTZ'2001-01-01 08:00:00', TIMESTAMPTZ '2025-01-01 08:00:00']); 
+SELECT set(['car', 'bus']); 
 
 -- Test Conversion function:
 
@@ -43,7 +47,7 @@ SELECT Set(5);         -- returns: "{5}"
 SELECT Set(-42);       -- returns: "{-42}"
 SELECT Set(1.5);
 SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
-SELECT Set(DATE'2001-01-01') -- wrong result, will debug later 
+SELECT Set(DATE'2001-01-01') 
 -- TEXT need testing later 
 
 
@@ -76,11 +80,9 @@ SELECT startValue(INTSET('{42, 0, 7}'));  -- → 0
 SELECT startValue(intset('{1,3,5,7}'));
 SELECT startValue(FLOATSET('{-1.2,-3.1,3}'));
 
-c
+SELECT startValue(textset('{"highway", "car", "bike"}')); 
 
-SELECT startValue(textset('{"highway", "car", "bike"}')); --need debugging later 
-
-SELECT startValue(dateset('{2001-02-01, 2022-02-18}')); -- similar error as previous function for date 
+SELECT startValue(dateset('{2001-02-01, 2022-02-18}')); 
 
 -- Test endValue
 SELECT endValue(INTSET('{1,3,5,7}'));  -- → 7
@@ -90,6 +92,8 @@ SELECT endValue(INTSET('{42, 0, 7}'));  -- → 42
 SELECT valueN(INTSET('{-2, 2, 7}'),1); -- -> -2
 SELECT valueN(INTSET('{-2, 2, 7}'),4); -- -> NULL
 
+SELECT valueN(textset('{"highway", "car", "bike"}'),2);
+
 --Test getValues 
 SELECT getValues(intset('{1,3,5,7}')); --> now return as varchar, later will consider return as list 
 --Test shift
@@ -97,11 +101,9 @@ SELECT getValues(intset('{1,3,5,7}')); --> now return as varchar, later will con
 --Test unnest 
 -- Note that unnest is a built-in function in duckdb so we have to name differently 
 SELECT * FROM setUnnest(INTSET('{1, 1, 5, -7, -7}'));
---Timestamptz has some problem now 
--- Text also 
--- SELECT * FROM setUnnest(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'));
+SELECT * FROM setUnnest(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'));
 SELECT * FROM setUnnest(dateset('{2001-02-01, 2022-02-18}'));
-
+SELECT * FROM setUnnest(textset('{"highway", "car", "bike"}'));
 
 -- Missing these function
 -- CREATE FUNCTION floatset(intset)

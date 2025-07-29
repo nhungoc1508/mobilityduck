@@ -135,7 +135,13 @@ static void GenericSetFromList(DataChunk &args, ExpressionState &state, Vector &
                         break;
                     }
                     case T_TEXTSET:{
-                        values[i] = CStringGetDatum(val.ToString().c_str());
+                        std::string s = val.ToString();
+                        size_t len = s.size();
+
+                        text *txt = (text *)malloc(VARHDRSZ + len);
+                        SET_VARSIZE(txt, VARHDRSZ + len);
+                        memcpy(VARDATA(txt), s.c_str(), len);
+                        values[i] = CStringGetDatum(txt);                        
                         break;
                     }
                     case T_DATESET:{
@@ -143,17 +149,17 @@ static void GenericSetFromList(DataChunk &args, ExpressionState &state, Vector &
                         values[i] = DateADTGetDatum((int32_t)d);                        
                         break;
                     }
-                    case T_TSTZSET:{
-                        auto ts = val.GetValue<timestamp_t>();
-                        values[i] = TimestampTzGetDatum((int64_t)ts);                        
+                    case T_TSTZSET:{                        
+                        int64_t ts_val = val.GetValue<int64_t>();
+                        values[i] = TimestampTzGetDatum(ts_val);                        
                         break;
                     }
                     default:
                         throw InvalidInputException("Unsupported type in SetFromList");
                 }
             }
-            meosType base_type = settype_basetype(meos_type);
-            Set *s = set_make_free(values, (int)length, base_type, ORDER);
+            meosType base_type = settype_basetype(meos_type);            
+            Set *s = set_make_free(values, (int)length, base_type, ORDER);                        
             char *cstr = set_out(s, 15);
             string output(cstr);
             
@@ -223,10 +229,19 @@ static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result)
             UnaryExecutor::Execute<string_t, string_t>(
                 input, result, args.size(),
                 [&](string_t val) -> string_t {
-                    Set *s = value_set(CStringGetDatum(val.GetString().c_str()), T_TEXT);
+                    std::string str = val.GetString();
+                    size_t len = str.size();
+
+                    text *txt = (text *)malloc(VARHDRSZ + len);
+                    SET_VARSIZE(txt, VARHDRSZ + len);
+                    memcpy(VARDATA(txt), str.c_str(), len);
+
+                    Set *s = value_set(PointerGetDatum(txt), T_TEXT);
+
+                    // Set *s = value_set(CStringGetDatum(val.GetString().c_str()), T_TEXT);
                     char *cstr = set_out(s, 15);
                     string output(cstr);
-                    free(s); free(cstr);
+                    free(s); free(cstr);free(txt);
                     return StringVector::AddString(result, output);
                 });
             break;
@@ -296,7 +311,7 @@ void SetTypes::RegisterSetMemSize(DatabaseInstance &db) {
                 SetMemSize));
     }
 }
-//     //numValue
+//numValue
 static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
@@ -368,12 +383,12 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                 [&](string_t input_str) -> string_t {
                     Set *s = set_in(input_str.GetString().c_str(), set_type);
                     Datum d = set_start_value(s);
-                    free(s);
-                    // return StringVector::AddString(result, DatumGetCString(d));
-                    const char *cstr = DatumGetCString(d);
-                    string str(cstr);                    
-                    return StringVector::AddString(result, str);
-                    
+                    free(s);                    
+                    // const char *cstr = DatumGetCString(d);
+                    text *txt = (text *)DatumGetPointer(d);
+                    int len = VARSIZE(txt) - VARHDRSZ;
+                    string str(VARDATA(txt), len);
+                    return StringVector::AddString(result, str); 
                 });
             break;
 
@@ -460,13 +475,12 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                 input, result, args.size(),
                 [&](string_t input_str) -> string_t {
                     Set *s = set_in(input_str.GetString().c_str(), set_type);
-                    Datum d = set_end_value(s);
-                    const char *cstr = DatumGetCString(d);
-                    string str(cstr);
+                    Datum d = set_end_value(s);                    
                     free(s);
+                    text *txt = (text *)DatumGetPointer(d);
+                    int len = VARSIZE(txt) - VARHDRSZ;
+                    string str(VARDATA(txt), len);
                     return StringVector::AddString(result, str);
-                    
-                    // return StringVector::AddString(result, DatumGetCString(d));
                 });
             break;
 
@@ -524,7 +538,6 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
 
         if (set_vec.GetValue(i).IsNull() || index_vec.GetValue(i).IsNull()) continue;
 
-        // string_t set_str = set_vec.GetValue(i).GetValue<string_t>();
         auto set_str = StringValue::Get(set_vec.GetValue(i));
         int32_t index = index_vec.GetValue(i).GetValue<int32_t>();
         if (index <= 0) continue;
@@ -535,8 +548,7 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
         free(s);
 
         if (!found) continue;
-
-        // Now write to result vector
+        
         switch (base_type) {
             case T_INT4:
                 FlatVector::GetData<int32_t>(result_vec)[i] = DatumGetInt32(d);
@@ -548,8 +560,10 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
                 FlatVector::GetData<double>(result_vec)[i] = DatumGetFloat8(d);
                 break;
             case T_TEXT: {
-                const char *cstr = DatumGetCString(d);
-                FlatVector::GetData<string_t>(result_vec)[i] = StringVector::AddString(result_vec, string(cstr));
+                text *txt = (text *)DatumGetPointer(d);
+                int len = VARSIZE(txt) - VARHDRSZ;
+                string str(VARDATA(txt), len);
+                FlatVector::GetData<string_t>(result_vec)[i] = StringVector::AddString(result_vec, str);
                 break;
             }
             case T_DATE: {
@@ -602,11 +616,7 @@ struct SetUnnestBindData : public TableFunctionData {
 
 struct SetUnnestGlobalState : public GlobalTableFunctionState {
     idx_t idx = 0;
-    std::vector<Value> values;
-
-    // idx_t GetProgress() const override {
-    //     return idx;
-    // }
+    std::vector<Value> values;    
 };
 
 static unique_ptr<FunctionData> SetUnnestBind(ClientContext &context,
@@ -644,9 +654,18 @@ static unique_ptr<GlobalTableFunctionState> SetUnnestInit(ClientContext &context
             case T_INT4:      state->values.emplace_back(Value::INTEGER(DatumGetInt32(d))); break;
             case T_INT8:      state->values.emplace_back(Value::BIGINT(DatumGetInt64(d))); break;
             case T_FLOAT8:    state->values.emplace_back(Value::DOUBLE(DatumGetFloat8(d))); break;
-            case T_TEXT:      state->values.emplace_back(Value(std::string(DatumGetCString(d)))); break;
+            case T_TEXT: {     
+                text *txt = (text *)DatumGetPointer(d);
+                int len = VARSIZE(txt) - VARHDRSZ;
+                std::string str(VARDATA(txt), len);
+                state->values.emplace_back(Value(str));
+                break;
+            }
             case T_DATE:      state->values.emplace_back(Value::DATE(date_t(DatumGetInt32(d)))); break;
-            // case T_TIMESTAMPTZ: state->values.emplace_back(Value::TIMESTAMPTZ(DatumGetInt64(d))); break;
+            case T_TIMESTAMPTZ: {                
+                state->values.emplace_back(Value::TIMESTAMPTZ(timestamp_tz_t(DatumGetInt64(d)))); 
+                break;
+            }
             default:
                 free(s);
                 throw NotImplementedException("unnest(set): unsupported base type");

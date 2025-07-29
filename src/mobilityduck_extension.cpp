@@ -61,8 +61,8 @@ static void LoadInternal(DatabaseInstance &instance) {
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
 	// Register geometry types
-	GeoTypes::RegisterScalarFunctions(instance);
-	GeoTypes::RegisterTypes(instance);		
+	// GeoTypes::RegisterScalarFunctions(instance);
+	// GeoTypes::RegisterTypes(instance);		
 
 	//SetType
 	SetTypes::RegisterTypes(instance);
