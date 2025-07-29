@@ -91,7 +91,8 @@ set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/types.cpp    
     src/set.cpp
-    src/geomset.cpp
+    src/geomset.cpp    
+    src/functions.cpp
     )
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})

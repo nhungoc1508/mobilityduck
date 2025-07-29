@@ -973,6 +973,7 @@ span_type(meosType type)
   return false;
 }
 
+// TODO: [Ngoc] temporary fix, need to put ifndef back
 // #ifndef NDEBUG
 /**
  * @brief Return true if the type has a span type as bounding box

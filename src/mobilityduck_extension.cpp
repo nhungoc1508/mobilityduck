@@ -23,6 +23,13 @@ extern "C"{
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
 
+// MEOS
+extern "C" {
+	#include <postgres.h>
+    #include <utils/timestamp.h>
+    #include <meos.h>
+}
+
 namespace duckdb {
 
 inline void MobilityduckScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -41,7 +48,9 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 }
 
 static void LoadInternal(DatabaseInstance &instance) {
+	// Initialize MEOS
 	meos_initialize();
+
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_scalar_function);
