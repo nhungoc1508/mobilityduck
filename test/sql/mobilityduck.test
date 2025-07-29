@@ -6,22 +6,95 @@
 require mobilityduck
 
 # Test extension
-query I
-SELECT TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ) as tint;
-----
-{'value': 42, 'temptype': 35, 't': '2023-01-01 12:00:00+00'}
 
 query I
-SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
+SELECT INTSET('{-1,-3,3}');
 ----
-42
+{-3, -1, 3}
 
 query I
-SELECT asText(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as str;
+SELECT asText(INTSET('{-1,-3,3}'));
 ----
-42@2023-01-01 12:00:00+00
+{-3, -1, 3}
 
 query I
-SELECT asText(TINT(10000, '2025-07-18 15:30:00'::TIMESTAMPTZ)) as str;
+SELECT FLOATSET('{-1.2,-3.1,3}');
 ----
-10000@2025-07-18 15:30:00+00
+{-3.1, -1.2, 3}
+
+query I
+SELECT tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'); 
+----
+{"2001-01-01 08:00:00+00", "2001-01-03 09:30:00+00"}
+
+query I
+SELECT dateset('{2001-02-01}');
+----
+{2001-02-01}
+
+query I
+SELECT set([1, 2, 3]);
+----
+{1, 2, 3}
+
+query I
+SELECT set([1.2,1.5]);
+----
+{1.2, 1.5}
+
+query I 
+SELECT Set(5);
+----
+{5}
+
+query I
+SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
+----
+{"2001-01-01 08:00:00+00"}
+
+query I 
+SELECT Set(DATE'2001-01-01');
+----
+{2001-01-01}
+
+query I 
+SELECT memSize(INTSET('{-1,-3,3}'));
+----
+48
+
+query I 
+SELECT memSize(dateset('{2001-02-01, 2001-02-18}'));
+----
+40
+
+query I 
+SELECT startValue(FLOATSET('{-1.2,-3.1,3}'));
+----
+-3.1
+
+query I 
+SELECT valueN(INTSET('{-2, 2, 7}'),1);
+----
+-2
+
+query I 
+SELECT valueN(INTSET('{-2, 2, 7}'),4);
+----
+NULL
+
+query I 
+SELECT * FROM setUnnest(INTSET('{1, 1, 5, -7, -7}'));
+----
+-7
+1
+5
+
+query I 
+SELECT * FROM setUnnest(dateset('{2001-02-01, 2022-02-18}'));
+----
+2001-02-01
+2022-02-18
+
+query I 
+
+

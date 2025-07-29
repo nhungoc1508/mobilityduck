@@ -78,6 +78,11 @@ static void LoadInternal(DatabaseInstance &instance) {
 	
 	SpatialSetType::RegisterSRID(instance);
 	SpatialSetType::RegisterSetSRID(instance);
+	// SpatialSetType::RegisterTransform(instance); (debug later)
+
+	SpatialSetType::RegisterStartValue(instance);
+	SpatialSetType::RegisterEndValue(instance);
+	
 }
 
 

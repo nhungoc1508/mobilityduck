@@ -512,6 +512,7 @@ Set *
 spatialset_transform(const Set *s, int32_t srid_to)
 {
   int32_t srid_from = spatialset_srid(s);
+  
   /* Ensure the validity of the arguments */
   VALIDATE_SPATIALSET(s, NULL);
   if (! ensure_srid_known(srid_from) || ! ensure_srid_known(srid_to))

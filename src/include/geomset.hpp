@@ -24,6 +24,12 @@ struct SpatialSetType{
 
     static void RegisterSRID(DatabaseInstance &db);
     static void RegisterSetSRID(DatabaseInstance &db);
+    // static void RegisterTransform(DatabaseInstance &db); --debug later
+
+    // startValue 
+    static void RegisterStartValue(DatabaseInstance &db);
+    //endValue
+    static void RegisterEndValue(DatabaseInstance &db);
     
 };
 

@@ -203,4 +203,124 @@ void SpatialSetType::RegisterSetSRID(DatabaseInstance &db) {
 	));
 }
 
+/*--- Transform -> something wrong in cmake, get back later ---*/
+
+// static void TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+// 	auto &input_vec = args.data[0];
+// 	auto &srid_vec = args.data[1];
+
+// 	input_vec.Flatten(args.size());
+// 	srid_vec.Flatten(args.size());
+
+// 	for (idx_t i = 0; i < args.size(); i++) {
+// 		if (FlatVector::IsNull(input_vec, i) || FlatVector::IsNull(srid_vec, i)) {
+// 			FlatVector::SetNull(result_vec, i, true);
+// 			continue;
+// 		}
+
+// 		std::string ewkt = FlatVector::GetData<string_t>(input_vec)[i].GetString();
+// 		int32_t srid = FlatVector::GetData<int32_t>(srid_vec)[i];
+        
+// 		const char *ptr = ewkt.c_str();        
+// 		Set *s = set_in(ptr, T_GEOMSET);       
+// 		Set *result = spatialset_transform(s, srid);
+        
+// 		free(s);
+
+// 		if (!result) {
+// 			FlatVector::SetNull(result_vec, i, true);
+// 			continue;
+// 		}
+
+// 		char *out = set_out(result, 15);
+// 		string_t str = StringVector::AddString(result_vec, std::string(out));
+// 		FlatVector::GetData<string_t>(result_vec)[i] = str;        
+// 		free(result);
+// 		free(out);
+// 	}
+// }
+
+// void SpatialSetType::RegisterTransform(DatabaseInstance &db) {
+// 	ExtensionUtil::RegisterFunction(db, ScalarFunction(
+// 		"transform",
+// 		{SpatialSetType::GeomSet(), LogicalType::INTEGER},
+// 		SpatialSetType::GeomSet(),
+// 		TransformSpatialSet
+// 	));
+// }
+
+    // startValue
+static void GeomSetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input = args.data[0];
+	input.Flatten(args.size());
+
+	for (idx_t i = 0; i < args.size(); i++) {
+		if (FlatVector::IsNull(input, i)) {
+			FlatVector::SetNull(result, i, true);
+			continue;
+		}
+
+		auto ewkt = FlatVector::GetData<string_t>(input)[i].GetString();
+		const char *ptr = ewkt.c_str();
+		Set *s = set_in(ptr, T_GEOMSET);
+
+		Datum d = set_start_value(s);  // returns geometry pointer
+		GSERIALIZED *in = DatumGetGserializedP(d);  // serialize to WKT
+
+        char *text = geo_as_text(in,6);
+
+		string_t str = StringVector::AddString(result, std::string(text));
+		FlatVector::GetData<string_t>(result)[i] = str;
+
+		free(s);
+		free(text);
+	}
+}
+
+void SpatialSetType::RegisterStartValue(DatabaseInstance &db) {
+	ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"startValue",
+		{SpatialSetType::GeomSet()},  // geomset as varchar
+		LogicalType::VARCHAR,    // return geometry as WKT --> later can define the type 
+		GeomSetStartValue
+	));
+}
+
+    // endValue
+static void GeomSetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input = args.data[0];
+	input.Flatten(args.size());
+
+	for (idx_t i = 0; i < args.size(); i++) {
+		if (FlatVector::IsNull(input, i)) {
+			FlatVector::SetNull(result, i, true);
+			continue;
+		}
+
+		auto ewkt = FlatVector::GetData<string_t>(input)[i].GetString();
+		const char *ptr = ewkt.c_str();
+		Set *s = set_in(ptr, T_GEOMSET);
+
+		Datum d = set_end_value(s);  // returns geometry pointer
+		GSERIALIZED *in = DatumGetGserializedP(d);  // serialize to WKT
+
+        char *text = geo_as_text(in,6);
+
+		string_t str = StringVector::AddString(result, std::string(text));
+		FlatVector::GetData<string_t>(result)[i] = str;
+
+		free(s);
+		free(text);
+	}
+}
+
+void SpatialSetType::RegisterEndValue(DatabaseInstance &db) {
+	ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"endValue",
+		{SpatialSetType::GeomSet()},  // geomset as varchar
+		LogicalType::VARCHAR,    // return geometry as WKT --> later can define the type 
+		GeomSetEndValue
+	));
+}
+
 } // namespace duckdb

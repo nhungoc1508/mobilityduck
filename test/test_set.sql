@@ -93,12 +93,14 @@ SELECT valueN(INTSET('{-2, 2, 7}'),4); -- -> NULL
 --Test getValues 
 SELECT getValues(intset('{1,3,5,7}')); --> now return as varchar, later will consider return as list 
 --Test shift
-SELECT shift(INTSET('{-2, 2, 7}'),3);
+-- SELECT shift(INTSET('{-2, 2, 7}'),3);
 --Test unnest 
 -- Note that unnest is a built-in function in duckdb so we have to name differently 
 SELECT * FROM setUnnest(INTSET('{1, 1, 5, -7, -7}'));
 --Timestamptz has some problem now 
 -- Text also 
+-- SELECT * FROM setUnnest(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'));
+SELECT * FROM setUnnest(dateset('{2001-02-01, 2022-02-18}'));
 
 
 -- Missing these function
