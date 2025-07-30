@@ -91,7 +91,8 @@ set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/types.cpp    
     src/set.cpp
-    src/geomset.cpp    
+    src/geo.cpp
+    src/geoSet.cpp    
     src/functions.cpp
     )
 

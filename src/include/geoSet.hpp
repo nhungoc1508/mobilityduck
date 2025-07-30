@@ -31,6 +31,8 @@ struct SpatialSetType{
     //endValue
     static void RegisterEndValue(DatabaseInstance &db);
     
+    //round
+    static void RegisterRound(DatabaseInstance &db);
 };
 
 } // namespace duckdb

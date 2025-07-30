@@ -1,5 +1,6 @@
 // geometry.cpp
-#include "geomset.hpp"
+#include "geoSet.hpp"
+#include "geo.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
@@ -281,7 +282,7 @@ void SpatialSetType::RegisterStartValue(DatabaseInstance &db) {
 	ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"startValue",
 		{SpatialSetType::GeomSet()},  // geomset as varchar
-		LogicalType::VARCHAR,    // return geometry as WKT --> later can define the type 
+		Spatial::Geometry(),    // return geometry as WKT --> later can define the type 
 		GeomSetStartValue
 	));
 }
@@ -318,9 +319,85 @@ void SpatialSetType::RegisterEndValue(DatabaseInstance &db) {
 	ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"endValue",
 		{SpatialSetType::GeomSet()},  // geomset as varchar
-		LogicalType::VARCHAR,    // return geometry as WKT --> later can define the type 
+		Spatial::Geometry(),    // return geometry as WKT --> later can define the type 
 		GeomSetEndValue
 	));
+}
+
+//round function 
+static void GeomSetRound(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input_vec = args.data[0];
+	auto &digits_vec = args.data[1];
+
+	input_vec.Flatten(args.size());
+	digits_vec.Flatten(args.size());
+
+	for (idx_t i = 0; i < args.size(); i++) {
+		if (FlatVector::IsNull(input_vec, i) || FlatVector::IsNull(digits_vec, i)) {
+			FlatVector::SetNull(result, i, true);
+			continue;
+		}
+
+		auto ewkt = FlatVector::GetData<string_t>(input_vec)[i].GetString();
+		int digits = FlatVector::GetData<int32_t>(digits_vec)[i];
+
+		const char *ptr = ewkt.c_str();
+		Set *s = set_in(ptr, T_GEOMSET);
+		Set *rounded = set_round(s, digits);
+
+		char *out = set_out(rounded, digits);
+		string_t str = StringVector::AddString(result, std::string(out));
+		FlatVector::GetData<string_t>(result)[i] = str;
+
+		free(s);
+		free(rounded);
+		free(out);
+	}
+}
+
+static void GeomSetRoundDefault(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input_vec = args.data[0];
+	input_vec.Flatten(args.size());
+
+	for (idx_t i = 0; i < args.size(); i++) {
+		if (FlatVector::IsNull(input_vec, i)) {
+			FlatVector::SetNull(result, i, true);
+			continue;
+		}
+
+		auto ewkt = FlatVector::GetData<string_t>(input_vec)[i].GetString();
+		const char *ptr = ewkt.c_str();
+		Set *s = set_in(ptr, T_GEOMSET);
+		Set *rounded = set_round(s, 0);  // default: 0 decimal digits
+
+		char *out = set_out(rounded, 0);
+		string_t str = StringVector::AddString(result, std::string(out));
+		FlatVector::GetData<string_t>(result)[i] = str;
+
+		free(s);
+		free(rounded);
+		free(out);
+	}
+}
+
+void SpatialSetType::RegisterRound(DatabaseInstance &db) {
+	ScalarFunctionSet round_set("round");
+
+	// round(geomset)
+	round_set.AddFunction(ScalarFunction(
+		{SpatialSetType::GeomSet()},
+		SpatialSetType::GeomSet(),
+		GeomSetRoundDefault
+	));
+
+	// round(geomset, int)
+	round_set.AddFunction(ScalarFunction(
+		{SpatialSetType::GeomSet(), LogicalType::INTEGER},
+		SpatialSetType::GeomSet(),
+		GeomSetRound
+	));
+
+	ExtensionUtil::RegisterFunction(db, round_set);
 }
 
 } // namespace duckdb

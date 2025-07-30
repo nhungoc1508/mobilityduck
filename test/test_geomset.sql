@@ -29,3 +29,7 @@ SELECT asText(set_SRID(geomset ('{Point(1 1), Point(2 2)}'), 5676));
 SELECT startValue(geomset('{"Point(1 1)", "Point(2 1)"}'));
 
 SELECT endValue(geomset('{"Point(1 1)", "Point(2 1)"}'));
+
+SELECT asText(round(geomset('{"Point(1.1 1.2)", "Point(2.5 1.4999)"}')));
+
+SELECT asText(round(geomset('{"Point(1.144 1.256)", "Point(2.5 1.4999)"}'),2));

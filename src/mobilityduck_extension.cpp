@@ -4,7 +4,9 @@
 #include "types.hpp"
 #include "intset.hpp"
 #include "set.hpp"
-#include "geomset.hpp"
+#include "geo.hpp"
+#include "geoSet.hpp"
+
 
 #include "functions.hpp"
 #include "duckdb.hpp"
@@ -78,7 +80,11 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterSetGetValues(instance);
 	SetTypes::RegisterSetUnnest(instance);
 
-	//Geometry
+	//Spatial
+	Spatial::RegisterSpatialType(instance);
+	Spatial::RegisterPointConstructor(instance);
+
+	// GeoSet
 	SpatialSetType::RegisterGeomSet(instance);
 	SpatialSetType::RegisterGeomSetAsText(instance);
 	SpatialSetType::RegisterMemSize(instance);
@@ -91,6 +97,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	SpatialSetType::RegisterStartValue(instance);
 	SpatialSetType::RegisterEndValue(instance);
+	SpatialSetType::RegisterRound(instance);
 	
 }
 
