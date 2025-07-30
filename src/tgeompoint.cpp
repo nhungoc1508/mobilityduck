@@ -233,7 +233,7 @@ namespace duckdb {
         auto timespan_function = ScalarFunction(
             "timeSpan",
             {PointTypes::TGEOMPOINT()},     // takes a tgeompoint
-            SpanType::SPAN(),               // returns your SPAN type
+            SpanTypes::TSTZSPAN(),               // returns your SPAN type
             ExecuteTimeSpan);
         ExtensionUtil::RegisterFunction(instance, timespan_function);
 
@@ -268,7 +268,7 @@ namespace duckdb {
 
         auto tgeompoint_tstzspan_function = ScalarFunction(
             "TGEOMPOINT", // name
-            {LogicalType::VARCHAR, SpanType::SPAN()}, // inputs
+            {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, // inputs
             PointTypes::TGEOMPOINT(), 
             ExecuteTgeompointFromTstzspan);
         ExtensionUtil::RegisterFunction(instance, tgeompoint_tstzspan_function);

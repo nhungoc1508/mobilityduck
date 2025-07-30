@@ -709,7 +709,7 @@ namespace duckdb {
 
         auto tgeometry_from_tstzspan_function = ScalarFunction(
             "TGEOMETRY", // name
-            {LogicalType::VARCHAR, SpanType::SPAN()}, 
+            {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
             TGeometryTypes::TGEOMETRY(),  
             ExecuteTgeometryFromTstzspan);
         ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
@@ -718,7 +718,7 @@ namespace duckdb {
         auto tgeometry_to_timespan_function = ScalarFunction(
             "timeSpan",
             {TGeometryTypes::TGEOMETRY()},     // takes a tgeompoint
-            SpanType::SPAN(),               // returns your SPAN type
+            SpanTypes::TSTZSPAN(),               // returns your SPAN type
             ExecuteTGeometryToTimeSpan);
         ExtensionUtil::RegisterFunction(instance, tgeometry_to_timespan_function);
 

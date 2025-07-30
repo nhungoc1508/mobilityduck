@@ -66,8 +66,8 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TemporalTypes::RegisterCastFunctions(instance);
 	TemporalTypes::RegisterScalarFunctions(instance);
   
-  SpanType::RegisterScalarFunctions(instance);
-	SpanType::RegisterTypes(instance);
+  SpanTypes::RegisterScalarFunctions(instance);
+	SpanTypes::RegisterTypes(instance);
 	PointTypes::RegisterScalarFunctions(instance);
 	PointTypes::RegisterTypes(instance);
 	TGeometryTypes::RegisterScalarFunctions(instance);

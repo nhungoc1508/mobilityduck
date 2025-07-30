@@ -11,32 +11,66 @@ extern "C" {
     #include <meos.h>
     #include <meos_rgeo.h>
     #include <meos_internal.h>
+    #include <temporal/meos_catalog.h>
 }
 
 namespace duckdb {
 
+#define DEFINE_SPAN_TYPE(NAME)                                        \
+    LogicalType SpanTypes::NAME() {                                   \
+        auto type = LogicalType(LogicalTypeId::VARCHAR);             \
+        type.SetAlias(#NAME);                                        \
+        return type;                                                 \
+    }
 
-// LogicalType SpanType::SPAN() {
-//     auto type = LogicalType::STRUCT({
-//         {"lower", LogicalType::BIGINT},
-//         {"upper", LogicalType::BIGINT},
-//         {"lower_inc",LogicalType::BOOLEAN},
-//         {"upper_inc", LogicalType::BOOLEAN},
-//         {"basetype", LogicalType::UTINYINT}
-        
-//     });
-//     type.SetAlias("SPAN");
-//     return type;
-// }
+DEFINE_SPAN_TYPE(INTSPAN)
+DEFINE_SPAN_TYPE(BIGINTSPAN)
+DEFINE_SPAN_TYPE(FLOATSPAN)
+DEFINE_SPAN_TYPE(TEXTSPAN)
+DEFINE_SPAN_TYPE(DATESPAN)
+DEFINE_SPAN_TYPE(TSTZSPAN)
+
+#undef DEFINE_SPAN_TYPE
 
 
-
-
-LogicalType SpanType::SPAN() {
-    LogicalType type(LogicalTypeId::VARCHAR);
-    type.SetAlias("SPAN");
-    return type;
+void SpanTypes::RegisterTypes(DatabaseInstance &db) {
+    ExtensionUtil::RegisterType(db, "INTSPAN", INTSPAN());
+    ExtensionUtil::RegisterType(db, "BIGINTSPAN", BIGINTSPAN());
+    ExtensionUtil::RegisterType(db, "FLOATSPAN", FLOATSPAN());
+    ExtensionUtil::RegisterType(db, "TEXTSPAN", TEXTSPAN());
+    ExtensionUtil::RegisterType(db, "DATESPAN", DATESPAN());
+    ExtensionUtil::RegisterType(db, "TSTZSPAN", TSTZSPAN());    
 }
+
+const std::vector<LogicalType> &SpanTypes::AllTypes() {
+    static std::vector<LogicalType> types = {
+        INTSPAN(),
+        BIGINTSPAN(),
+        FLOATSPAN(),
+        TEXTSPAN(),
+        DATESPAN(),
+        TSTZSPAN()
+    };
+    return types;
+}
+
+meosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, meosType> alias_to_type = {
+        {"INTSPAN", T_INTSPAN},
+        {"BIGINTSPAN", T_BIGINTSPAN},
+        {"FLOATSPAN", T_FLOATSPAN},
+        {"DATESPAN", T_DATESPAN},
+        {"TSTZSPAN", T_TSTZSPAN}        
+    };
+
+    auto it = alias_to_type.find(alias);
+    if (it != alias_to_type.end()) {
+        return it->second;
+    } else {
+        return T_UNKNOWN;
+    }
+}
+
 
 inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
@@ -67,7 +101,24 @@ inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &r
     }
 }
 
-inline void ExecuteDatespanToDatespan (DataChunk &args, ExpressionState &state, Vector &result) {
+static void ExecuteSpanAsText(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    auto meos_type = SpanTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_str) -> string_t {
+            Span *s = span_in(input_str.GetString().c_str(), meos_type);
+            char *cstr = span_out(s, 15);
+            string output(cstr);
+            free(s);
+            free(cstr);
+            return StringVector::AddString(result, output);
+        });
+}
+
+inline void ExecuteDatespanToTstzspan (DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
 
@@ -95,29 +146,36 @@ inline void ExecuteDatespanToDatespan (DataChunk &args, ExpressionState &state, 
     }
 }
 
-void SpanType::RegisterScalarFunctions(DatabaseInstance &instance) {
-    
-    // Function: string input -> canonicalized SPAN string output
-    auto intspan_function = ScalarFunction(
-        "INTSPAN",
-        {LogicalType::VARCHAR},
-        SpanType::SPAN(),  // Return SPAN (which is VARCHAR with alias)
-        ExecuteSpanCreate
-    );
-    ExtensionUtil::RegisterFunction(instance, intspan_function);
+void SpanTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
+    for (const auto &t : SpanTypes::AllTypes()){
+        auto span_create_function = ScalarFunction(
+            t.ToString(),
+            {LogicalType::VARCHAR},
+            t,
+            ExecuteSpanCreate
+        );
+        ExtensionUtil::RegisterFunction(instance,span_create_function);
+    }
+
+ 
+    for (const auto &t : SpanTypes::AllTypes()) {
+        auto span_as_text = ScalarFunction(
+            "asText", 
+            {t},
+            LogicalType::VARCHAR, 
+            ExecuteSpanAsText
+        );
+        ExtensionUtil::RegisterFunction(instance, span_as_text);
+    }
 
 
     auto tstzspan_function = ScalarFunction(
         "tstzspan",
         {LogicalType::VARCHAR},
-        SpanType::SPAN(),  // Return SPAN (which is VARCHAR with alias)
-        ExecuteDatespanToDatespan
+        SpanTypes::TSTZSPAN(),  
+        ExecuteDatespanToTstzspan
     );
     ExtensionUtil::RegisterFunction(instance, tstzspan_function);
-}
-
-void SpanType::RegisterTypes(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterType(instance, "SPAN", SpanType::SPAN());
 }
 
 } // namespace duckdb
