@@ -19,72 +19,6 @@ extern "C" {
 
 namespace duckdb {
 
-void TInt::Serialize(Serializer &serializer) const {
-    if (IsNull()) {
-        serializer.WriteProperty<bool>(1, "is_null", true);
-        return;
-    }
-    serializer.WriteProperty<bool>(1, "is_null", false);
-    Temporal *temp = GetTemporal();
-    char *str = temporal_out(temp, OUT_DEFAULT_DECIMAL_DIGITS);
-    serializer.WriteProperty<string>(2, "meos_ptr", str);
-    free(str);
-}
-
-void TInt::Deserialize(Deserializer &deserializer) {
-    bool is_null = deserializer.ReadProperty<bool>(1, "is_null");
-    if (is_null) {
-        meos_ptr = 0;
-        return;
-    }
-    string str = deserializer.ReadProperty<string>(2, "meos_ptr");
-    Temporal *temp = temporal_in(str.c_str(), T_TINT);
-    meos_ptr = (uintptr_t)temp;
-}
-
-Temporal* TInt::GetTemporal() const {
-    return (Temporal*)meos_ptr;
-}
-
-tempSubtype TInt::GetSubtype() const {
-    if (IsNull()) return ANYTEMPSUBTYPE;
-    return (tempSubtype)GetTemporal()->subtype;
-}
-
-meosType TInt::GetTemptype() const {
-    if (IsNull()) return T_TINT;
-    return (meosType)GetTemporal()->temptype;
-}
-
-bool TInt::IsNull() const {
-    return meos_ptr == 0;
-}
-
-TInt TInt::FromTemporal(Temporal *temp) {
-    return TInt((uintptr_t)temp);
-}
-
-TInt TInt::FromString(const string &str) {
-    Temporal *temp = temporal_in(str.c_str(), T_TINT);
-    return TInt((uintptr_t)temp);
-}
-
-string TInt::ToString(const TInt &tint) {
-    if (tint.IsNull()) return "NULL";
-    
-    Temporal *temp = tint.GetTemporal();
-    char *str = temporal_out(temp, OUT_DEFAULT_DECIMAL_DIGITS);
-    string result(str);
-    free(str);
-    return result;
-}
-
-size_t TIntHash::operator()(const TInt &tint) const {
-    if (tint.IsNull()) return 0;
-    Temporal *temp = tint.GetTemporal();
-    return std::hash<string>{}(TInt::ToString(tint));
-}
-
 LogicalType TInt::TIntMake() {
     auto type = LogicalType::STRUCT({
         {"meos_ptr", LogicalType::UBIGINT}
@@ -92,6 +26,12 @@ LogicalType TInt::TIntMake() {
     type.SetAlias("TINT");
     return type;
 }
+
+// LogicalType TInt::TIntMake() {
+//     auto type = LogicalType(LogicalTypeId::VARCHAR);
+//     type.SetAlias("TINT");
+//     return type;
+// }
 
 void TInt::RegisterType(DatabaseInstance &instance) {
     ExtensionUtil::RegisterType(instance, "TINT", TInt::TIntMake());
@@ -161,6 +101,126 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
         TemporalFunctions::TemporalEndValue
     );
     ExtensionUtil::RegisterFunction(instance, end_value);
+
+    auto min_value = ScalarFunction(
+        "minValue",
+        {TInt::TIntMake()},
+        LogicalType::BIGINT,
+        TemporalFunctions::TemporalMinValue
+    );
+    ExtensionUtil::RegisterFunction(instance, min_value);
+
+    auto max_value = ScalarFunction(
+        "maxValue",
+        {TInt::TIntMake()},
+        LogicalType::BIGINT,
+        TemporalFunctions::TemporalMaxValue
+    );
+    ExtensionUtil::RegisterFunction(instance, max_value);
+
+    auto value_N = ScalarFunction(
+        "valueN",
+        {TInt::TIntMake(), LogicalType::BIGINT},
+        LogicalType::BIGINT,
+        TemporalFunctions::TemporalValueN
+    );
+    ExtensionUtil::RegisterFunction(instance, value_N);
+
+    auto min_instant = ScalarFunction(
+        "minInstant",
+        {TInt::TIntMake()},
+        TInt::TIntMake(),
+        TemporalFunctions::TemporalMinInstant
+    );
+    ExtensionUtil::RegisterFunction(instance, min_instant);
+
+    auto max_instant = ScalarFunction(
+        "maxInstant",
+        {TInt::TIntMake()},
+        TInt::TIntMake(),
+        TemporalFunctions::TemporalMaxInstant
+    );
+    ExtensionUtil::RegisterFunction(instance, max_instant);
+
+    auto instant_timestamptz = ScalarFunction(
+        "getTimestamp",
+        {TInt::TIntMake()},
+        LogicalType::TIMESTAMP_TZ,
+        TemporalFunctions::TInstantTimestamptz
+    );
+    ExtensionUtil::RegisterFunction(instance, instant_timestamptz);
+
+    auto duration = ScalarFunction(
+        "duration",
+        {TInt::TIntMake(), LogicalType::BOOLEAN},
+        LogicalType::INTERVAL,
+        TemporalFunctions::TemporalDuration
+    );
+    ExtensionUtil::RegisterFunction(instance, duration);
+
+    auto tseq_constructor = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(TInt::TIntMake())},
+        TInt::TIntMake(),
+        TemporalFunctions::TsequenceConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseq_constructor);
+
+    auto tseq_constructor2 = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR},
+        TInt::TIntMake(),
+        TemporalFunctions::TsequenceConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseq_constructor2);
+
+    auto tseq_constructor3 = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
+        TInt::TIntMake(),
+        TemporalFunctions::TsequenceConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseq_constructor3);
+
+    auto tseq_constructor4 = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
+        TInt::TIntMake(),
+        TemporalFunctions::TsequenceConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseq_constructor4);
+
+    auto temp_to_tseq = ScalarFunction(
+        "tintSeq",
+        {TInt::TIntMake(), LogicalType::VARCHAR},
+        TInt::TIntMake(),
+        TemporalFunctions::TemporalToTsequence
+    );
+    ExtensionUtil::RegisterFunction(instance, temp_to_tseq);
+
+    auto temp_to_tseq2 = ScalarFunction(
+        "tintSeq",
+        {TInt::TIntMake()},
+        TInt::TIntMake(),
+        TemporalFunctions::TemporalToTsequence
+    );
+    ExtensionUtil::RegisterFunction(instance, temp_to_tseq2);
+
+    auto tseqset_constructor = ScalarFunction(
+        "tintSeqSet",
+        {LogicalType::LIST(TInt::TIntMake())},
+        TInt::TIntMake(),
+        TemporalFunctions::TsequencesetConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseqset_constructor);
+
+    auto temp_to_tseqset = ScalarFunction(
+        "tintSeqSet",
+        {TInt::TIntMake()},
+        TInt::TIntMake(),
+        TemporalFunctions::TemporalToTsequenceset
+    );
+    ExtensionUtil::RegisterFunction(instance, temp_to_tseqset);
 }
 
 } // namespace duckdb

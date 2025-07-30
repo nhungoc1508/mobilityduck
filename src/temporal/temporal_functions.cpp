@@ -34,6 +34,14 @@ meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     throw InternalException("Unknown alias: " + std::string(alias));
 }
 
+interval_t TemporalHelpers::MeosToDuckDBInterval(MeosInterval *interval) {
+    interval_t duckdb_interval;
+    duckdb_interval.months = interval->month;
+    duckdb_interval.days = interval->day;
+    duckdb_interval.micros = interval->time;
+    return duckdb_interval;
+}
+
 bool TemporalFunctions::StringToTemporal(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
 
@@ -186,6 +194,297 @@ void TemporalFunctions::TemporalEndValue(DataChunk &args, ExpressionState &state
         Temporal *temp = (Temporal*)value;
         Datum ret = temporal_end_value(temp);
         result.SetValue(i, Value::BIGINT((int64_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalMinValue(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(value_vec);
+    auto &meos_ptr_child = children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        Datum ret = temporal_min_value(temp);
+        result.SetValue(i, Value::BIGINT((int64_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalMaxValue(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(value_vec);
+    auto &meos_ptr_child = children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        Datum ret = temporal_max_value(temp);
+        result.SetValue(i, Value::BIGINT((int64_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalValueN(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    auto &n_vec = args.data[1];
+    value_vec.Flatten(count);
+    n_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(value_vec);
+    auto &meos_ptr_child = children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        int n = n_vec.GetValue(i).GetValue<int32_t>();
+        Datum ret;
+        bool found = temporal_value_n(temp, n, &ret);
+        if (!found) {
+            result.SetValue(i, Value());
+            continue;
+        }
+        result.SetValue(i, Value::BIGINT((int64_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalMinInstant(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &in_children = StructVector::GetEntries(value_vec);
+    auto &in_meos_ptr_child = in_children[0];
+
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = in_meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        TInstant *ret = temporal_min_instant(temp);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalMaxInstant(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &in_children = StructVector::GetEntries(value_vec);
+    auto &in_meos_ptr_child = in_children[0];
+
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = in_meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        TInstant *ret = temporal_max_instant(temp);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TInstantTimestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+    
+    auto &children = StructVector::GetEntries(value_vec);
+    auto &meos_ptr_child = children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        TInstant *inst = (TInstant*)value;
+        ensure_temporal_isof_subtype((Temporal*)inst, TINSTANT);
+        timestamp_tz_t ret = (timestamp_tz_t)inst->t;
+        result.SetValue(i, Value::TIMESTAMPTZ(ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalDuration(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    auto &boundspan_vec = args.data[1];
+    value_vec.Flatten(count);
+    boundspan_vec.Flatten(count);
+
+    auto &children = StructVector::GetEntries(value_vec);
+    auto &meos_ptr_child = children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        bool boundspan = boundspan_vec.GetValue(i).GetValue<bool>();
+        MeosInterval *ret = temporal_duration(temp, boundspan);
+        interval_t duckdb_interval = TemporalHelpers::MeosToDuckDBInterval(ret);
+        result.SetValue(i, Value::INTERVAL(duckdb_interval));
+        free(ret);
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TsequenceConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+
+    auto &in_children = StructVector::GetEntries(child_vec);
+    auto &in_meos_ptr_child = in_children[0];
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    bool lower_inc = true;
+    bool upper_inc = true;
+
+    for (idx_t i = 0; i < count; i++) {
+        auto offset = list_entries[i].offset;
+        auto length = list_entries[i].length;
+
+        if (args.size() > 1) {
+            auto &interp_child = args.data[1];
+            interp_child.Flatten(count);
+            auto interp_str = interp_child.GetValue(i).ToString();
+            interp = interptype_from_string(interp_str.c_str());
+        }
+        if (args.size() > 2) {
+            auto &lower_inc_child = args.data[2];
+            lower_inc = lower_inc_child.GetValue(i).GetValue<bool>();
+        }
+        if (args.size() > 3) {
+            auto &upper_inc_child = args.data[3];
+            upper_inc = upper_inc_child.GetValue(i).GetValue<bool>();
+        }
+
+        TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+        for (idx_t j = 0; j < length; j++) {
+            idx_t child_idx = offset + j;
+            uintptr_t value = in_meos_ptr_child->GetValue(child_idx).GetValue<uintptr_t>();
+            instants[j] = (TInstant*)value;
+        }
+        TSequence *seq = tsequence_make((const TInstant **) instants, length,
+            lower_inc, upper_inc, interp, true);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)seq));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalToTsequence(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &in_children = StructVector::GetEntries(value_vec);
+    auto &in_meos_ptr_child = in_children[0];
+
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = in_meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        interpType interp = INTERP_NONE;
+        if (args.size() > 1) {
+            auto &interp_child = args.data[1];
+            interp_child.Flatten(count);
+            auto interp_str = interp_child.GetValue(i).ToString();
+            interp = interptype_from_string(interp_str.c_str());
+        }
+        TSequence *ret = temporal_to_tsequence(temp, interp);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)ret));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TsequencesetConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+
+    auto &in_children = StructVector::GetEntries(child_vec);
+    auto &in_meos_ptr_child = in_children[0];
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        auto offset = list_entries[i].offset;
+        auto length = list_entries[i].length;
+        TSequence **sequences = (TSequence **)malloc(length * sizeof(TSequence *));
+        for (idx_t j = 0; j < length; j++) {
+            idx_t child_idx = offset + j;
+            uintptr_t value = in_meos_ptr_child->GetValue(child_idx).GetValue<uintptr_t>();
+            sequences[j] = (TSequence*)value;
+        }
+        TSequenceSet *seqset = tsequenceset_make((const TSequence **)sequences, length, true);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)seqset));
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::TemporalToTsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &value_vec = args.data[0];
+    value_vec.Flatten(count);
+
+    auto &in_children = StructVector::GetEntries(value_vec);
+    auto &in_meos_ptr_child = in_children[0];
+
+    auto &out_children = StructVector::GetEntries(result);
+    auto &out_meos_ptr_child = out_children[0];
+
+    for (idx_t i = 0; i < count; i++) {
+        uintptr_t value = in_meos_ptr_child->GetValue(i).GetValue<uintptr_t>();
+        Temporal *temp = (Temporal*)value;
+        interpType interp = INTERP_NONE;
+        if (args.size() > 1) {
+            auto &interp_child = args.data[1];
+            interp_child.Flatten(count);
+            auto interp_str = interp_child.GetValue(i).ToString();
+            interp = interptype_from_string(interp_str.c_str());
+        }
+        TSequenceSet *ret = temporal_to_tsequenceset(temp, interp);
+        out_meos_ptr_child->SetValue(i, Value::UBIGINT((uintptr_t)ret));
     }
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);

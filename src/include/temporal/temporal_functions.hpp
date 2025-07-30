@@ -13,6 +13,7 @@ typedef struct {
 
 struct TemporalHelpers {
     static meosType GetTemptypeFromAlias(const char *alias);
+    static interval_t MeosToDuckDBInterval(MeosInterval *interval);
 };
 
 struct TemporalFunctions {
@@ -27,6 +28,17 @@ struct TemporalFunctions {
     static void TInstantValue(DataChunk &args, ExpressionState &state, Vector &result);
     static void TemporalStartValue(DataChunk &args, ExpressionState &state, Vector &result);
     static void TemporalEndValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalMinValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalMaxValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalValueN(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalMinInstant(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalMaxInstant(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TInstantTimestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalDuration(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TsequenceConstructor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalToTsequence(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TsequencesetConstructor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalToTsequenceset(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

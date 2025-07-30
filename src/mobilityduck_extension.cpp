@@ -14,6 +14,8 @@
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
+#include <mutex>
+
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
 
@@ -43,7 +45,10 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 
 static void LoadInternal(DatabaseInstance &instance) {
 	// Initialize MEOS
-	meos_initialize();
+	static std::once_flag meos_init_flag;
+    std::call_once(meos_init_flag, []() {
+        meos_initialize();
+    });
 
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);

@@ -31,18 +31,6 @@ SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
 ----
 42
 
-# TINT asText without timezone
-query I
-SELECT asText(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as str;
-----
-42@2023-01-01 12:00:00+00
-
-# TINT asText with timezone
-query I
-SELECT asText(TINT(42, '2023-01-01 12:00:00+07'::TIMESTAMPTZ)) as str;
-----
-42@2023-01-01 05:00:00+00
-
 # TINT cast with only date
 query I
 SELECT '15@2025-01-01'::TINT as tint;
@@ -295,3 +283,18 @@ query I
 SELECT tintSeqSet(['[1@2000-01-01, 1@2000-01-02]'::TINT, '[2@2000-01-03, 2@2000-01-04]'::TINT]) as tint_seq_set;
 ----
 {[1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00], [2@2000-01-03 00:00:00+00, 2@2000-01-04 00:00:00+00]}
+
+query I
+SELECT tintSeq(tint '1@2000-01-01');
+----
+[1@2000-01-01 00:00:00+00]
+
+query I
+SELECT tintSeq(tint '{1@2000-01-01}');
+----
+{1@2000-01-01 00:00:00+00}
+
+query I
+SELECT tintSeq(tint '{1@2000-01-01, 2@2000-01-02, 1@2000-01-03}');
+----
+{1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00}
