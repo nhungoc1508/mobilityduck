@@ -89,7 +89,11 @@ add_subdirectory(src/meos)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/types.cpp
-    src/functions.cpp)
+    src/functions.cpp
+    src/temporal/tint.cpp
+    src/temporal/tbool.cpp
+    src/temporal/temporal_types.cpp
+    src/temporal/temporal_functions.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})

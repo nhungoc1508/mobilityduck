@@ -16,6 +16,10 @@ struct GeoTypes {
     static LogicalType TINT();
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
+
+    static LogicalType TInstantType();
+    static LogicalType TSequenceType();
+    static LogicalType TSequenceSetType();
 };
 
 } // namespace duckdb
