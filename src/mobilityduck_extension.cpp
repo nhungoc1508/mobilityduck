@@ -7,12 +7,21 @@
 #include "geomset.hpp"
 
 #include "functions.hpp"
+#include "temporal/temporal_types.hpp"
+#include "temporal/temporal_functions.hpp"
+#include "temporal/tint.hpp"
+#include "temporal/tbool.hpp"
 #include "duckdb.hpp"
+#include "tgeometry.hpp"
+#include "tgeompoint.hpp"
+#include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+
+#include <mutex>
 
 extern "C"{
 	#include <postgres.h>
@@ -49,7 +58,10 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 
 static void LoadInternal(DatabaseInstance &instance) {
 	// Initialize MEOS
-	meos_initialize();
+	static std::once_flag meos_init_flag;
+    std::call_once(meos_init_flag, []() {
+        meos_initialize();
+    });
 
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
@@ -61,39 +73,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
 	// Register geometry types
-	// GeoTypes::RegisterScalarFunctions(instance);
-	// GeoTypes::RegisterTypes(instance);		
-
-	//SetType
-	SetTypes::RegisterTypes(instance);
-	SetTypes::RegisterSet(instance);
-	SetTypes::RegisterSetAsText(instance);
-	SetTypes::RegisterSetConstructors(instance);
-	SetTypes::RegisterSetConversion(instance);
-	SetTypes::RegisterSetMemSize(instance);
-	SetTypes::RegisterSetNumValues(instance);
-	SetTypes::RegisterSetStartValue(instance);
-	SetTypes::RegisterSetEndValue(instance);
-	SetTypes::RegisterSetValueN(instance);
-	SetTypes::RegisterSetGetValues(instance);
-	SetTypes::RegisterSetUnnest(instance);
-
-	//Geometry
-	SpatialSetType::RegisterGeomSet(instance);
-	SpatialSetType::RegisterGeomSetAsText(instance);
-	SpatialSetType::RegisterMemSize(instance);
-	SpatialSetType::RegisterGeogSet(instance);
-	SpatialSetType::RegisterGeogSetAsText(instance);
-	
-	SpatialSetType::RegisterSRID(instance);
-	SpatialSetType::RegisterSetSRID(instance);
-	// SpatialSetType::RegisterTransform(instance); (debug later)
-
-	SpatialSetType::RegisterStartValue(instance);
-	SpatialSetType::RegisterEndValue(instance);
-	
+	GeoFunctions::RegisterScalarFunctions(instance);
+	GeoTypes::RegisterTypes(instance);
 }
-
 
 void MobilityduckExtension::Load(DuckDB &db) {
 	LoadInternal(*db.instance);
