@@ -72,9 +72,43 @@ static void LoadInternal(DatabaseInstance &instance) {
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
-	// Register geometry types
-	GeoFunctions::RegisterScalarFunctions(instance);
-	GeoTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterCastFunctions(instance);
+	TemporalTypes::RegisterScalarFunctions(instance);
+  
+  	SpanType::RegisterScalarFunctions(instance);
+	SpanType::RegisterTypes(instance);
+	PointTypes::RegisterScalarFunctions(instance);
+	PointTypes::RegisterTypes(instance);
+	TGeometryTypes::RegisterScalarFunctions(instance);
+	TGeometryTypes::RegisterTypes(instance);
+
+	SetTypes::RegisterTypes(instance);
+	SetTypes::RegisterSet(instance);
+	SetTypes::RegisterSetAsText(instance);
+	SetTypes::RegisterSetConstructors(instance);
+	SetTypes::RegisterSetConversion(instance);
+	SetTypes::RegisterSetMemSize(instance);
+	SetTypes::RegisterSetNumValues(instance);
+	SetTypes::RegisterSetStartValue(instance);
+	SetTypes::RegisterSetEndValue(instance);
+	SetTypes::RegisterSetValueN(instance);
+	SetTypes::RegisterSetGetValues(instance);
+	SetTypes::RegisterSetUnnest(instance);
+
+	//Geometry
+	SpatialSetType::RegisterGeomSet(instance);
+	SpatialSetType::RegisterGeomSetAsText(instance);
+	SpatialSetType::RegisterMemSize(instance);
+	SpatialSetType::RegisterGeogSet(instance);
+	SpatialSetType::RegisterGeogSetAsText(instance);
+	
+	SpatialSetType::RegisterSRID(instance);
+	SpatialSetType::RegisterSetSRID(instance);
+	// SpatialSetType::RegisterTransform(instance); (debug later)
+
+	SpatialSetType::RegisterStartValue(instance);
+	SpatialSetType::RegisterEndValue(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
