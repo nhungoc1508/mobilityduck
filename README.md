@@ -1,26 +1,32 @@
-# Mobilityduck
+# MobilityDuck
 
-This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
+This repository is based on https://github.com/duckdb/extension-template.
 
 ---
 
-This extension, Mobilityduck, allow you to ... <extension_goal>.
+MobilityDuck is a binding for DuckDB built on top of [MEOS (Mobility Engine, Open Source)](https://libmeos.org/), a C library that enables the manipulation of temporal and spatiotemporal data based on [MobilityDB](https://mobilitydb.com/)'s data types and functions.
 
-
-## Building
-### Managing dependencies
-DuckDB extensions uses VCPKG for dependency management. Enabling VCPKG is very simple: follow the [installation instructions](https://vcpkg.io/en/getting-started) or just run the following:
-```shell
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
-export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
+## Requirements
+```sh
+apt install build-essential cmake libgeos-dev libproj-dev libjson-c-dev libgsl-dev
 ```
-Note: VCPKG is only required for extensions that want to rely on it for dependency management. If you want to develop an extension without dependencies, or want to do your own dependency management, just skip this step. Note that the example extension uses VCPKG to build with a dependency for instructive purposes, so when skipping this step the build may not work without removing the dependency.
+
+## Building MobilityDuck
+### Clone the repository
+```sh
+git clone --recurse-submodules https://github.com/nhungoc1508/mobilityduck.git
+```
+Note that `--recurse-submodules` will ensure DuckDB is pulled which is required to build the extension.
 
 ### Build steps
-Now to build the extension, run:
+To build the extension, from the root directory (`mobilityduck`), run (for first build):
 ```sh
 make
+```
+
+For subsequent builds, use `ninja` for faster build relying on cache:
+```sh
+GEN=ninja make
 ```
 The main binaries that will be built are:
 ```sh
@@ -33,54 +39,55 @@ The main binaries that will be built are:
 - `mobilityduck.duckdb_extension` is the loadable binary as it would be distributed.
 
 ## Running the extension
-To run the extension code, simply start the shell with `./build/release/duckdb`.
+To run the extension code, start the shell with `./build/release/duckdb`.
 
-Now we can use the features from the extension directly in DuckDB. The template contains a single scalar function `mobilityduck()` that takes a string arguments and returns a string:
+Now we can use the features from the extension directly in DuckDB. Some examples:
 ```
-D select mobilityduck('Jane') as result;
-┌───────────────┐
-│    result     │
-│    varchar    │
-├───────────────┤
-│ Mobilityduck Jane 🐥 │
-└───────────────┘
+D SELECT '100@2025-01-01 10:00:00+05'::TINT as tint;
+┌────────────────────────────┐
+│            tint            │
+│            tint            │
+├────────────────────────────┤
+│ 100@2025-01-01 05:00:00+00 │
+└────────────────────────────┘
+
+D SELECT duration('{1@2000-01-01, 2@2000-01-02, 1@2000-01-03}'::TINT, true) as duration;
+┌──────────┐
+│ duration │
+│ interval │
+├──────────┤
+│ 2 days   │
+└──────────┘
+
+D SELECT tstzspan('[2000-01-01,2000-01-01]') as ts_span;
+┌──────────────────────────────────────────────────┐
+│                     ts_span                      │
+│                       span                       │
+├──────────────────────────────────────────────────┤
+│ [2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00) │
+└──────────────────────────────────────────────────┘
+
+D SELECT timeSpan(tgeompoint('{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}')) as span;
+┌──────────────────────────────────────────────────┐
+│                       span                       │
+│                       span                       │
+├──────────────────────────────────────────────────┤
+│ [2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00] │
+└──────────────────────────────────────────────────┘
+
+D SELECT * FROM setUnnest(textset('{"highway", "car", "bike"}'));
+┌─────────┐
+│ unnest  │
+│ varchar │
+├─────────┤
+│ bike    │
+│ car     │
+│ highway │
+└─────────┘
 ```
 
 ## Running the tests
-Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
+Test files are located in `./test/sql`. These SQL tests can be run using:
 ```sh
 make test
-```
-
-### Installing the deployed binaries
-To install your extension binaries from S3, you will need to do two things. Firstly, DuckDB should be launched with the
-`allow_unsigned_extensions` option set to true. How to set this will depend on the client you're using. Some examples:
-
-CLI:
-```shell
-duckdb -unsigned
-```
-
-Python:
-```python
-con = duckdb.connect(':memory:', config={'allow_unsigned_extensions' : 'true'})
-```
-
-NodeJS:
-```js
-db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"});
-```
-
-Secondly, you will need to set the repository endpoint in DuckDB to the HTTP url of your bucket + version of the extension
-you want to install. To do this run the following SQL query in DuckDB:
-```sql
-SET custom_extension_repository='bucket.s3.eu-west-1.amazonaws.com/<your_extension_name>/latest';
-```
-Note that the `/latest` path will allow you to install the latest extension version available for your current version of
-DuckDB. To specify a specific version, you can pass the version instead.
-
-After running these steps, you can install and load your extension using the regular INSTALL/LOAD commands in DuckDB:
-```sql
-INSTALL mobilityduck
-LOAD mobilityduck
 ```
