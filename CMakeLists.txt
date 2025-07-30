@@ -83,12 +83,12 @@ include_directories(SYSTEM /usr/include/json-c)
 include_directories("${CMAKE_BINARY_DIR}/extension/mobilityduck/meos/postgres")
 include_directories("${CMAKE_BINARY_DIR}/extension/mobilityduck/src/meos/postgres")
 
+
 # --- Add MEOS as a subdirectory ---
 add_subdirectory(src/meos)
 
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    src/types.cpp
     src/functions.cpp
     src/temporal/tint.cpp
     src/temporal/tbool.cpp
@@ -96,7 +96,9 @@ set(EXTENSION_SOURCES
     src/temporal/temporal_functions.cpp
     src/span.cpp
     src/tgeometry.cpp
-    src/tgeompoint.cpp)
+    src/tgeompoint.cpp
+    src/set.cpp
+    src/geomset.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})

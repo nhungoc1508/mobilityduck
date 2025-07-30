@@ -673,7 +673,8 @@ pg_date_in(const char *str)
     return DATEVAL_NOEND;
   }
 
-  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  // date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - UNIX_EPOCH_JDATE;
 
   /* Now check for just-out-of-range dates */
   if (!IS_VALID_DATE(date))
@@ -717,7 +718,9 @@ pg_date_out(DateADT d)
     EncodeSpecialDate(d, buf);
   else
   {
-    j2date(d + POSTGRES_EPOCH_JDATE,
+    // j2date(d + POSTGRES_EPOCH_JDATE,
+    //      &(tm->tm_year), &(tm->tm_mon), &(tm->tm_mday));
+    j2date(d + UNIX_EPOCH_JDATE,
          &(tm->tm_year), &(tm->tm_mon), &(tm->tm_mday));
     EncodeDateOnly(tm, DateStyle, buf);
   }
@@ -763,7 +766,8 @@ date2timestamptz_opt_overflow(DateADT dateVal, int *overflow)
      * Since dates have the same minimum values as timestamps, only upper
      * boundary need be checked for overflow.
      */
-    if (dateVal >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
+    // if (dateVal >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
+    if (dateVal >= (TIMESTAMP_END_JULIAN - UNIX_EPOCH_JDATE))
     {
       if (overflow)
       {
@@ -779,7 +783,7 @@ date2timestamptz_opt_overflow(DateADT dateVal, int *overflow)
       }
     }
 
-    j2date(dateVal + POSTGRES_EPOCH_JDATE,
+    j2date(dateVal + UNIX_EPOCH_JDATE,
          &(tm->tm_year), &(tm->tm_mon), &(tm->tm_mday));
     tm->tm_hour = 0;
     tm->tm_min = 0;
@@ -939,7 +943,7 @@ date2timestamp_opt_overflow(DateADT dateVal, int *overflow)
      * Since dates have the same minimum values as timestamps, only upper
      * boundary need be checked for overflow.
      */
-    if (dateVal >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
+    if (dateVal >= (TIMESTAMP_END_JULIAN - UNIX_EPOCH_JDATE))
     {
       if (overflow)
       {
@@ -1012,7 +1016,7 @@ timestamp_to_date(MeosTimestamp t)
     }
     else
       result = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) -
-        POSTGRES_EPOCH_JDATE;
+        UNIX_EPOCH_JDATE;
   }
   return result;
 }
@@ -1458,7 +1462,7 @@ timestamptz_to_date(TimestampTz t)
       "timestamp out of range");
     return DATE_NOEND(result);
   }
-  result = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+  result = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - UNIX_EPOCH_JDATE;
   return result;
 }
 

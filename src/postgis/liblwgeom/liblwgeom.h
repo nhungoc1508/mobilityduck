@@ -82,7 +82,7 @@ typedef struct LWPROJ
 #define LIBLWGEOM_VERSION ""
 #define LIBLWGEOM_VERSION_MAJOR ""
 #define LIBLWGEOM_VERSION_MINOR ""
-// #define LIBLWGEOM_GEOS_VERSION "30800"
+// #define LIBLWGEOM_GEOS_VERSION "31101"
 #define POSTGIS_GEOS_VERSION 3800
 
 /** Return lwgeom version string (not to be freed) */

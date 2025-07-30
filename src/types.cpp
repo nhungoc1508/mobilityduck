@@ -63,6 +63,7 @@ void GeoTypes::RegisterTypes(DatabaseInstance &instance) {
     ExtensionUtil::RegisterType(instance, "TINT", GeoTypes::TINT());
 }
 
+
 } // namespace duckdb
 
 #ifndef MOBILITYDUCK_EXTENSION_TYPES
