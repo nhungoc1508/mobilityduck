@@ -1,6 +1,7 @@
 #include "common.hpp"
 #include "temporal/tint.hpp"
 #include "temporal/temporal_functions.hpp"
+
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
@@ -221,6 +222,62 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
         TemporalFunctions::TemporalToTsequenceset
     );
     ExtensionUtil::RegisterFunction(instance, temp_to_tseqset);
+
+    auto temp_to_tstzspan = ScalarFunction(
+        "timeSpan",
+        {TInt::TIntMake()},
+        SpanType::SPAN(),
+        TemporalFunctions::TemporalToTstzspan
+    );
+    ExtensionUtil::RegisterFunction(instance, temp_to_tstzspan);
+
+    auto tnumber_to_span = ScalarFunction(
+        "valueSpan",
+        {TInt::TIntMake()},
+        SpanType::SPAN(),
+        TemporalFunctions::TnumberToSpan
+    );
+    ExtensionUtil::RegisterFunction(instance, tnumber_to_span);
+
+    auto valueset = ScalarFunction(
+        "valueSet",
+        {TInt::TIntMake()},
+        SetTypes::INTSET(),
+        TemporalFunctions::TemporalValueset
+    );
+    ExtensionUtil::RegisterFunction(instance, valueset);
+
+    auto sequences = ScalarFunction(
+        "sequences",
+        {TInt::TIntMake()},
+        LogicalType::LIST(TInt::TIntMake()),
+        TemporalFunctions::TemporalSequences
+    );
+    ExtensionUtil::RegisterFunction(instance, sequences);
+
+    auto shift_value = ScalarFunction(
+        "shiftValue",
+        {TInt::TIntMake(), LogicalType::BIGINT},
+        TInt::TIntMake(),
+        TemporalFunctions::TnumberShiftValue
+    );
+    ExtensionUtil::RegisterFunction(instance, shift_value);
+
+    auto scale_value = ScalarFunction(
+        "scaleValue",
+        {TInt::TIntMake(), LogicalType::BIGINT},
+        TInt::TIntMake(),
+        TemporalFunctions::TnumberScaleValue
+    );
+    ExtensionUtil::RegisterFunction(instance, scale_value);
+
+    auto shift_scale_value = ScalarFunction(
+        "shiftScaleValue",
+        {TInt::TIntMake(), LogicalType::BIGINT, LogicalType::BIGINT},
+        TInt::TIntMake(),
+        TemporalFunctions::TnumberShiftScaleValue
+    );
+    ExtensionUtil::RegisterFunction(instance, shift_scale_value);
 }
 
 } // namespace duckdb

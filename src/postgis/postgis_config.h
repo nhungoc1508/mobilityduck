@@ -94,7 +94,7 @@
 #define POSTGIS_GDAL_VERSION 30
 
 /* GEOS library version */
-#define POSTGIS_GEOS_VERSION 31101
+#define POSTGIS_GEOS_VERSION 30800
 
 /* PostGIS libxml2 version */
 #define POSTGIS_LIBXML2_VERSION "2.9.10"
@@ -115,7 +115,7 @@
 #define POSTGIS_PGSQL_VERSION 140
 
 /* PROJ library version */
-#define POSTGIS_PROJ_VERSION 91
+#define POSTGIS_PROJ_VERSION 63
 
 /* Define to 1 if a warning is outputted every time a double is truncated */
 #define POSTGIS_RASTER_WARN_ON_TRUNCATION 0

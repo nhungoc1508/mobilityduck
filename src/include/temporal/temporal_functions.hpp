@@ -2,6 +2,9 @@
 
 #include "duckdb/common/typedefs.hpp"
 
+#include "span.hpp"
+#include "set.hpp"
+
 namespace duckdb {
 
 class ExtensionLoader;
@@ -14,6 +17,8 @@ typedef struct {
 struct TemporalHelpers {
     static meosType GetTemptypeFromAlias(const char *alias);
     static interval_t MeosToDuckDBInterval(MeosInterval *interval);
+    static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
+    static LogicalType GetTemporalLogicalType(meosType temptype);
 };
 
 struct TemporalFunctions {
@@ -39,6 +44,13 @@ struct TemporalFunctions {
     static void TemporalToTsequence(DataChunk &args, ExpressionState &state, Vector &result);
     static void TsequencesetConstructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void TemporalToTsequenceset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalToTstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TnumberToSpan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalValueset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TnumberShiftValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TnumberScaleValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TnumberShiftScaleValue(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
