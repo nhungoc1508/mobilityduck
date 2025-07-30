@@ -357,7 +357,8 @@ tempsubtype_from_string(const char *str, int16 *subtype)
   return false;
 }
 
-#ifndef NDEBUG
+// TODO: [Ngoc] temporary fix, need to put ifndef back
+// #ifndef NDEBUG
 /**
  * @brief Ensure that the subtype of a temporal value is valid
  * @note The function is used for the dispatch functions for temporal types
@@ -382,7 +383,7 @@ temptype_subtype_all(tempSubtype subtype)
     return true;
   return false;
 }
-#endif
+// #endif
 
 /*****************************************************************************/
 

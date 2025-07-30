@@ -632,12 +632,12 @@ extern const Span *SPANSET_SP_N(const SpanSet *ss, int index);
 
 /* Macros for speeding up access to components of temporal sequences (sets)*/
 
-#if DEBUG_BUILD
+// #if DEBUG_BUILD
 extern size_t *TSEQUENCE_OFFSETS_PTR(const TSequence *seq);
 extern const TInstant *TSEQUENCE_INST_N(const TSequence *seq, int index);
 extern size_t *TSEQUENCESET_OFFSETS_PTR(const TSequenceSet *ss);
 extern const TSequence *TSEQUENCESET_SEQ_N(const TSequenceSet *ss, int index);
-#else
+// #else
 /**
  * @brief Return a pointer to the offsets array of a temporal sequence
  * @note The period component of the bbox is already declared in the struct
@@ -671,7 +671,7 @@ extern const TSequence *TSEQUENCESET_SEQ_N(const TSequenceSet *ss, int index);
 #define TSEQUENCESET_SEQ_N(ss, index) ( (const TSequence *)( \
   ((char *) &((ss)->period)) + (ss)->bboxsize + \
   (sizeof(size_t) * (ss)->maxcount) + (TSEQUENCESET_OFFSETS_PTR(ss))[index] ) )
-#endif /* DEBUG_BUILD */
+// #endif /* DEBUG_BUILD */
 
 /*****************************************************************************
  * Internal function accessing the Gnu Scientic Library (GSL)
