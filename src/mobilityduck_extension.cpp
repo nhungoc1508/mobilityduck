@@ -1,20 +1,20 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
-#include "types.hpp"
-#include "intset.hpp"
+// #include "types.hpp"
+// #include "intset.hpp"
 #include "set.hpp"
-#include "geomset.hpp"
+// #include "geomset.hpp"
 
-#include "functions.hpp"
-#include "temporal/temporal_types.hpp"
-#include "temporal/temporal_functions.hpp"
-#include "temporal/tint.hpp"
-#include "temporal/tbool.hpp"
+// #include "functions.hpp"
+// #include "temporal/temporal_types.hpp"
+// #include "temporal/temporal_functions.hpp"
+// #include "temporal/tint.hpp"
+// #include "temporal/tbool.hpp"
 #include "duckdb.hpp"
-#include "tgeometry.hpp"
-#include "tgeompoint.hpp"
-#include "span.hpp"
+// #include "tgeometry.hpp"
+// #include "tgeompoint.hpp"
+// #include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -24,8 +24,8 @@
 #include <mutex>
 
 extern "C"{
-	#include <postgres.h>
-    #include <utils/timestamp.h>
+	// #include <postgres.h>
+    // #include <utils/timestamp.h>
     #include <meos.h>
 }
 
@@ -33,11 +33,11 @@ extern "C"{
 #include <openssl/opensslv.h>
 
 // MEOS
-extern "C" {
-	#include <postgres.h>
-    #include <utils/timestamp.h>
-    #include <meos.h>
-}
+// extern "C" {
+// 	#include <postgres.h>
+//     #include <utils/timestamp.h>
+//     #include <meos.h>
+// }
 
 namespace duckdb {
 
@@ -72,43 +72,43 @@ static void LoadInternal(DatabaseInstance &instance) {
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
-	TemporalTypes::RegisterTypes(instance);
-	TemporalTypes::RegisterCastFunctions(instance);
-	TemporalTypes::RegisterScalarFunctions(instance);
+	// TemporalTypes::RegisterTypes(instance);
+	// TemporalTypes::RegisterCastFunctions(instance);
+	// TemporalTypes::RegisterScalarFunctions(instance);
   
-  	SpanType::RegisterScalarFunctions(instance);
-	SpanType::RegisterTypes(instance);
-	PointTypes::RegisterScalarFunctions(instance);
-	PointTypes::RegisterTypes(instance);
-	TGeometryTypes::RegisterScalarFunctions(instance);
-	TGeometryTypes::RegisterTypes(instance);
+  	// SpanType::RegisterScalarFunctions(instance);
+	// SpanType::RegisterTypes(instance);
+	// PointTypes::RegisterScalarFunctions(instance);
+	// PointTypes::RegisterTypes(instance);
+	// TGeometryTypes::RegisterScalarFunctions(instance);
+	// TGeometryTypes::RegisterTypes(instance);
 
 	SetTypes::RegisterTypes(instance);
 	SetTypes::RegisterSet(instance);
 	SetTypes::RegisterSetAsText(instance);
-	SetTypes::RegisterSetConstructors(instance);
-	SetTypes::RegisterSetConversion(instance);
-	SetTypes::RegisterSetMemSize(instance);
-	SetTypes::RegisterSetNumValues(instance);
-	SetTypes::RegisterSetStartValue(instance);
-	SetTypes::RegisterSetEndValue(instance);
-	SetTypes::RegisterSetValueN(instance);
-	SetTypes::RegisterSetGetValues(instance);
-	SetTypes::RegisterSetUnnest(instance);
+	// SetTypes::RegisterSetConstructors(instance);
+	// SetTypes::RegisterSetConversion(instance);
+	// SetTypes::RegisterSetMemSize(instance);
+	// SetTypes::RegisterSetNumValues(instance);
+	// SetTypes::RegisterSetStartValue(instance);
+	// SetTypes::RegisterSetEndValue(instance);
+	// SetTypes::RegisterSetValueN(instance);
+	// SetTypes::RegisterSetGetValues(instance);
+	// SetTypes::RegisterSetUnnest(instance);
 
 	//Geometry
-	SpatialSetType::RegisterGeomSet(instance);
-	SpatialSetType::RegisterGeomSetAsText(instance);
-	SpatialSetType::RegisterMemSize(instance);
-	SpatialSetType::RegisterGeogSet(instance);
-	SpatialSetType::RegisterGeogSetAsText(instance);
+	// SpatialSetType::RegisterGeomSet(instance);
+	// SpatialSetType::RegisterGeomSetAsText(instance);
+	// SpatialSetType::RegisterMemSize(instance);
+	// SpatialSetType::RegisterGeogSet(instance);
+	// SpatialSetType::RegisterGeogSetAsText(instance);
 	
-	SpatialSetType::RegisterSRID(instance);
-	SpatialSetType::RegisterSetSRID(instance);
-	// SpatialSetType::RegisterTransform(instance); (debug later)
+	// SpatialSetType::RegisterSRID(instance);
+	// SpatialSetType::RegisterSetSRID(instance);
+	// // SpatialSetType::RegisterTransform(instance); (debug later)
 
-	SpatialSetType::RegisterStartValue(instance);
-	SpatialSetType::RegisterEndValue(instance);
+	// SpatialSetType::RegisterStartValue(instance);
+	// SpatialSetType::RegisterEndValue(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {

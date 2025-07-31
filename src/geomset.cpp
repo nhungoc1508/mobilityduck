@@ -8,7 +8,7 @@
 
 
 extern "C" {
-    #include <postgres.h>
+    // #include <postgres.h>
     #include <utils/timestamp.h>
     #include <meos.h>
     #include <meos_rgeo.h>
