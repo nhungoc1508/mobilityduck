@@ -13,7 +13,8 @@
 
 #include "temporal/tint.hpp"
 #include "temporal/tbool.hpp"
-
+#include "temporal/tint2.hpp"
+#include "temporal/tint3.hpp"
 extern "C" {
     #include <postgres.h>
     #include <utils/timestamp.h>
