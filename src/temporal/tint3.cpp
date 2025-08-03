@@ -32,7 +32,7 @@ void TInt3::RegisterType(DatabaseInstance &instance) {
 }
 
 bool TInt3::StringToTemporal(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    printf("StringToTemporal called\n");
+    // printf("StringToTemporal called\n");
     bool success = true;
     try {
         UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
@@ -64,7 +64,7 @@ bool TInt3::StringToTemporal(Vector &source, Vector &result, idx_t count, CastPa
 }
 
 bool TInt3::TemporalToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    printf("TemporalToString called\n");
+    // printf("TemporalToString called\n");
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count, [&](string_t input) {
             uint8_t *wkb = (uint8_t *)input.GetDataUnsafe();
@@ -100,7 +100,7 @@ void TInt3::RegisterCastFunctions(DatabaseInstance &instance) {
 }
 
 void TInt3::TInstantConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    printf("TInstantConstructor called\n");
+    // printf("TInstantConstructor called\n");
     BinaryExecutor::Execute<int64_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](int64_t value, timestamp_tz_t ts) {
@@ -117,7 +117,7 @@ void TInt3::TInstantConstructor(DataChunk &args, ExpressionState &state, Vector 
 }
 
 void TInt3::TemporalSubtype(DataChunk &args, ExpressionState &state, Vector &result) {
-    printf("TemporalSubtype called\n");
+    // printf("TemporalSubtype called\n");
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -136,7 +136,7 @@ void TInt3::TemporalSubtype(DataChunk &args, ExpressionState &state, Vector &res
 }
 
 void TInt3::TInstantValue(DataChunk &args, ExpressionState &state, Vector &result) {
-    printf("TInstantValue called\n");
+    // printf("TInstantValue called\n");
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -155,7 +155,7 @@ void TInt3::TInstantValue(DataChunk &args, ExpressionState &state, Vector &resul
 }
 
 void TInt3::TInstantTimestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    printf("TInstantTimestamptz called\n");
+    // printf("TInstantTimestamptz called\n");
     UnaryExecutor::Execute<string_t, timestamp_tz_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -193,18 +193,22 @@ vector<Value> TInt3::TempArrToArray(Temporal **temparr, int32_t count, LogicalTy
 }
 
 void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
+    // printf("TemporalSequences called\n");
     auto count = args.size();
     auto &value_vec = args.data[0];
     value_vec.Flatten(count);
 
     for (idx_t i = 0; i < count; i++) {
-        auto value_entry = value_vec.GetValue(i);
-        uint8_t *wkb = (uint8_t *)value_entry.GetDataUnsafe();
-        size_t wkb_size = value_entry.GetSize();
-        Temporal *temp = temporal_from_wkb(wkb, wkb_size);
+        auto blob_value = value_vec.GetValue(i);
+        
+        auto wkb_string = blob_value.GetValueUnsafe<string_t>();
+        auto wkb_data = (uint8_t *)wkb_string.GetDataUnsafe();
+        auto wkb_size = wkb_string.GetSize();
+        
+        Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
         if (!temp) {
             throw InternalException("Failure in tint TemporalSequences: unable to cast string to temporal");
-            return;
+            continue;
         }
         
         int32_t seq_count;
@@ -222,15 +226,18 @@ void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &r
         
         for (int32_t j = 0; j < seq_count; j++) {
             const TSequence *seq = sequences[j];
-            char *seq_str = temporal_out((Temporal*)seq, OUT_DEFAULT_DECIMAL_DIGITS);
-            values.push_back(Value(seq_str));
-            free(seq_str); // Use free for MEOS-allocated memory
+            // char *seq_str = temporal_out((Temporal*)seq, OUT_DEFAULT_DECIMAL_DIGITS);
+            size_t seq_wkb_size;
+            uint8_t *seq_wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &seq_wkb_size);
+            values.push_back(string_t((const char*)seq_wkb, seq_wkb_size));
+            // free(seq_str); // Use free for MEOS-allocated memory
         }
         
         Value list_value = Value::LIST(TInt3::TInt3Make(), values);
         result.SetValue(i, list_value);
         
-        free(temp);
+        free(temp); // Free the temporal object
+        // Note: sequences array is managed by MEOS, don't free it
     }
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
