@@ -32,7 +32,7 @@ void TInt3::RegisterType(DatabaseInstance &instance) {
 }
 
 bool TInt3::StringToTemporal(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    // printf("StringToTemporal called\n");
+    printf("StringToTemporal called\n");
     bool success = true;
     try {
         UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
@@ -64,7 +64,7 @@ bool TInt3::StringToTemporal(Vector &source, Vector &result, idx_t count, CastPa
 }
 
 bool TInt3::TemporalToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    // printf("TemporalToString called\n");
+    printf("TemporalToString called\n");
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count, [&](string_t input) {
             uint8_t *wkb = (uint8_t *)input.GetDataUnsafe();
@@ -192,56 +192,86 @@ vector<Value> TInt3::TempArrToArray(Temporal **temparr, int32_t count, LogicalTy
     return values;
 }
 
-void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
-    // printf("TemporalSequences called\n");
-    auto count = args.size();
-    auto &value_vec = args.data[0];
-    value_vec.Flatten(count);
+// void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
+//     printf("TemporalSequences called\n");
+//     UnaryExecutor::Execute<string_t, list_entry_t>(
+//         args.data[0], result, args.size(),
+//         [&](string_t input) {
+//             auto wkb_data = (uint8_t *)input.GetDataUnsafe();
+//             auto wkb_size = input.GetSize();
+//             Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
+//             if (!temp) {
+//                 throw InternalException("Failure in tint TemporalSequences: unable to cast string to temporal");
+//                 return list_entry_t();
+//             }
+//             int32_t seq_count;
+//             const TSequence **sequences = temporal_sequences_p(temp, &seq_count);
+//             printf("Here 0, seq_count: %d\n", seq_count);
+//             if (seq_count == 0) {
+//                 free(temp);
+//                 return list_entry_t();
+//             }
 
-    for (idx_t i = 0; i < count; i++) {
-        auto blob_value = value_vec.GetValue(i);
-        
-        auto wkb_string = blob_value.GetValueUnsafe<string_t>();
-        auto wkb_data = (uint8_t *)wkb_string.GetDataUnsafe();
-        auto wkb_size = wkb_string.GetSize();
-        
-        Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-        if (!temp) {
-            throw InternalException("Failure in tint TemporalSequences: unable to cast string to temporal");
-            continue;
+//             auto &child_vec = ListVector::GetEntry(result);
+//             ListVector::Reserve(result, seq_count);
+//             auto child_data = FlatVector::GetData<string_t>(child_vec);
+//             printf("Here 1\n");
+
+//             for (int32_t i = 0; i < seq_count; i++) {
+//                 const TSequence *seq = sequences[i];
+//                 size_t seq_wkb_size;
+//                 uint8_t *seq_wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &seq_wkb_size);
+//                 auto seq_string = string_t((const char*)seq_wkb, seq_wkb_size);
+//                 printf("Here 2\n");
+
+//                 child_data[i] = seq_string;
+
+//                 free(seq_wkb);
+//             }
+
+//             free(temp);
+//             return list_entry_t(0, seq_count);
+//         }
+//     );
+// }
+
+void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
+    printf("TemporalSequences called\n");
+    idx_t total_count = 0;
+    UnaryExecutor::Execute<string_t, list_entry_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            auto wkb_data = (uint8_t *)input.GetDataUnsafe();
+            auto wkb_size = input.GetSize();
+            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
+            if (!temp) {
+                throw InternalException("Failure in tint TemporalSequences: unable to cast string to temporal");
+                return list_entry_t();
+            }
+            int32_t seq_count;
+            const TSequence **sequences = temporal_sequences_p(temp, &seq_count);
+            if (seq_count == 0) {
+                free(temp);
+                return list_entry_t();
+            }
+            const auto entry = list_entry_t(total_count, seq_count);
+            total_count += seq_count;
+            ListVector::Reserve(result, total_count);
+
+            auto &seq_vec = ListVector::GetEntry(result);
+            const auto seq_data = FlatVector::GetData<string_t>(seq_vec);
+
+            for (idx_t i = 0; i < seq_count; i++) {
+                const TSequence *seq = sequences[i];
+                size_t seq_wkb_size;
+                uint8_t *seq_wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &seq_wkb_size);
+                seq_data[entry.offset + i] = string_t((const char*)seq_wkb, seq_wkb_size);
+            }
+            free(temp);
+            return entry;
         }
-        
-        int32_t seq_count;
-        const TSequence **sequences = temporal_sequences_p(temp, &seq_count);
-        
-        if (seq_count == 0) {
-            result.SetValue(i, Value::LIST(TInt3::TInt3Make(), vector<Value>()));
-            free(temp); // Free the temporal object
-            continue;
-        }
-        
-        // Convert sequences to string values
-        vector<Value> values;
-        values.reserve(seq_count);
-        
-        for (int32_t j = 0; j < seq_count; j++) {
-            const TSequence *seq = sequences[j];
-            // char *seq_str = temporal_out((Temporal*)seq, OUT_DEFAULT_DECIMAL_DIGITS);
-            size_t seq_wkb_size;
-            uint8_t *seq_wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &seq_wkb_size);
-            values.push_back(string_t((const char*)seq_wkb, seq_wkb_size));
-            // free(seq_str); // Use free for MEOS-allocated memory
-        }
-        
-        Value list_value = Value::LIST(TInt3::TInt3Make(), values);
-        result.SetValue(i, list_value);
-        
-        free(temp); // Free the temporal object
-        // Note: sequences array is managed by MEOS, don't free it
-    }
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
+    );
+    ListVector::SetListSize(result, total_count);
 }
 
 void TInt3::RegisterScalarFunctions(DatabaseInstance &instance) {
