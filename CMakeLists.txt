@@ -86,7 +86,7 @@ include_directories(src/include)
 #     src/geomset.cpp)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    src/set2.cpp  
+    src/set.cpp  
     src/span.cpp  
 )
 

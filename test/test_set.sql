@@ -48,7 +48,7 @@ SELECT Set(-42);       -- returns: "{-42}"
 SELECT Set(1.5);
 SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
 SELECT Set(DATE'2001-01-01') 
--- TEXT need testing later 
+
 
 
 -- Test MemSize:
