@@ -11,7 +11,6 @@
 #include "temporal/temporal_functions.hpp"
 #include "temporal/tint.hpp"
 #include "temporal/tbool.hpp"
-#include "temporal/tint2.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"

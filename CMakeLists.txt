@@ -92,8 +92,6 @@ set(EXTENSION_SOURCES
     src/functions.cpp
     src/temporal/tint.cpp
     src/temporal/tbool.cpp
-    src/temporal/tint2.cpp
-    src/temporal/tint3.cpp
     src/temporal/temporal_types.cpp
     src/temporal/temporal_functions.cpp
     src/span.cpp
