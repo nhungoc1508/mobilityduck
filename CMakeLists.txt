@@ -79,7 +79,7 @@ include_directories(src/include)
 #     src/temporal/tbool.cpp
 #     src/temporal/temporal_types.cpp
 #     src/temporal/temporal_functions.cpp
-#     src/span.cpp
+    # src/span.cpp
 #     src/tgeometry.cpp
 #     src/tgeompoint.cpp
 #     src/set.cpp
@@ -87,6 +87,8 @@ include_directories(src/include)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/set.cpp    
+    src/span.cpp
+    src/tgeometry.cpp
 )
 
 # Build extension targets

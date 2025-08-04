@@ -12,9 +12,9 @@
 // #include "temporal/tint.hpp"
 // #include "temporal/tbool.hpp"
 #include "duckdb.hpp"
-// #include "tgeometry.hpp"
+#include "tgeometry.hpp"
 // #include "tgeompoint.hpp"
-// #include "span.hpp"
+#include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -76,12 +76,14 @@ static void LoadInternal(DatabaseInstance &instance) {
 	// TemporalTypes::RegisterCastFunctions(instance);
 	// TemporalTypes::RegisterScalarFunctions(instance);
   
-  	// SpanType::RegisterScalarFunctions(instance);
-	// SpanType::RegisterTypes(instance);
+  	SpanTypes::RegisterScalarFunctions(instance);
+	SpanTypes::RegisterTypes(instance);
+	SpanTypes::RegisterCastFunctions(instance);
 	// PointTypes::RegisterScalarFunctions(instance);
 	// PointTypes::RegisterTypes(instance);
-	// TGeometryTypes::RegisterScalarFunctions(instance);
-	// TGeometryTypes::RegisterTypes(instance);
+	TGeometryTypes::RegisterScalarFunctions(instance);
+	TGeometryTypes::RegisterTypes(instance);
+	TGeometryTypes::RegisterCastFunctions(instance);
 
 	SetTypes::RegisterTypes(instance);
 	SetTypes::RegisterSet(instance);
