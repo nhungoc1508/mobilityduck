@@ -192,49 +192,6 @@ vector<Value> TInt3::TempArrToArray(Temporal **temparr, int32_t count, LogicalTy
     return values;
 }
 
-// void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
-//     printf("TemporalSequences called\n");
-//     UnaryExecutor::Execute<string_t, list_entry_t>(
-//         args.data[0], result, args.size(),
-//         [&](string_t input) {
-//             auto wkb_data = (uint8_t *)input.GetDataUnsafe();
-//             auto wkb_size = input.GetSize();
-//             Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-//             if (!temp) {
-//                 throw InternalException("Failure in tint TemporalSequences: unable to cast string to temporal");
-//                 return list_entry_t();
-//             }
-//             int32_t seq_count;
-//             const TSequence **sequences = temporal_sequences_p(temp, &seq_count);
-//             printf("Here 0, seq_count: %d\n", seq_count);
-//             if (seq_count == 0) {
-//                 free(temp);
-//                 return list_entry_t();
-//             }
-
-//             auto &child_vec = ListVector::GetEntry(result);
-//             ListVector::Reserve(result, seq_count);
-//             auto child_data = FlatVector::GetData<string_t>(child_vec);
-//             printf("Here 1\n");
-
-//             for (int32_t i = 0; i < seq_count; i++) {
-//                 const TSequence *seq = sequences[i];
-//                 size_t seq_wkb_size;
-//                 uint8_t *seq_wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &seq_wkb_size);
-//                 auto seq_string = string_t((const char*)seq_wkb, seq_wkb_size);
-//                 printf("Here 2\n");
-
-//                 child_data[i] = seq_string;
-
-//                 free(seq_wkb);
-//             }
-
-//             free(temp);
-//             return list_entry_t(0, seq_count);
-//         }
-//     );
-// }
-
 void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
     printf("TemporalSequences called\n");
     idx_t total_count = 0;
@@ -272,6 +229,101 @@ void TInt3::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &r
         }
     );
     ListVector::SetListSize(result, total_count);
+}
+
+void TInt3::TsequenceConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    printf("TsequenceConstructor called\n");
+    
+    auto count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+
+    meosType temptype = T_TINT;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    bool lower_inc = true;
+    bool upper_inc = true;
+
+    if (args.size() > 1) {
+        auto &interp_child = args.data[1];
+        interp_child.Flatten(count);
+        auto interp_str = interp_child.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+    if (args.size() > 2) {
+        auto &lower_inc_child = args.data[2];
+        lower_inc = lower_inc_child.GetValue(0).GetValue<bool>();
+    }
+    if (args.size() > 3) {
+        auto &upper_inc_child = args.data[3];
+        upper_inc = upper_inc_child.GetValue(0).GetValue<bool>();
+    }
+
+    // Get direct access to child vector data
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, count,
+        [&](const list_entry_t &list) {
+            auto offset = list.offset;
+            auto length = list.length;
+
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            if (!instants) {
+                throw InternalException("Memory allocation failed in TsequenceConstructor");
+            }
+
+            for (idx_t i = 0; i < length; i++) {
+                idx_t child_idx = offset + i;
+                auto wkb_data = child_data[child_idx];
+                Temporal *temp = temporal_from_wkb((uint8_t*)wkb_data.GetDataUnsafe(), wkb_data.GetSize());
+                if (!temp) {
+                    free(instants);
+                    throw InternalException("Failure in TsequenceConstructor: unable to convert WKB to temporal");
+                }
+                instants[i] = (TInstant*)temp;
+            }
+
+            TSequence *seq = tsequence_make((const TInstant **)instants, length,
+                lower_inc, upper_inc, interp, true);
+            
+            if (!seq) {
+                for (idx_t j = 0; j < length; j++) {
+                    free(instants[j]);
+                }
+                free(instants);
+                throw InternalException("Failure in TsequenceConstructor: unable to create sequence");
+            }
+
+            size_t wkb_size;
+            uint8_t *wkb = temporal_as_wkb((Temporal*)seq, WKB_EXTENDED, &wkb_size);
+            if (!wkb) {
+                free(seq);
+                for (idx_t j = 0; j < length; j++) {
+                    free(instants[j]);
+                }
+                free(instants);
+                throw InternalException("Failure in TsequenceConstructor: unable to convert sequence to WKB");
+            }
+
+            string_t result_str((const char*)wkb, wkb_size);
+
+            // free(wkb);
+            free(seq);
+            for (idx_t j = 0; j < length; j++) {
+                free(instants[j]);
+            }
+            free(instants);
+
+            return result_str;
+        }
+    );
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
 }
 
 void TInt3::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -314,6 +366,14 @@ void TInt3::RegisterScalarFunctions(DatabaseInstance &instance) {
         TInt3::TemporalSequences
     );
     ExtensionUtil::RegisterFunction(instance, sequences);
+
+    auto tseq_constructor = ScalarFunction(
+        "tintSeq",
+        {LogicalType::LIST(TInt3::TInt3Make())},
+        TInt3::TInt3Make(),
+        TInt3::TsequenceConstructor
+    );
+    ExtensionUtil::RegisterFunction(instance, tseq_constructor);
 }
 
 } // namespace duckdb

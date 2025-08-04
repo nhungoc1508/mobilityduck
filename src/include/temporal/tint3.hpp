@@ -34,6 +34,7 @@ struct TInt3 {
     static void TInstantValue(DataChunk &args, ExpressionState &state, Vector &result);
     static void TInstantTimestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result);
+    static void TsequenceConstructor(DataChunk &args, ExpressionState &state, Vector &result);
     
     static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
 
