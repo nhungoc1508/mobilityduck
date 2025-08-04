@@ -90,10 +90,10 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterCastFunctions(instance);
 	SetTypes::RegisterSetConversion(instance);
 	// SetTypes::RegisterSetMemSize(instance);
-	// SetTypes::RegisterSetNumValues(instance);
-	// SetTypes::RegisterSetStartValue(instance);
-	// SetTypes::RegisterSetEndValue(instance);
-	// SetTypes::RegisterSetValueN(instance);
+	SetTypes::RegisterSetNumValues(instance);
+	SetTypes::RegisterSetStartValue(instance);
+	SetTypes::RegisterSetEndValue(instance);
+	SetTypes::RegisterSetValueN(instance);
 	// SetTypes::RegisterSetGetValues(instance);
 	// SetTypes::RegisterSetUnnest(instance);
 
