@@ -20,35 +20,27 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TInt::TIntMake() {
-    auto type = LogicalType::STRUCT({
-        {"meos_ptr", LogicalType::UBIGINT}
-    });
+LogicalType TInt::TINT() {
+    LogicalType type(LogicalTypeId::BLOB);
     type.SetAlias("TINT");
     return type;
 }
 
-// LogicalType TInt::TIntMake() {
-//     auto type = LogicalType(LogicalTypeId::VARCHAR);
-//     type.SetAlias("TINT");
-//     return type;
-// }
-
 void TInt::RegisterType(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterType(instance, "TINT", TInt::TIntMake());
+    ExtensionUtil::RegisterType(instance, "TINT", TInt::TINT());
 }
 
 void TInt::RegisterCastFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR,
-        TInt::TIntMake(),
+        TInt::TINT(),
         TemporalFunctions::StringToTemporal
     );
 
     ExtensionUtil::RegisterCastFunction(
         instance,
-        TInt::TIntMake(),
+        TInt::TINT(),
         LogicalType::VARCHAR,
         TemporalFunctions::TemporalToString
     );
@@ -58,14 +50,14 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto constructor = ScalarFunction(
         "tint",
         {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ},
-        TInt::TIntMake(),
+        TInt::TINT(),
         TemporalFunctions::TInstantConstructor
     );
     ExtensionUtil::RegisterFunction(instance, constructor);
 
     auto tempsubtype = ScalarFunction(
         "tempSubtype",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::VARCHAR,
         TemporalFunctions::TemporalSubtype
     );
@@ -73,7 +65,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto interp = ScalarFunction(
         "interp",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::VARCHAR,
         TemporalFunctions::TemporalInterp
     );
@@ -81,7 +73,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto value = ScalarFunction(
         "getValue",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::BIGINT,
         TemporalFunctions::TInstantValue
     );
@@ -89,7 +81,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto start_value = ScalarFunction(
         "startValue",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::BIGINT,
         TemporalFunctions::TemporalStartValue
     );
@@ -97,7 +89,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto end_value = ScalarFunction(
         "endValue",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::BIGINT,
         TemporalFunctions::TemporalEndValue
     );
@@ -105,7 +97,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto min_value = ScalarFunction(
         "minValue",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::BIGINT,
         TemporalFunctions::TemporalMinValue
     );
@@ -113,7 +105,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto max_value = ScalarFunction(
         "maxValue",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::BIGINT,
         TemporalFunctions::TemporalMaxValue
     );
@@ -121,7 +113,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto value_N = ScalarFunction(
         "valueN",
-        {TInt::TIntMake(), LogicalType::BIGINT},
+        {TInt::TINT(), LogicalType::BIGINT},
         LogicalType::BIGINT,
         TemporalFunctions::TemporalValueN
     );
@@ -129,23 +121,23 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto min_instant = ScalarFunction(
         "minInstant",
-        {TInt::TIntMake()},
-        TInt::TIntMake(),
+        {TInt::TINT()},
+        TInt::TINT(),
         TemporalFunctions::TemporalMinInstant
     );
     ExtensionUtil::RegisterFunction(instance, min_instant);
 
     auto max_instant = ScalarFunction(
         "maxInstant",
-        {TInt::TIntMake()},
-        TInt::TIntMake(),
+        {TInt::TINT()},
+        TInt::TINT(),
         TemporalFunctions::TemporalMaxInstant
     );
     ExtensionUtil::RegisterFunction(instance, max_instant);
 
     auto instant_timestamptz = ScalarFunction(
         "getTimestamp",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         LogicalType::TIMESTAMP_TZ,
         TemporalFunctions::TInstantTimestamptz
     );
@@ -153,7 +145,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto duration = ScalarFunction(
         "duration",
-        {TInt::TIntMake(), LogicalType::BOOLEAN},
+        {TInt::TINT(), LogicalType::BOOLEAN},
         LogicalType::INTERVAL,
         TemporalFunctions::TemporalDuration
     );
@@ -161,71 +153,71 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto tseq_constructor = ScalarFunction(
         "tintSeq",
-        {LogicalType::LIST(TInt::TIntMake())},
-        TInt::TIntMake(),
+        {LogicalType::LIST(TInt::TINT())},
+        TInt::TINT(),
         TemporalFunctions::TsequenceConstructor
     );
     ExtensionUtil::RegisterFunction(instance, tseq_constructor);
 
     auto tseq_constructor2 = ScalarFunction(
         "tintSeq",
-        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR},
-        TInt::TIntMake(),
+        {LogicalType::LIST(TInt::TINT()), LogicalType::VARCHAR},
+        TInt::TINT(),
         TemporalFunctions::TsequenceConstructor
     );
     ExtensionUtil::RegisterFunction(instance, tseq_constructor2);
 
     auto tseq_constructor3 = ScalarFunction(
         "tintSeq",
-        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
-        TInt::TIntMake(),
+        {LogicalType::LIST(TInt::TINT()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
+        TInt::TINT(),
         TemporalFunctions::TsequenceConstructor
     );
     ExtensionUtil::RegisterFunction(instance, tseq_constructor3);
 
     auto tseq_constructor4 = ScalarFunction(
         "tintSeq",
-        {LogicalType::LIST(TInt::TIntMake()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
-        TInt::TIntMake(),
+        {LogicalType::LIST(TInt::TINT()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
+        TInt::TINT(),
         TemporalFunctions::TsequenceConstructor
     );
     ExtensionUtil::RegisterFunction(instance, tseq_constructor4);
 
     auto temp_to_tseq = ScalarFunction(
         "tintSeq",
-        {TInt::TIntMake(), LogicalType::VARCHAR},
-        TInt::TIntMake(),
+        {TInt::TINT(), LogicalType::VARCHAR},
+        TInt::TINT(),
         TemporalFunctions::TemporalToTsequence
     );
     ExtensionUtil::RegisterFunction(instance, temp_to_tseq);
 
     auto temp_to_tseq2 = ScalarFunction(
         "tintSeq",
-        {TInt::TIntMake()},
-        TInt::TIntMake(),
+        {TInt::TINT()},
+        TInt::TINT(),
         TemporalFunctions::TemporalToTsequence
     );
     ExtensionUtil::RegisterFunction(instance, temp_to_tseq2);
 
     auto tseqset_constructor = ScalarFunction(
         "tintSeqSet",
-        {LogicalType::LIST(TInt::TIntMake())},
-        TInt::TIntMake(),
+        {LogicalType::LIST(TInt::TINT())},
+        TInt::TINT(),
         TemporalFunctions::TsequencesetConstructor
     );
     ExtensionUtil::RegisterFunction(instance, tseqset_constructor);
 
     auto temp_to_tseqset = ScalarFunction(
         "tintSeqSet",
-        {TInt::TIntMake()},
-        TInt::TIntMake(),
+        {TInt::TINT()},
+        TInt::TINT(),
         TemporalFunctions::TemporalToTsequenceset
     );
     ExtensionUtil::RegisterFunction(instance, temp_to_tseqset);
 
     auto temp_to_tstzspan = ScalarFunction(
         "timeSpan",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         SpanType::SPAN(),
         TemporalFunctions::TemporalToTstzspan
     );
@@ -233,7 +225,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto tnumber_to_span = ScalarFunction(
         "valueSpan",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         SpanType::SPAN(),
         TemporalFunctions::TnumberToSpan
     );
@@ -241,7 +233,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto valueset = ScalarFunction(
         "valueSet",
-        {TInt::TIntMake()},
+        {TInt::TINT()},
         SetTypes::INTSET(),
         TemporalFunctions::TemporalValueset
     );
@@ -249,32 +241,32 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     auto sequences = ScalarFunction(
         "sequences",
-        {TInt::TIntMake()},
-        LogicalType::LIST(TInt::TIntMake()),
+        {TInt::TINT()},
+        LogicalType::LIST(TInt::TINT()),
         TemporalFunctions::TemporalSequences
     );
     ExtensionUtil::RegisterFunction(instance, sequences);
 
     auto shift_value = ScalarFunction(
         "shiftValue",
-        {TInt::TIntMake(), LogicalType::BIGINT},
-        TInt::TIntMake(),
+        {TInt::TINT(), LogicalType::BIGINT},
+        TInt::TINT(),
         TemporalFunctions::TnumberShiftValue
     );
     ExtensionUtil::RegisterFunction(instance, shift_value);
 
     auto scale_value = ScalarFunction(
         "scaleValue",
-        {TInt::TIntMake(), LogicalType::BIGINT},
-        TInt::TIntMake(),
+        {TInt::TINT(), LogicalType::BIGINT},
+        TInt::TINT(),
         TemporalFunctions::TnumberScaleValue
     );
     ExtensionUtil::RegisterFunction(instance, scale_value);
 
     auto shift_scale_value = ScalarFunction(
         "shiftScaleValue",
-        {TInt::TIntMake(), LogicalType::BIGINT, LogicalType::BIGINT},
-        TInt::TIntMake(),
+        {TInt::TINT(), LogicalType::BIGINT, LogicalType::BIGINT},
+        TInt::TINT(),
         TemporalFunctions::TnumberShiftScaleValue
     );
     ExtensionUtil::RegisterFunction(instance, shift_scale_value);

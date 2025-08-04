@@ -1,44 +1,65 @@
+# name: test/sql/temporal.test
+# description: test mobilityduck extension
+# group: [sql]
+
+# Require statement will ensure this test is run with this extension loaded
 require mobilityduck
 
-query I
-SELECT '15@2025-01-01'::TINT as tint;
-----
-15@2025-01-01 00:00:00+00
+# Test extension
 
-query I
-SELECT '100@2025-01-01 15:00:00'::TINT as tint;
-----
-100@2025-01-01 15:00:00+00
-
-query I
-SELECT '100@2025-01-01 10:00:00+05'::TINT as tint;
-----
-100@2025-01-01 05:00:00+00
-
-query I
-SELECT '{1@2025-01-01, 2@2025-01-02, 1@2025-01-03}'::TINT as tint;
-----
-{1@2025-01-01 00:00:00+00, 2@2025-01-02 00:00:00+00, 1@2025-01-03 00:00:00+00}
-
-query I
-SELECT '{[1@2025-01-01, 2@2025-01-02],[3@2025-01-04, 3@2025-01-05]}'::TINT as tint;
-----
-{[1@2025-01-01 00:00:00+00, 2@2025-01-02 00:00:00+00], [3@2025-01-04 00:00:00+00, 3@2025-01-05 00:00:00+00]}
-
+# TINT() with only date
 query I
 SELECT TINT(42, '2023-01-01'::TIMESTAMPTZ) as tint;
 ----
 42@2023-01-01 00:00:00+00
 
+# TINT with date and time
 query I
 SELECT TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ) as tint;
 ----
 42@2023-01-01 12:00:00+00
 
+# TINT with date and time and timezone
 query I
 SELECT TINT(42, '2023-01-01 12:00:00+05'::TIMESTAMPTZ) as tint;
 ----
 42@2023-01-01 07:00:00+00
+
+# TINT getValue
+query I
+SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
+----
+42
+
+# TINT cast with only date
+query I
+SELECT '15@2025-01-01'::TINT as tint;
+----
+15@2025-01-01 00:00:00+00
+
+# TINT cast with date and time
+query I
+SELECT '100@2025-01-01 15:00:00'::TINT as tint;
+----
+100@2025-01-01 15:00:00+00
+
+# TINT cast with date and time and timezone
+query I
+SELECT '100@2025-01-01 10:00:00+05'::TINT as tint;
+----
+100@2025-01-01 05:00:00+00
+
+# TINT cast for Sequence
+query I
+SELECT '{1@2025-01-01, 2@2025-01-02, 1@2025-01-03}'::TINT as tint;
+----
+{1@2025-01-01 00:00:00+00, 2@2025-01-02 00:00:00+00, 1@2025-01-03 00:00:00+00}
+
+# TINT cast for SequenceSet
+query I
+SELECT '{[1@2025-01-01, 2@2025-01-02],[3@2025-01-04, 3@2025-01-05]}'::TINT as tint;
+----
+{[1@2025-01-01 00:00:00+00, 2@2025-01-02 00:00:00+00], [3@2025-01-04 00:00:00+00, 3@2025-01-05 00:00:00+00]}
 
 query I
 SELECT tempSubtype('1@2025-01-01'::TINT) as tempType;
@@ -74,11 +95,6 @@ query I
 SELECT interp('{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}'::TINT) as interp;
 ----
 Step
-
-query I
-SELECT getValue(TINT(42, '2023-01-01 12:00:00'::TIMESTAMPTZ)) as value;
-----
-42
 
 query I
 SELECT startValue('100@2000-01-01'::TINT) as startVal;
@@ -321,12 +337,12 @@ SELECT valueSet(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04,
 query I
 SELECT sequences(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]');
 ----
-['[1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00]']
+[[1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00]]
 
 query I
 SELECT sequences(tint '{[1@2000-01-01], [3@2000-01-04, 3@2000-01-05]}');
 ----
-['[1@2000-01-01 00:00:00+00]', '[3@2000-01-04 00:00:00+00, 3@2000-01-05 00:00:00+00]']
+[[1@2000-01-01 00:00:00+00], [3@2000-01-04 00:00:00+00, 3@2000-01-05 00:00:00+00]]
 
 query I
 SELECT shiftValue(tint '{1@2001-01-01, 2@2001-01-03, 1@2001-01-05}', 100);

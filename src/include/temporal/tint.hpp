@@ -22,7 +22,7 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TInt {
-    static LogicalType TIntMake();
+    static LogicalType TINT();
     static void RegisterType(DatabaseInstance &instance);
     static void RegisterCastFunctions(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
