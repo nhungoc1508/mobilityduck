@@ -25,19 +25,27 @@ struct SetTypes {
     static const std::vector<LogicalType> &AllTypes();
 
     static void RegisterTypes(DatabaseInstance &db);
-	static void RegisterSet(DatabaseInstance &db);
-	static void RegisterSetAsText(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);
-    static void RegisterSetConstructors(DatabaseInstance &db);
-    static void RegisterSetConversion(DatabaseInstance &db);
-    static void RegisterSetMemSize(DatabaseInstance &db);
-    static void RegisterSetNumValues(DatabaseInstance &db);
-    static void RegisterSetStartValue(DatabaseInstance &db);
-    static void RegisterSetEndValue(DatabaseInstance &db);
-    static void RegisterSetValueN(DatabaseInstance &db);
-    static void RegisterSetGetValues(DatabaseInstance &db);
-    static void RegisterSetUnnest(DatabaseInstance &db);
-    
+    static void RegisterScalarFunctions(DatabaseInstance &db);    
+    static void RegisterSetUnnest(DatabaseInstance &db);    
+};
+
+struct SetFunctions{
+    // for cast
+    static bool SetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+
+    // other
+    static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result);
+    static void AsText(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetConstructor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetConversion(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 struct SetTypeMapping {

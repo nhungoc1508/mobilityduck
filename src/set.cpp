@@ -82,7 +82,7 @@ LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
 }
 
 
-static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetFromText(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
@@ -98,16 +98,8 @@ static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result)
     );
 }
 
-void SetTypes::RegisterSet(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(t.ToString(), {LogicalType::VARCHAR}, t, SetFromText)
-        );
-    }
-}
-
 //AsText
-static void AsText(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::AsText(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
@@ -130,17 +122,8 @@ static void AsText(DataChunk &args, ExpressionState &state, Vector &result) {
     );
 }
 
-void SetTypes::RegisterSetAsText(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("asText", {t}, LogicalType::VARCHAR, AsText)
-        );
-    }
-
-}
-
 // Cast
-bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::SetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     auto result_data = FlatVector::GetData<string_t>(result); 
 
@@ -169,7 +152,7 @@ bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &
     return true;
 }
 
-bool TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
 
     auto target_type = result.GetType();
@@ -203,19 +186,19 @@ void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             instance,
             t,                      
             LogicalType::VARCHAR,   
-            SetBlobToText   
+            SetFunctions::SetToText   
         ); // Blob to text
         ExtensionUtil::RegisterCastFunction(
             instance,
             LogicalType::VARCHAR, 
             t,                                    
-            TextToSet   
+            SetFunctions::TextToSet   
         ); // text to blob
     }
 }
 
 // Set constructor from list 
-static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
     auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
@@ -292,18 +275,8 @@ static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result)
     );
 }
 
-void SetTypes::RegisterSetConstructors(DatabaseInstance &db) {
-    for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = SetTypeMapping::GetChildType(t); 
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("set", {LogicalType::LIST(child_type)}, t, SetFromList)                    
-        );
-    }    
-}
-
 // Conversion function: base type -> set 
-static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetConversion(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -396,18 +369,8 @@ static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result)
     }
 }
 
-void SetTypes::RegisterSetConversion(DatabaseInstance &db) {
-    for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = SetTypeMapping::GetChildType(t); 
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("set", {child_type}, t, SetFromBase)                    
-        );
-    }    
-}
-
 // //memSize
-static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -423,19 +386,9 @@ static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) 
         });
 }
 
-void SetTypes::RegisterSetMemSize(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(
-                "memSize",
-                {set_type},
-                LogicalType::INTEGER,
-                SetMemSize));
-    }
-}
 
 //numValue
-static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetNumValues(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -455,20 +408,8 @@ static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result
         });
 }
 
-
-void SetTypes::RegisterSetNumValues(DatabaseInstance &db){
-    for (auto &set_type : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(
-                "numValues",
-                {set_type},
-                LogicalType::INTEGER,
-                SetNumValues));
-    }
-}
-
 //startValue 
-static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -584,19 +525,9 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
     }
 }
 
-void SetTypes::RegisterSetStartValue(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = SetTypeMapping::GetChildType(set_type); 
-
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("startValue", {set_type}, child_type, SetStartValue)
-        );
-    }
-}
 
 //endValue 
-static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::SetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -709,22 +640,11 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
 
         default:
             throw NotImplementedException("startValue: Unsupported set base type.");
-    }
-}
-
-void SetTypes::RegisterSetEndValue(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = SetTypeMapping::GetChildType(set_type); 
-
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("endValue", {set_type}, child_type, SetEndValue)
-        );
     }
 }
 
 // valueN
-static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+void SetFunctions::SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec) {
     auto &set_vec = args.data[0];
     auto &index_vec = args.data[1];
 
@@ -790,19 +710,9 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
     }
 }
 
-void SetTypes::RegisterSetValueN(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {
-        LogicalType base_type = SetTypeMapping::GetChildType(set_type);
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetValueN)
-        );
-    }
-}
-
 //getValues
 
-static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::GetSetValues(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     idx_t row_count = args.size();
     
@@ -834,7 +744,7 @@ static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result
             continue;
         }
 
-        auto count = s->count;
+        uint64_t count = s->count;
         Datum *values = set_vals(s);
         
         ListVector::SetListSize(result, total_offset + count);
@@ -897,15 +807,59 @@ static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result
         free(s);
     }
 }
+void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {    
+    for (const auto &set_type : SetTypes::AllTypes()) {
+        auto base_type = SetTypeMapping::GetChildType(set_type); 
 
-void SetTypes::RegisterSetGetValues(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
-        auto child = SetTypeMapping::GetChildType(t);
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("getValues", {t}, LogicalType::LIST(child), GetSetValues)
+            db, ScalarFunction(set_type.ToString(), {LogicalType::VARCHAR}, set_type, SetFunctions::SetFromText)
+        ); 
+
+        ExtensionUtil::RegisterFunction(
+            db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::AsText)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::SetConstructor)                    
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("set", {base_type}, set_type, SetFunctions::SetConstructor)                    
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::SetMemSize)
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::SetNumValues)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("startValue", {set_type}, base_type, SetFunctions::SetStartValue)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("endValue", {set_type}, base_type, SetFunctions::SetEndValue)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::SetValueN)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::GetSetValues)
         );
     }
 }
+
 
 // Unnest
 struct SetUnnestBindData : public TableFunctionData {

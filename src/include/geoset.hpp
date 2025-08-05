@@ -11,22 +11,24 @@ namespace duckdb {
 struct SpatialSetType{    
     static LogicalType GeomSet();     
     static LogicalType GeogSet();   
-    static void RegisterGeoSet(DatabaseInstance &db);        
-    static void RegisterGeoSetAsText(DatabaseInstance &db);
+
+    static void RegisterTypes(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);
-    static void RegisterMemSize(DatabaseInstance &db);    
-        
-    //different from base set 
-
-    static void RegisterSRID(DatabaseInstance &db);
-    static void RegisterSetSRID(DatabaseInstance &db);
-    static void RegisterTransform(DatabaseInstance &db); 
-
-    // startValue 
-    static void RegisterStartValue(DatabaseInstance &db);
-    //endValue
-    static void RegisterEndValue(DatabaseInstance &db);
-    
+    static void RegisterScalarFunctions(DatabaseInstance &db);        
 };
+
+struct SpatialSetFunctions{
+    //cast
+    static bool GeoSetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool TextToGeoSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+
+    //other
+    static void GeoSetFromText(DataChunk &args, ExpressionState &state, Vector &result); 
+    static void GeoSetAsText(DataChunk &args, ExpressionState &state, Vector &result);
+    static void GeomMemSize(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SpatialSRID(DataChunk &args, ExpressionState &state, Vector &result);
+    static void SetSRID(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec);
+};   
 
 } // namespace duckdb

@@ -78,32 +78,13 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TGeometryTypes::RegisterCastFunctions(instance);
 
 	SetTypes::RegisterTypes(instance);
-	SetTypes::RegisterSet(instance);
-	SetTypes::RegisterSetAsText(instance);
 	SetTypes::RegisterCastFunctions(instance);
-	SetTypes::RegisterSetConstructors(instance);
-	SetTypes::RegisterSetConversion(instance);
-	SetTypes::RegisterSetMemSize(instance);
-	SetTypes::RegisterSetNumValues(instance);
-	SetTypes::RegisterSetStartValue(instance);
-	SetTypes::RegisterSetEndValue(instance);
-	SetTypes::RegisterSetValueN(instance);
-	SetTypes::RegisterSetGetValues(instance);
+	SetTypes::RegisterScalarFunctions(instance);
 	SetTypes::RegisterSetUnnest(instance);
 
 	//Geometry
-	SpatialSetType::RegisterGeoSet(instance);
-	SpatialSetType::RegisterGeoSetAsText(instance);
-	SpatialSetType::RegisterCastFunctions(instance);
-	SpatialSetType::RegisterMemSize(instance);
-	
-	
-	SpatialSetType::RegisterSRID(instance);
-	SpatialSetType::RegisterSetSRID(instance);
-	SpatialSetType::RegisterTransform(instance); 
-
-	// SpatialSetType::RegisterStartValue(instance);
-	// SpatialSetType::RegisterEndValue(instance);
+	SpatialSetType::RegisterTypes(instance);	
+	SpatialSetType::RegisterCastFunctions(instance);		
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
