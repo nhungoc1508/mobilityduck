@@ -220,7 +220,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto temp_to_tstzspan = ScalarFunction(
         "timeSpan",
         {TInt::TINT()},
-        SpanType::SPAN(),
+        SpanTypes::INTSPAN(),
         TemporalFunctions::TemporalToTstzspan
     );
     ExtensionUtil::RegisterFunction(instance, temp_to_tstzspan);
@@ -228,7 +228,7 @@ void TInt::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto tnumber_to_span = ScalarFunction(
         "valueSpan",
         {TInt::TINT()},
-        SpanType::SPAN(),
+        SpanTypes::INTSPAN(),
         TemporalFunctions::TnumberToSpan
     );
     ExtensionUtil::RegisterFunction(instance, tnumber_to_span);
