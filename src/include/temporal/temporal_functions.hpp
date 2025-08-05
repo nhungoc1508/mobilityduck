@@ -22,7 +22,6 @@ struct TemporalHelpers {
     static meosType GetTemptypeFromAlias(const char *alias);
     static interval_t MeosToDuckDBInterval(MeosInterval *interval);
     static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
-    static LogicalType GetTemporalLogicalType(meosType temptype);
     static timestamp_tz_t DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts);
     static timestamp_tz_t MeosToDuckDBTimestamp(timestamp_tz_t meos_ts);
 };

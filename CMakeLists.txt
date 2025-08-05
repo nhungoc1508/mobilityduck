@@ -89,9 +89,10 @@ include_directories(src/include)
 #     src/geomset.cpp)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    src/temporal/tint.cpp
+    # src/temporal/tint.cpp
     # src/temporal/tbool.cpp
-    src/temporal/temporal_types.cpp
+    # src/temporal/temporal_types.cpp
+    src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/set.cpp    
     src/span.cpp
