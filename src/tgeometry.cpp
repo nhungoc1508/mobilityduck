@@ -12,6 +12,8 @@ extern "C" {
 }
 
 namespace duckdb {
+
+
     
 LogicalType TGeometryTypes::TGEOMETRY() {
     auto type = LogicalType(LogicalTypeId::BLOB);
@@ -21,12 +23,12 @@ LogicalType TGeometryTypes::TGEOMETRY() {
 
 inline void ExecuteTGeometryFromString(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
-    auto &input_vec = args.data[0];
+    auto &input_geom_vec = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_string) -> string_t {
-            std::string input = input_string.GetString();
+        input_geom_vec, result, count,
+        [&](string_t input_geom_str) -> string_t {
+            std::string input = input_geom_str.GetString();
             
             // Add proper type parameter (adjust T_TGEOMPOINT as needed)
             Temporal *tinst = tgeometry_in(input.c_str());
@@ -58,303 +60,240 @@ inline void ExecuteTGeometryFromString(DataChunk &args, ExpressionState &state, 
     }
 }
 
-inline void ExecuteTgeometryFromTimestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+
+
+TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, int *count) {
+    auto &child_vector = ListVector::GetEntry(tgeometry_arr_vec);
+    auto list_size = list_entry.length;
+    auto list_offset = list_entry.offset;
+    
+    if (list_size == 0) {
+        *count = 0;
+        return nullptr;
+    }
+    
+    *count = list_size;
+    
+    // Allocate array for TInstant pointers
+    TInstant **instants = (TInstant**)malloc(sizeof(TInstant*) * list_size);
+    
+    // Extract each TGEOMETRY element and convert to TInstant
+    for (idx_t i = 0; i < list_size; i++) {
+        auto element_idx = list_offset + i;
+        string_t tgeom_blob = FlatVector::GetData<string_t>(child_vector)[element_idx];
+        
+        // Convert WKB blob back to Temporal/TInstant
+        const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+        size_t wkb_size = tgeom_blob.GetSize();
+        
+        Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
+        if (!temp) {
+            // Clean up previously allocated instants
+            for (idx_t j = 0; j < i; j++) {
+                if (instants[j]) free(instants[j]);
+            }
+            free(instants);
+            *count = 0;
+            return nullptr;
+        }
+        
+        instants[i] = (TInstant*)temp;
+    }
+    
+    return instants;
+}
+
+
+inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
+    const char* default_interp = "step";
     auto count = args.size();
-    auto &value_vec = args.data[0];
-    auto &t_vec = args.data[1];
-
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
-        value_vec, t_vec, result, count,
-        [&](string_t value_str, timestamp_tz_t t) -> string_t {
-            std::string value = value_str.GetString();
+    auto &tgeometry_vec = args.data[0];
+    
+    // Create a constant vector with default interpolation if no second argument
+    Vector interp_vec(LogicalType::VARCHAR, count);
+    if (args.data.size() > 1) {
+        interp_vec.Reference(args.data[1]);
+    } else {
+        // Fill with default interpolation
+        for (idx_t i = 0; i < count; i++) {
+            FlatVector::GetData<string_t>(interp_vec)[i] = StringVector::AddString(interp_vec, default_interp);
+        }
+    }
+    
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        tgeometry_vec, interp_vec, result, count,
+        [&](string_t tgeom_blob, string_t interp_str) -> string_t {
+            // Convert WKB blob back to Temporal
+            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t wkb_size = tgeom_blob.GetSize();
             
-            // Use geom_in instead of basetype_in (from the available functions)
-            GSERIALIZED *gs = geom_in(value.c_str(), -1); // -1 for no typmod constraint
+            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
+            if (!temp) {
+                throw InvalidInputException("Failed to convert TGEOMETRY to temporal object");
+            }
             
-            if (gs == NULL) {
-                throw InvalidInputException("Invalid geometry format: " + value);
+            std::string interp_string = interp_str.GetString();
+            if (interp_string.empty()) {
+                interp_string = default_interp;
             }
-
-            TInstant *inst = tgeoinst_make(gs, static_cast<TimestampTz>(t.value-946684800000000LL));
-
-            if (inst == NULL) {
-                free(gs);
-                throw InvalidInputException("Failed to create TInstant");
+            
+            interpType interp = interptype_from_string(interp_string.c_str());
+            TSequence *seq = temporal_to_tsequence(temp, interp);
+            
+            if (!seq) {
+                free(temp);
+                throw InvalidInputException("Failed to create TSequence");
             }
+            
+            // Convert TSequence to WKB for consistent storage
+            size_t seq_wkb_size;
+            uint8_t *seq_wkb_data = temporal_as_wkb(reinterpret_cast<Temporal*>(seq), 0, &seq_wkb_size);
+            
+            if (!seq_wkb_data) {
+                free(temp);
+                free(seq);
+                throw InvalidInputException("Failed to convert TSequence to WKB format");
+            }
+            
+            // Create string_t from binary data and store as BLOB
+            string_t wkb_string_t(reinterpret_cast<const char*>(seq_wkb_data), seq_wkb_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
+            
+            // Clean up
+            free(seq_wkb_data);
+            free(temp);
+            free(seq);
+            
+            return stored_data;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
-            // Convert TInstant to WKB binary data (same as ExecuteTGeometryFromString)
+inline void ExecuteTGeometrySeqArr(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &tgeometry_arr_vec = args.data[0];    
+    auto &interp_vec = args.data[1];
+    
+    BinaryExecutor::Execute<list_entry_t, string_t, string_t>(
+        tgeometry_arr_vec, interp_vec, result, count,
+        [&](list_entry_t list_entry, string_t interp_str) -> string_t {
+            std::string interp_string = interp_str.GetString();
+            interpType interp = interptype_from_string(interp_string.c_str());
+            
+            // Use default values of true for lower and upper bounds
+            bool lower_inc = true;
+            bool upper_inc = true;
+            
+            // Extract array elements using the new function
+            int element_count;
+            TInstant **instants = temparr_extract(tgeometry_arr_vec, list_entry, &element_count);
+            
+            if (!instants || element_count == 0) {
+                throw InvalidInputException("Failed to extract TInstant array from input");
+            }
+            
+            TSequence *sequence_result = tsequence_make((const TInstant **) instants, element_count, 
+                                                    lower_inc, upper_inc, interp, true);
+            
+            if (!sequence_result) {
+                // Clean up before throwing
+                for (int j = 0; j < element_count; j++) {
+                    if (instants[j]) {
+                        free(instants[j]);
+                    }
+                }
+                free(instants);
+                throw InvalidInputException("Failed to create TSequence");
+            }
+            
+            // Convert to WKB binary format for consistent storage
             size_t wkb_size;
-            uint8_t *wkb_data = temporal_as_wkb(reinterpret_cast<Temporal*>(inst), 0, &wkb_size);
+            uint8_t *wkb_data = temporal_as_wkb(reinterpret_cast<Temporal*>(sequence_result), 0, &wkb_size);
             
-            if (wkb_data == NULL) {
-                free(inst);
-                free(gs);
-                throw InvalidInputException("Failed to convert TInstant to WKB format");
+            if (!wkb_data) {
+                free(sequence_result);
+                for (int j = 0; j < element_count; j++) {
+                    if (instants[j]) {
+                        free(instants[j]);
+                    }
+                }
+                free(instants);
+                throw InvalidInputException("Failed to convert TSequence to WKB format");
             }
-
+            
             // Create string_t from binary data and store as BLOB
             string_t wkb_string_t(reinterpret_cast<const char*>(wkb_data), wkb_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
             
             // Clean up memory
             free(wkb_data);
-            free(inst);
-            free(gs);
+            free(sequence_result);
+            for (int j = 0; j < element_count; j++) {
+                if (instants[j]) {
+                    free(instants[j]);
+                }
+            }
+            free(instants);
             
             return stored_data;
         });
-
+    
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 
-
-inline void ExecuteTgeometryFromTstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void ExecuteTGeometryAsEWKT(DataChunk &args, ExpressionState &state, Vector &result){
     auto count = args.size();
-    auto &value_vec = args.data[0];
-    auto &span_vec = args.data[1];
-
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        value_vec, span_vec, result, count,
-        [&](string_t value_str, string_t span_blob) -> string_t {
-            std::string value = value_str.GetString();
-            
-            // Use geom_in for geometry parsing
-            GSERIALIZED *gs = geom_in(value.c_str(), -1);
-            if (gs == NULL) {
-                throw InvalidInputException("Invalid geometry format: " + value);
-            }
-
-            // Convert the TSTZSPAN blob back to a MEOS Span object
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
-            size_t wkb_size = span_blob.GetSize();
-            
-            const Span *span = span_from_wkb(wkb_data, wkb_size);
-            if (span == NULL) {
-                free(gs);
-                throw InvalidInputException("Invalid WKB data for TSTZSPAN");
-            }
-
-            TSequence *seq = tsequence_from_base_tstzspan(Datum(gs), T_TGEOMETRY, span, STEP);
-            if (seq == NULL) {
-                free(gs);
-                free((void*)span);
-                throw InvalidInputException("Failed to create TSequence");
-            }
-
-            // Convert to WKB binary format for consistent storage
-            size_t output_wkb_size;
-            uint8_t *output_wkb_data = temporal_as_wkb(reinterpret_cast<Temporal*>(seq), 0, &output_wkb_size);
-            
-            if (output_wkb_data == NULL) {
-                free(seq);
-                free(gs);
-                free((void*)span);
-                throw InvalidInputException("Failed to convert to WKB format");
-            }
-
-            // Create string_t from binary data and store as BLOB
-            string_t wkb_string_t(reinterpret_cast<const char*>(output_wkb_data), output_wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
-            
-            // Clean up memory
-            free(output_wkb_data);
-            free(seq);
-            free(gs);
-            free((void*)span);
-            
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
- inline void ExecuteTGeometryToTimeSpan(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
+    auto &input_geom_vec = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_blob) -> string_t {
-            // Convert WKB blob back to Temporal object
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
-            
+        input_geom_vec, result, count,
+        [&](string_t input_geom_str) -> string_t {
+
+            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*> (input_geom_str.GetData());
+            size_t wkb_size = input_geom_str.GetSize();
+
             Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-            if (temp == NULL) {
+
+            if(temp == NULL){
                 throw InvalidInputException("Invalid WKB data for TGEOMETRY");
             }
-            
-            // Extract time span using MEOS function
-            Span *timespan = temporal_to_tstzspan(temp);
-            if (timespan == NULL) {
-                free(temp);
-                throw InvalidInputException("Failed to extract timespan from TGEOMETRY");
-            }
-            
-            // Convert span to WKB binary data for consistent storage
-            size_t span_wkb_size;
-            uint8_t *span_wkb_data = span_as_wkb(timespan, 0, &span_wkb_size);
-            if (span_wkb_data == NULL) {
-                free(timespan);
-                free(temp);
-                throw InvalidInputException("Failed to convert timespan to WKB format");
-            }
-            
-            // Create string_t from binary data and store as BLOB
-            string_t wkb_string_t(reinterpret_cast<const char*>(span_wkb_data), span_wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
-            
-            free(span_wkb_data);
-            free(timespan);
-            free(temp);
-            
-            return stored_data;
-        });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-inline void ExecuteTGeometryToTInstant(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_blob) -> string_t {
-            // Convert WKB blob back to Temporal object
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
+            char *ewkt = tspatial_as_ewkt(temp, 0);
             
-            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-            if (temp == NULL) {
-                printf("%s", 'Invalid WKB data for TGEOMETRY');
-                throw InvalidInputException("Invalid WKB data for TGEOMETRY");
-            }
-            
-            // Convert to TInstant
-            TInstant *inst = temporal_to_tinstant(temp);
-            if (inst == NULL) {
-                printf("%s", 'Failed to convert TGEOMETRY to TInstant');
-                free(temp);
-                throw InvalidInputException("Failed to convert TGEOMETRY to TInstant");
-            }
-            
-            // Convert TInstant to WKB binary data for consistent storage
-            size_t inst_wkb_size;
-            uint8_t *inst_wkb_data = temporal_as_wkb(reinterpret_cast<Temporal*>(inst), 0, &inst_wkb_size);
-            if (inst_wkb_data == NULL) {
-                printf("%s", 'Failed to convert TInstant to WKB format');
-                free(inst);
-                free(temp);
-                throw InvalidInputException("Failed to convert TInstant to WKB format");
-            }
-            
-            // // Create string_t from binary data and store as BLOB
-            string_t wkb_string_t(reinterpret_cast<const char*>(inst_wkb_data), inst_wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
-            
-            free(inst_wkb_data);
-            free(inst);
-            free(temp);
-            
-            // return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void ExecuteTGeometryToTimestamp(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, timestamp_tz_t>(
-        input_vec, result, count,
-        [&](string_t input_blob) -> timestamp_tz_t {
-            // Convert WKB blob back to Temporal object
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
-            
-            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-            if (temp == NULL) {
-                throw InvalidInputException("Invalid WKB data for TGEOMETRY");
-            }
-            
-            // Convert to TInstant (works for any temporal type)
-            TInstant *tinst = temporal_to_tinstant(temp);
-            if (tinst == NULL) {
-                free(temp);
-                throw InvalidInputException("Failed to convert TGEOMETRY to TInstant");
-            }
-            
-            // Extract timestamp
-            TimestampTz meos_t = tinst->t;
-            
-            // Convert MEOS timestamp to DuckDB timestamp
-            timestamp_tz_t duckdb_t = static_cast<timestamp_tz_t>(meos_t + 946684800000000LL);
-            
-            free(tinst);
-            free(temp);
-            return duckdb_t;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void ExecuteTGeometryAsText(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_blob) -> string_t {
-            // Convert WKB blob back to Temporal object
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
-            
-            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
-            if (temp == NULL) {
-                throw InvalidInputException("Invalid WKB data for TGEOMETRY");
-            }
-            
-            // Convert to text representation
-            char *str = tspatial_as_text(temp, 0);
-            if (str == NULL) {
+            if (ewkt == NULL) {
                 free(temp);
                 throw InvalidInputException("Failed to convert TGEOMETRY to text");
             }
             
-            std::string result_str(str);
-            free(str);
+            std::string result_str(ewkt);
+            free(ewkt);
             free(temp);
             
             return StringVector::AddString(result, result_str);
-        });
 
-    if (count == 1) {
+        }
+    );
+
+    if (count == 1){
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+
 }
 
-    
+ 
+
 
 bool TgeometryFunctions::StringToTgeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
-        [&](string_t input_string) -> string_t {
-            std::string input_str = input_string.GetString();
+        [&](string_t input_geom_str) -> string_t {
+            std::string input_str = input_geom_str.GetString();
 
             // Add type parameter
             Temporal *t = tgeometry_in(input_str.c_str());
@@ -411,6 +350,8 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
     return true;   
 }
 
+
+
 void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto tgeometry_function = ScalarFunction(
         "TGEOMETRY", 
@@ -420,49 +361,39 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_function);
 
-    auto tgeometry_from_timestamp_function = ScalarFunction(
-        "TGEOMETRY",
-        {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
-        TGeometryTypes::TGEOMETRY(), 
-        ExecuteTgeometryFromTimestamp);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_from_timestamp_function);
+    auto tgeometryseqarr_function = ScalarFunction(
+            "tgeometrySeq", 
+            {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR},
+            TGeometryTypes::TGEOMETRY(),
+            ExecuteTGeometrySeqArr
+        );
+        ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_function);
 
-    auto tgeometry_from_tstzspan_function = ScalarFunction(
-        "TGEOMETRY", // name
-        {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
-        TGeometryTypes::TGEOMETRY(),  
-        ExecuteTgeometryFromTstzspan);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
+    auto tgeometryseq_function_2params = ScalarFunction(
+            "tgeometrySeq", 
+            {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
+            TGeometryTypes::TGEOMETRY(),
+            ExecuteTGeometrySeq
+        );
+        ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_2params);
 
-        auto tgeometry_to_timespan_function = ScalarFunction(
-        "timeSpan",
+    auto tgeometryseq_function_1param = ScalarFunction(
+        "tgeometrySeq", 
         {TGeometryTypes::TGEOMETRY()},
-        SpanTypes::TSTZSPAN(),
-        ExecuteTGeometryToTimeSpan
+        TGeometryTypes::TGEOMETRY(),
+        ExecuteTGeometrySeq
     );
-    ExtensionUtil::RegisterFunction(instance, tgeometry_to_timespan_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_1param);
 
-    // auto tgeometry_to_tinstant_function = ScalarFunction(
-    //     "tgeometryInst",
-    //     {TGeometryTypes::TGEOMETRY()},
-    //     LogicalType::VARCHAR,
-    //     ExecuteTGeometryToTInstant
-    // );
-    // ExtensionUtil::RegisterFunction(instance, tgeometry_to_tinstant_function);
 
-    auto tgeometry_gettimespan_function = ScalarFunction(
-        "getTimestamp",
-        {TGeometryTypes::TGEOMETRY()},
-        LogicalType::TIMESTAMP_TZ,  //*******************change to tinstant */
-        ExecuteTGeometryToTimestamp);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_gettimespan_function);
-
-    auto tgeometry_as_text_function = ScalarFunction(
-        "asText", 
+    auto TgeometryAsEWKT = ScalarFunction(
+        "asEWKT",
         {TGeometryTypes::TGEOMETRY()},
         LogicalType::VARCHAR,
-        ExecuteTGeometryAsText
+        ExecuteTGeometryAsEWKT
     );
+    ExtensionUtil::RegisterFunction(instance,TgeometryAsEWKT);
+
     
 }
 

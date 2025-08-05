@@ -13,7 +13,7 @@
 // #include "temporal/tbool.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
-// #include "tgeompoint.hpp"
+#include "tgeompoint.hpp"
 #include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
@@ -79,8 +79,9 @@ static void LoadInternal(DatabaseInstance &instance) {
   	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
-	// PointTypes::RegisterScalarFunctions(instance);
-	// PointTypes::RegisterTypes(instance);
+	TGeomPointTypes::RegisterScalarFunctions(instance);
+	TGeomPointTypes::RegisterTypes(instance);
+	TGeomPointTypes::RegisterCastFunctions(instance);
 	TGeometryTypes::RegisterScalarFunctions(instance);
 	TGeometryTypes::RegisterTypes(instance);
 	TGeometryTypes::RegisterCastFunctions(instance);
