@@ -1,6 +1,6 @@
 #include "meos_wrapper_simple.hpp"
 #include "common.hpp"
-#include "temporal/temporal_types.hpp"
+// #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
 
 #include "duckdb/common/types/blob.hpp"
@@ -17,7 +17,8 @@ namespace duckdb {
 static const alias_type_struct DUCKDB_ALIAS_TYPE_CATALOG[] = {
     {(char*)"TINT", T_TINT},
     {(char*)"TFLOAT", T_TFLOAT},
-    {(char*)"TBOOL", T_TBOOL}
+    {(char*)"TBOOL", T_TBOOL},
+    {(char*)"TTEXT", T_TTEXT}
 };
 
 meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
@@ -49,17 +50,6 @@ vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count,
         values.push_back(val);
     }
     return values;
-}
-
-LogicalType TemporalHelpers::GetTemporalLogicalType(meosType temptype) {
-    switch (temptype) {
-        case T_TINT:
-            return TInt::TINT();
-        case T_TBOOL:
-            // return TBool::TBoolMake();
-        default:
-            throw InternalException("Unsupported temporal type: " + std::to_string(temptype));
-    }
 }
 
 timestamp_tz_t TemporalHelpers::DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {

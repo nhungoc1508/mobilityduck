@@ -27,10 +27,10 @@ namespace duckdb {
 
 class ExtensionLoader;
 
-struct TemporalTypes {
-    static void RegisterTypes(DatabaseInstance &instance);
-    static void RegisterCastFunctions(DatabaseInstance &instance);
-    static void RegisterScalarFunctions(DatabaseInstance &instance);
-};
+// struct TemporalTypes {
+//     static void RegisterTypes(DatabaseInstance &instance);
+//     static void RegisterCastFunctions(DatabaseInstance &instance);
+//     static void RegisterScalarFunctions(DatabaseInstance &instance);
+// };
 
 } // namespace duckdb

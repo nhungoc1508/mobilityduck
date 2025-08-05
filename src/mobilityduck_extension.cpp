@@ -9,6 +9,7 @@
 // #include "functions.hpp"
 #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
+#include "temporal/temporal.hpp"
 #include "temporal/tint.hpp"
 #include "temporal/tbool.hpp"
 #include "duckdb.hpp"
