@@ -43,11 +43,11 @@ SELECT set(['car', 'bus']);
 
 -- Test Conversion function:
 
-SELECT Set(5);         -- returns: "{5}"
+SELECT Set(5);         
 SELECT Set(-42);       
 SELECT Set(1.5);
 SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
-SELECT Set(DATE'2001-01-01') 
+SELECT Set(DATE'2001-01-01');
 select set(TEXT 'car');
 
 
@@ -101,7 +101,17 @@ SELECT valueN(dateset('{2001-02-01, 2022-02-18}'), 1);
 SELECT valueN(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'), 2); 
 
 --Test getValues 
-SELECT getValues(intset('{1,3,5,7}')); --> now return as varchar, later will consider return as list 
+SELECT getValues(intset('{1,3,5,7}')); 
+
+
+SELECT getValues(FLOATSET('{-1.2,-3.1,3}'));
+
+SELECT getValues(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}')); 
+
+SELECT getValues(textset('{"highway", "car", "bike"}'));
+
+SELECT getValues(dateset('{2001-02-01, 2022-02-18}'));
+
 --Test shift
 -- SELECT shift(INTSET('{-2, 2, 7}'),3);
 --Test unnest 
