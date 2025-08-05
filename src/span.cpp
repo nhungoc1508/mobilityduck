@@ -68,13 +68,12 @@ meosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     }
 }
 
-// Refactored to use UnaryExecutor
+
 inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input_vec = args.data[0];
     auto &result_type = result.GetType();
     std::string type_alias = result_type.GetAlias();
     
-    // Map the alias to the correct MEOS type
     meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
     
     if (target_meos_type == T_UNKNOWN) {
@@ -86,105 +85,87 @@ inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &r
         [&](string_t input_str) -> string_t {
             std::string input = input_str.GetString();
             
-            // Use the correct MEOS type for parsing
             Span *span = span_in(input.c_str(), target_meos_type);
             
             if (span == NULL) {
                 throw InvalidInputException("Invalid " + type_alias + " format: " + input);
             }
 
-            // Convert to WKB format
-            size_t wkb_size;
-            uint8_t *wkb_data = span_as_wkb(span, WKB_EXTENDED, &wkb_size);
-            
-            if (wkb_data == NULL) {
-                free(span);
-                throw InvalidInputException("Failed to convert span to WKB format");
-            }
 
-            // Create string_t from binary data and add to result vector
-            string_t wkb_string_t(reinterpret_cast<const char*>(wkb_data), wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
+            size_t span_size = sizeof(*span);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+
+            memcpy(span_buffer, span, span_size);
+
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             
-            free(wkb_data);
+            free(span_buffer);
             free(span);
             
             return stored_data;
         });
 }
 
-// Already using UnaryExecutor - no changes needed
+// Fixed to use memcpy instead of WKB
 inline void ExecuteSpanAsText(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
         input, result, args.size(),
         [&](string_t input_blob) -> string_t {
-            // Convert binary string_t back to span
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
             
-            Span *s = span_from_wkb(wkb_data, wkb_size);
-            if (s == NULL) {
-                throw InvalidInputException("Invalid WKB data for span");
-            }
+            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t span_size = input_blob.GetSize();
+            
+            const Span *s = reinterpret_cast<const Span*>(span_data);
             
             char *cstr = span_out(s, 15);
             std::string output(cstr);
-            free(s);
             free(cstr);
             
             return StringVector::AddString(result, output);
         });
 }
 
-// Already using UnaryExecutor - no changes needed
+// Fixed to use memcpy instead of WKB
 inline void ExecuteDatespanToTstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
         input, result, args.size(),
         [&](string_t input_blob) -> string_t {
-            // Convert binary string_t back to span
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
             
-            Span *input_span = span_from_wkb(wkb_data, wkb_size);
-            if (input_span == NULL) {
-                throw InvalidInputException("Invalid WKB data for DATESPAN");
-            }
+            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t span_size = input_blob.GetSize();
+            
+          
+            const Span *input_span = reinterpret_cast<const Span*>(span_data);
             
             Span *output_span = datespan_to_tstzspan(input_span);
             if (output_span == NULL) {
-                free(input_span);
                 throw InvalidInputException("Failed to convert DATESPAN to TSTZSPAN");
             }
             
-            size_t output_wkb_size;
-            uint8_t *output_wkb_data = span_as_wkb(output_span, WKB_EXTENDED, &output_wkb_size);
-            if (output_wkb_data == NULL) {
-                free(input_span);
-                free(output_span);
-                throw InvalidInputException("Failed to convert TSTZSPAN to WKB format");
-            }
+            // Use memcpy for output span
+            size_t output_span_size = sizeof(*output_span);
+            uint8_t *output_buffer = (uint8_t*) malloc(output_span_size);
+            memcpy(output_buffer, output_span, output_span_size);
 
             // Create the result string_t
-            string_t wkb_string_t(reinterpret_cast<const char*>(output_wkb_data), output_wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
+            string_t span_string_t(reinterpret_cast<const char*>(output_buffer), output_span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             
-            // Clean up memory
-            free(output_wkb_data);
+            
+            free(output_buffer);
             free(output_span);
-            free(input_span);
             
             return stored_data;
         });
 }
 
-
-// Refactored to use UnaryExecutor
 bool SpanFunctions::StringToSpan(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    // Get the target type from the result vector
+    
     auto &result_type = result.GetType();
     std::string type_alias = result_type.GetAlias();
     
@@ -207,20 +188,16 @@ bool SpanFunctions::StringToSpan(Vector &source, Vector &result, idx_t count, Ca
                 throw InvalidInputException("Invalid " + type_alias + " format: " + input);
             }
 
-            // Convert to WKB format
-            size_t wkb_size;
-            uint8_t *wkb_data = span_as_wkb(span, WKB_EXTENDED, &wkb_size);
-            
-            if (wkb_data == NULL) {
-                free(span);
-                throw InvalidInputException("Failed to convert span to WKB format");
-            }
+            // Use memcpy instead of WKB format
+            size_t span_size = sizeof(*span);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, span, span_size);
 
             // Create string_t from binary data and add to result vector
-            string_t wkb_string_t(reinterpret_cast<const char*>(wkb_data), wkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, wkb_string_t);
+            string_t span_string_t(reinterpret_cast<const char*>(span_buffer), span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             
-            free(wkb_data);
+            free(span_buffer);
             free(span);
             
             return stored_data;
@@ -229,23 +206,20 @@ bool SpanFunctions::StringToSpan(Vector &source, Vector &result, idx_t count, Ca
     return true;
 }
 
-// Already using UnaryExecutor - removed redundant vector type setting
+// Fixed to use memcpy instead of WKB
 bool SpanFunctions::SpanToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t input_blob) -> string_t {
-            // Convert binary string_t back to span
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t wkb_size = input_blob.GetSize();
+            // Convert binary string_t back to span using direct memory access
+            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t span_size = input_blob.GetSize();
             
-            Span *s = span_from_wkb(wkb_data, wkb_size);
-            if (s == NULL) {
-                throw InvalidInputException("Invalid WKB data for span");
-            }
+            // Cast directly to Span*
+            const Span *s = reinterpret_cast<const Span*>(span_data);
             
             char *cstr = span_out(s, 15);
             std::string output(cstr);
-            free(s);
             free(cstr);
             
             return StringVector::AddString(result, output);

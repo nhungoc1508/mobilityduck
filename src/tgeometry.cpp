@@ -112,7 +112,69 @@ inline void ExecuteTgeometryFromTimestamp(DataChunk &args, ExpressionState &stat
     }
 }
 
+inline void ExecuteTgeometryFromTstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_geom_vec = args.data[0];
+    auto &span_vec = args.data[1];
 
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        input_geom_vec, span_vec, result, count,
+        [&](string_t input_geom_str, string_t span_str)-> string_t{
+            std::string geom_value = input_geom_str.GetString();
+
+            GSERIALIZED *gs = geom_in(geom_value.c_str(), -1);
+            
+            if(gs == NULL){
+                throw InvalidInputException("Invalid geometry format: "+ geom_value);
+            }
+            
+            const uint8_t *span = reinterpret_cast<const uint8_t*> (span_str.GetData());
+            size_t span_size = span_str.GetSize();
+
+            if (span_size < sizeof(void*)){
+                throw InvalidInputException("Invalid Span data: insufficient size");
+            }
+            uint8_t *span_copy = (uint8*) malloc(span_size);
+            memcpy(span_copy,span,span_size);
+            const Span *span_cmp = reinterpret_cast<const Span*>(span_copy);
+
+            TSequence *seq = tsequence_from_base_tstzspan(Datum(gs), T_TGEOMETRY, span_cmp, STEP);
+
+            if (seq == NULL) {
+                free(gs);
+                free(span_copy);
+                throw InvalidInputException("Failed to create TSequence");
+            }
+
+            size_t seq_size = temporal_mem_size((Temporal*)seq);
+
+            uint8_t *seq_buffer = (uint8_t *)malloc(seq_size);
+            if (!seq_buffer) {
+                free(seq);
+                free(gs);
+                free(span_copy);
+                free((void*)span);
+                throw InvalidInputException("Failed to allocate memory for sequence data");
+            }
+
+            memcpy(seq_buffer, seq, seq_size);
+
+            string_t seq_string_t((char*) seq_buffer, seq_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, seq_string_t);
+
+            free(seq_buffer);
+            free(seq);
+            free(span_copy);
+            free(gs);
+
+            return stored_data;
+
+        });
+
+    if (count == 1){
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 inline void ExecuteTGeometryAsEWKT(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
@@ -180,13 +242,19 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_function);
         
-    auto tgeometry_from_timestamp_function = ScalarFunction(
-        "TGEOMETRY",
-        {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
-        TGeometryTypes::TGEOMETRY(), 
-        ExecuteTgeometryFromTimestamp);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_from_timestamp_function);
+    // auto tgeometry_from_timestamp_function = ScalarFunction(
+    //     "TGEOMETRY",
+    //     {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
+    //     TGeometryTypes::TGEOMETRY(), 
+    //     ExecuteTgeometryFromTimestamp);
+    // ExtensionUtil::RegisterFunction(instance, tgeometry_from_timestamp_function);
 
+     auto tgeometry_from_tstzspan_function = ScalarFunction(
+        "TGEOMETRY", // name
+        {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
+        TGeometryTypes::TGEOMETRY(),  
+        ExecuteTgeometryFromTstzspan);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
 
     auto TgeometryAsEWKT = ScalarFunction(
         "asEWKT",
