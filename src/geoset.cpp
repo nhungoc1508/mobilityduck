@@ -282,8 +282,6 @@ void SpatialSetType::RegisterSetSRID(DatabaseInstance &db) {
 	));
 }
 
-/*--- Transform -> something wrong in cmake, get back later ---*/
-
 static void TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec) {
 	auto &input_vec = args.data[0];
 	auto &srid_vec = args.data[1];

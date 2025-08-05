@@ -85,6 +85,7 @@ set(EXTENSION_SOURCES
     src/span.cpp
     src/tgeometry.cpp
     src/tgeompoint.cpp
+    src/geoset.cpp
     )
 
 # Build extension targets

@@ -63,9 +63,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
-	// TemporalTypes::RegisterTypes(instance);
-	// TemporalTypes::RegisterCastFunctions(instance);
-	// TemporalTypes::RegisterScalarFunctions(instance);
+	TemporalTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterCastFunctions(instance);
+	TemporalTypes::RegisterScalarFunctions(instance);
   
   	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
