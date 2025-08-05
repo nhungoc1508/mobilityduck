@@ -1,5 +1,6 @@
 #define MOBILITYDUCK_TEMPORAL_TYPES
 
+#include "meos_wrapper_simple.hpp"
 #include "common.hpp"
 #include "temporal/temporal_types.hpp"
 #include "duckdb/common/extension_type_info.hpp"

@@ -1,3 +1,5 @@
+#include "meos_wrapper_simple.hpp"
+
 #include "common.hpp"
 #include "temporal/tint.hpp"
 #include "temporal/temporal_functions.hpp"
@@ -11,11 +13,11 @@
 #include "duckdb/common/extension_type_info.hpp"
 
 extern "C" {
-    #include <postgres.h>
-    #include <utils/timestamp.h>
+    // #include <postgres.h>
+    // #include <utils/timestamp.h>
     #include <meos.h>
     #include <meos_internal.h>
-    #include "temporal/type_inout.h"
+    // #include "temporal/type_inout.h"
 }
 
 namespace duckdb {

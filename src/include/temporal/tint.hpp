@@ -10,12 +10,7 @@
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
-extern "C" {
-    #include <postgres.h>
-    #include <utils/timestamp.h>
-    #include <meos.h>
-    #include <meos_internal.h>
-}
+#include "meos_wrapper_simple.hpp"
 
 namespace duckdb {
 

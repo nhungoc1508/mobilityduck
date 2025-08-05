@@ -1,12 +1,12 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
-#include "types.hpp"
+// #include "types.hpp"
 #include "intset.hpp"
 #include "set.hpp"
 #include "geomset.hpp"
 
-#include "functions.hpp"
+// #include "functions.hpp"
 #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/tint.hpp"
@@ -24,8 +24,8 @@
 #include <mutex>
 
 extern "C"{
-	#include <postgres.h>
-    #include <utils/timestamp.h>
+	// #include <postgres.h>
+    // #include <utils/timestamp.h>
     #include <meos.h>
 }
 
@@ -34,8 +34,8 @@ extern "C"{
 
 // MEOS
 extern "C" {
-	#include <postgres.h>
-    #include <utils/timestamp.h>
+	// #include <postgres.h>
+    // #include <utils/timestamp.h>
     #include <meos.h>
 }
 

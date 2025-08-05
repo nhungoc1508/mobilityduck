@@ -1,3 +1,4 @@
+#include "meos_wrapper_simple.hpp"
 #include "common.hpp"
 #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
@@ -9,14 +10,7 @@
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
-extern "C" {
-    #include <postgres.h>
-    #include <utils/timestamp.h>
-    #include <meos.h>
-    #include <meos_rgeo.h>
-    #include <meos_internal.h>
-    #include "temporal/type_inout.h"
-}
+#include "meos_wrapper_simple.hpp"
 
 namespace duckdb {
 
@@ -62,7 +56,7 @@ LogicalType TemporalHelpers::GetTemporalLogicalType(meosType temptype) {
         case T_TINT:
             return TInt::TINT();
         case T_TBOOL:
-            return TBool::TBoolMake();
+            // return TBool::TBoolMake();
         default:
             throw InternalException("Unsupported temporal type: " + std::to_string(temptype));
     }
@@ -98,7 +92,8 @@ bool TemporalFunctions::StringToTemporal(Vector &source, Vector &result, idx_t c
                     success = false;
                     return string_t();
                 }
-                size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
+                // size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
+                size_t temp_size = temporal_mem_size(temp);
                 char *temp_data = (char*)malloc(temp_size);
                 memcpy(temp_data, temp, temp_size);
                 return string_t(temp_data, temp_size);
@@ -141,7 +136,8 @@ void TemporalFunctions::TInstantConstructor(DataChunk &args, ExpressionState &st
             timestamp_tz_t meos_ts = TemporalHelpers::DuckDBToMeosTimestamp(ts);
             TInstant *inst = tinstant_make((Datum)value, temptype, (TimestampTz)meos_ts.value);
             Temporal *temp = (Temporal*)inst;
-            size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size(temp);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, temp, temp_size);
             return string_t(temp_data, temp_size);
@@ -358,7 +354,8 @@ void TemporalFunctions::TemporalMinInstant(DataChunk &args, ExpressionState &sta
                 return string_t();
             }
             TInstant *ret = temporal_min_instant(temp);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
             free(temp);
@@ -384,7 +381,8 @@ void TemporalFunctions::TemporalMaxInstant(DataChunk &args, ExpressionState &sta
                 return string_t();
             }
             TInstant *ret = temporal_max_instant(temp);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
             free(temp);
@@ -409,7 +407,7 @@ void TemporalFunctions::TInstantTimestamptz(DataChunk &args, ExpressionState &st
                 throw InternalException("Failure in TInstantTimestamptz: unable to cast string to temporal");
                 return timestamp_tz_t();
             }
-            ensure_temporal_isof_subtype(temp, TINSTANT);
+            // ensure_temporal_isof_subtype(temp, TINSTANT);
             timestamp_tz_t ret = (timestamp_tz_t)((TInstant*)temp)->t;
             timestamp_tz_t duckdb_ts = TemporalHelpers::MeosToDuckDBTimestamp(ret);
             free(temp);
@@ -510,7 +508,8 @@ void TemporalFunctions::TsequenceConstructor(DataChunk &args, ExpressionState &s
                 throw InternalException("Failure in TsequenceConstructor: unable to create sequence");
             }
 
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seq) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seq) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)seq);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)seq, temp_size);
             string_t result_str(temp_data, temp_size);
@@ -549,7 +548,8 @@ void TemporalFunctions::TemporalToTsequence(DataChunk &args, ExpressionState &st
                 return string_t();
             }
             TSequence *ret = temporal_to_tsequence(temp, interp);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
             string_t result_str(temp_data, temp_size);
@@ -606,7 +606,8 @@ void TemporalFunctions::TsequencesetConstructor(DataChunk &args, ExpressionState
                 throw InternalException("Failure in TsequencesetConstructor: unable to create sequence set");
             }
 
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seqset) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seqset) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)seqset);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)seqset, temp_size);
             string_t result_str(temp_data, temp_size);
@@ -645,7 +646,8 @@ void TemporalFunctions::TemporalToTsequenceset(DataChunk &args, ExpressionState 
                 return string_t();
             }
             TSequenceSet *ret = temporal_to_tsequenceset(temp, interp);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
             string_t result_str(temp_data, temp_size);
@@ -729,7 +731,7 @@ void TemporalFunctions::TemporalValueset(DataChunk &args, ExpressionState &state
             if (temp->temptype == T_TBOOL) {
                 // TODO: handle tbool
             }
-            Set *ret = set_make_free(values, count, basetype, ORDER_NO);
+            Set *ret = set_make_free(values, count, basetype, false);
             char *str = set_out(ret, 0);
             free(ret);
             return string_t(str);
@@ -769,7 +771,8 @@ void TemporalFunctions::TemporalSequences(DataChunk &args, ExpressionState &stat
 
             for (idx_t i = 0; i < seq_count; i++) {
                 const TSequence *seq = sequences[i];
-                size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seq) + VARHDRSZ;
+                // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seq) + VARHDRSZ;
+                size_t temp_size = temporal_mem_size((Temporal*)seq);
                 char *temp_data = (char*)malloc(temp_size);
                 memcpy(temp_data, (Temporal*)seq, temp_size);
                 seq_data[entry.offset + i] = string_t(temp_data, temp_size);
@@ -795,7 +798,8 @@ void TemporalFunctions::TnumberShiftValue(DataChunk &args, ExpressionState &stat
                 return string_t();
             }
             Temporal *ret = tnumber_shift_scale_value(temp, shift, 0, true, false);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, ret, temp_size);
             free(ret);
@@ -822,7 +826,8 @@ void TemporalFunctions::TnumberScaleValue(DataChunk &args, ExpressionState &stat
                 return string_t();
             }
             Temporal *ret = tnumber_shift_scale_value(temp, 0, duration, false, true);
-            size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, ret, temp_size);
             free(ret);
@@ -849,7 +854,8 @@ void TemporalFunctions::TnumberShiftScaleValue(DataChunk &args, ExpressionState 
                 return string_t();
             }
             Temporal *ret = tnumber_shift_scale_value(temp, shift, duration, true, true);
-            size_t temp_size = VARSIZE_ANY_EXHDR(ret) + VARHDRSZ;
+            // size_t temp_size = VARSIZE_ANY_EXHDR(ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size(ret);
             char *temp_data = (char*)malloc(temp_size);
             memcpy(temp_data, ret, temp_size);
             free(ret);

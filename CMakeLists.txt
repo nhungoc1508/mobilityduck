@@ -48,7 +48,7 @@ find_package(OpenSSL REQUIRED)
 # Use externally installed MEOS
 # -----------------------------
 include_directories(/usr/local/include)
-include_directories(/usr/local/include/postgres)
+# include_directories(/usr/local/include/postgres)
 
 # include_directories(src/meos/include)
 # include_directories(src/meos/postgres)
@@ -71,12 +71,12 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 include_directories(src/include)
 
 # Spatial/PostGIS compatibility headers (if needed by functions)
-configure_file(./src/postgis/liblwgeom/liblwgeom.h.in ./src/postgis/liblwgeom/liblwgeom.h)
+# configure_file(./src/postgis/liblwgeom/liblwgeom.h.in ./src/postgis/liblwgeom/liblwgeom.h)
 # configure_file(./src/postgis/postgis_config.h.in ./src/postgis/postgis_config.h)
-include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis/liblwgeom")
+# include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis/liblwgeom")
 # include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis/libpgcommon")
 # include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis")
-include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis/liblwgeom")
+# include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis/liblwgeom")
 # include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis")
 
 # set(EXTENSION_SOURCES
@@ -95,7 +95,7 @@ include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis/liblwgeom")
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/temporal/tint.cpp
-    src/temporal/tbool.cpp
+    # src/temporal/tbool.cpp
     src/temporal/temporal_types.cpp
     src/temporal/temporal_functions.cpp
     src/span.cpp
