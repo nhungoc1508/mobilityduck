@@ -29,6 +29,7 @@ struct SetTypes {
     static void RegisterTypes(DatabaseInstance &db);
 	static void RegisterSet(DatabaseInstance &db);
 	static void RegisterSetAsText(DatabaseInstance &db);
+    static void RegisterCastFunctions(DatabaseInstance &db);
     static void RegisterSetConstructors(DatabaseInstance &db);
     static void RegisterSetConversion(DatabaseInstance &db);
     static void RegisterSetMemSize(DatabaseInstance &db);

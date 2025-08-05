@@ -7,7 +7,10 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
 extern "C" {
+    // #include <postgres.h>
+    // #include <utils/timestamp.h>
     #include <meos.h>
+    // #include <meos_rgeo.h>
     #include <meos_internal.h>    
 }
 
@@ -32,12 +35,6 @@ struct SpanTypes {
 struct SpanTypeMapping {
     static meosType GetMeosTypeFromAlias(const std::string &alias);
     static LogicalType GetChildType(const LogicalType &type);
-};
-
-// Add this new struct for cast functions
-struct SpanFunctions {
-    static bool StringToSpan(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool SpanToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 } // namespace duckdb

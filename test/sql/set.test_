@@ -48,24 +48,24 @@ SELECT Set(5);
 {5}
 
 query I
+SELECT Set(1.5);
+----
+{1,5}
+
+query I
 SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
 ----
 {"2001-01-01 08:00:00+00"}
 
 query I 
-SELECT Set(DATE'2001-01-01');
+SELECT Set(DATE'2001-01-01'); 
 ----
 {2001-01-01}
 
 query I 
-SELECT memSize(INTSET('{-1,-3,3}'));
+select set(TEXT 'car');
 ----
-48
-
-query I 
-SELECT memSize(dateset('{2001-02-01, 2001-02-18}'));
-----
-40
+{"car"}
 
 query I 
 SELECT startValue(FLOATSET('{-1.2,-3.1,3}'));

@@ -89,15 +89,16 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterTypes(instance);
 	SetTypes::RegisterSet(instance);
 	SetTypes::RegisterSetAsText(instance);
-	// SetTypes::RegisterSetConstructors(instance);
-	// SetTypes::RegisterSetConversion(instance);
-	// SetTypes::RegisterSetMemSize(instance);
-	// SetTypes::RegisterSetNumValues(instance);
-	// SetTypes::RegisterSetStartValue(instance);
-	// SetTypes::RegisterSetEndValue(instance);
-	// SetTypes::RegisterSetValueN(instance);
-	// SetTypes::RegisterSetGetValues(instance);
-	// SetTypes::RegisterSetUnnest(instance);
+	SetTypes::RegisterCastFunctions(instance);
+	SetTypes::RegisterSetConstructors(instance);
+	SetTypes::RegisterSetConversion(instance);
+	SetTypes::RegisterSetMemSize(instance);
+	SetTypes::RegisterSetNumValues(instance);
+	SetTypes::RegisterSetStartValue(instance);
+	SetTypes::RegisterSetEndValue(instance);
+	SetTypes::RegisterSetValueN(instance);
+	SetTypes::RegisterSetGetValues(instance);
+	SetTypes::RegisterSetUnnest(instance);
 
 	//Geometry
 	// SpatialSetType::RegisterGeomSet(instance);
