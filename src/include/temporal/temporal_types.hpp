@@ -12,16 +12,16 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
 #include "temporal/tint.hpp"
-#include "temporal/tbool.hpp"
-
-extern "C" {
-    #include <postgres.h>
-    #include <utils/timestamp.h>
-    #include <meos.h>
-    #include <meos_rgeo.h>
-    #include <meos_internal.h>
-    #include "temporal/type_inout.h"
-}
+// #include "temporal/tbool.hpp"
+// extern "C" {
+//     // #include <postgres.h>
+//     // #include <utils/timestamp.h>
+//     #include <meos.h>
+//     // #include <meos_rgeo.h>
+//     #include <meos_internal.h>
+//     // #include "temporal/type_inout.h"
+// }
+#include "meos_wrapper_simple.hpp"
 
 namespace duckdb {
 

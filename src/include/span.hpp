@@ -29,6 +29,7 @@ struct SpanTypes {
     static LogicalType TSTZSPAN();
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
+    static void RegisterCastFunctions(DatabaseInstance &instance);
 };
 
 struct SpanTypeMapping {
