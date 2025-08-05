@@ -14,6 +14,7 @@ struct TGeometryTypes {
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
     static void RegisterCastFunctions(DatabaseInstance &instance);
+    static void RegisterScalarInOutFunctions(DatabaseInstance &instance);
 };
 
 struct TgeometryFunctions {
