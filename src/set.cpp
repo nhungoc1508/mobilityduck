@@ -15,66 +15,6 @@ extern "C" {
 
 namespace duckdb {
 
-static inline Datum
-Float8GetDatum(double X)
-{
-  union
-  {
-    double    value;
-    int64    retval;
-  }      myunion;
-
-  myunion.value = X;
-  return Datum(myunion.retval);
-}
-
-static inline double
-DatumGetFloat8(Datum X)
-{
-  union
-  {
-    int64    value;
-    double    retval;
-  }      myunion;
-
-  myunion.value = int64(X);
-  return myunion.retval;
-}
-
-#define CStringGetDatum(X) PointerGetDatum(X)
-#define PointerGetDatum(X) ((Datum) (X))    
-#define SET_VARSIZE(PTR, len)        SET_VARSIZE_4B(PTR, len)
-#define SET_VARSIZE_4B(PTR,len) \
-  (((varattrib_4b *) (PTR))->va_4byte.va_header = (((uint32) (len)) << 2))
-#define VARSIZE(PTR)            VARSIZE_4B(PTR)
-#define VARSIZE_4B(PTR) \
-  ((((varattrib_4b *) (PTR))->va_4byte.va_header >> 2) & 0x3FFFFFFF)
-#define VARDATA(PTR)            VARDATA_4B(PTR)
-#define VARDATA_4B(PTR)    (((varattrib_4b *) (PTR))->va_4byte.va_data) 
-#define FLEXIBLE_ARRAY_MEMBER	/* empty */
-
-#define VARSIZE_ANY(PTR) \
-  (VARATT_IS_1B_E(PTR) ? VARSIZE_EXTERNAL(PTR) : \
-   (VARATT_IS_1B(PTR) ? VARSIZE_1B(PTR) : \
-    VARSIZE_4B(PTR)))
-typedef union
-{
-  struct            /* Normal varlena (4-byte length) */
-  {
-    uint32    va_header;
-    char    va_data[FLEXIBLE_ARRAY_MEMBER];
-  }      va_4byte;
-  struct            /* Compressed-in-line format */
-  {
-    uint32    va_header;
-    uint32    va_tcinfo;  /* Original data size (excludes header) and
-                 * compression method; see va_extinfo */
-    char    va_data[FLEXIBLE_ARRAY_MEMBER]; /* Compressed data */
-  }      va_compressed;
-} varattrib_4b;
-
-#define VARHDRSZ		((int32) sizeof(int32))
-
 #define DEFINE_SET_TYPE(NAME)                                        \
     LogicalType SetTypes::NAME() {                                   \
         auto type = LogicalType(LogicalTypeId::BLOB);             \
@@ -216,11 +156,7 @@ bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &
         size_t size = blob.GetSize();
 
         Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);
-        
-        if (!s) {
-            throw InvalidInputException("Failed to decode Set from WKB");
-        }
+        memcpy(s, data, size);        
 
         char *cstr = set_out(s, 15);  
         result_data[i] = StringVector::AddString(result, cstr);
@@ -287,7 +223,7 @@ static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result)
         list_input, result, args.size(),
         [&](list_entry_t list_entry) -> string_t {
             auto &child = ListVector::GetEntry(list_input);
-            child.Flatten(args.size());  // ensure flat layout
+            child.Flatten(args.size());  
 
             idx_t offset = list_entry.offset;
             idx_t length = list_entry.length;
@@ -476,8 +412,7 @@ static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) 
 
     UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
-        [&](string_t input_blob) -> int32_t {            
-            auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
+        [&](string_t input_blob) -> int32_t {                                 
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             Set *s = (Set*)malloc(size);
@@ -899,7 +834,7 @@ static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result
             continue;
         }
 
-        int count = s->count;
+        auto count = s->count;
         Datum *values = set_vals(s);
         
         ListVector::SetListSize(result, total_offset + count);

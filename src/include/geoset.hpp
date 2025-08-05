@@ -8,23 +8,19 @@
 
 namespace duckdb {
 
-struct SpatialSetType{
-    //geometry set
+struct SpatialSetType{    
     static LogicalType GeomSet();     
-    static void RegisterGeomSet(DatabaseInstance &db);        
-    static void RegisterGeomSetAsText(DatabaseInstance &db);
-    static void RegisterMemSize(DatabaseInstance &db);    
-    
-    //geography set
     static LogicalType GeogSet();   
-    static void RegisterGeogSet(DatabaseInstance &db);        
-    static void RegisterGeogSetAsText(DatabaseInstance &db);
-
+    static void RegisterGeoSet(DatabaseInstance &db);        
+    static void RegisterGeoSetAsText(DatabaseInstance &db);
+    static void RegisterCastFunctions(DatabaseInstance &db);
+    static void RegisterMemSize(DatabaseInstance &db);    
+        
     //different from base set 
 
     static void RegisterSRID(DatabaseInstance &db);
     static void RegisterSetSRID(DatabaseInstance &db);
-    // static void RegisterTransform(DatabaseInstance &db); --debug later
+    static void RegisterTransform(DatabaseInstance &db); 
 
     // startValue 
     static void RegisterStartValue(DatabaseInstance &db);

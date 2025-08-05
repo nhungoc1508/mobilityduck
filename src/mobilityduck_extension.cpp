@@ -4,7 +4,7 @@
 // #include "types.hpp"
 // #include "intset.hpp"
 #include "set.hpp"
-// #include "geomset.hpp"
+#include "geoset.hpp"
 
 // #include "functions.hpp"
 // #include "temporal/temporal_types.hpp"
@@ -14,7 +14,7 @@
 #include "duckdb.hpp"
 // #include "tgeometry.hpp"
 // #include "tgeompoint.hpp"
-#include "span.hpp"
+// #include "span.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -23,21 +23,12 @@
 
 #include <mutex>
 
-extern "C"{
-	// #include <postgres.h>
-    // #include <utils/timestamp.h>
+extern "C"{	
     #include <meos.h>
 }
 
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
-
-// MEOS
-// extern "C" {
-// 	#include <postgres.h>
-//     #include <utils/timestamp.h>
-//     #include <meos.h>
-// }
 
 namespace duckdb {
 
@@ -76,8 +67,8 @@ static void LoadInternal(DatabaseInstance &instance) {
 	// TemporalTypes::RegisterCastFunctions(instance);
 	// TemporalTypes::RegisterScalarFunctions(instance);
   
-  	SpanTypes::RegisterScalarFunctions(instance);
-	SpanTypes::RegisterTypes(instance);
+  	// SpanTypes::RegisterScalarFunctions(instance);
+	// SpanTypes::RegisterTypes(instance);
 	// PointTypes::RegisterScalarFunctions(instance);
 	// PointTypes::RegisterTypes(instance);
 	// TGeometryTypes::RegisterScalarFunctions(instance);
@@ -98,15 +89,15 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterSetUnnest(instance);
 
 	//Geometry
-	// SpatialSetType::RegisterGeomSet(instance);
-	// SpatialSetType::RegisterGeomSetAsText(instance);
-	// SpatialSetType::RegisterMemSize(instance);
-	// SpatialSetType::RegisterGeogSet(instance);
-	// SpatialSetType::RegisterGeogSetAsText(instance);
+	SpatialSetType::RegisterGeoSet(instance);
+	SpatialSetType::RegisterGeoSetAsText(instance);
+	SpatialSetType::RegisterCastFunctions(instance);
+	SpatialSetType::RegisterMemSize(instance);
 	
-	// SpatialSetType::RegisterSRID(instance);
-	// SpatialSetType::RegisterSetSRID(instance);
-	// // SpatialSetType::RegisterTransform(instance); (debug later)
+	
+	SpatialSetType::RegisterSRID(instance);
+	SpatialSetType::RegisterSetSRID(instance);
+	SpatialSetType::RegisterTransform(instance); 
 
 	// SpatialSetType::RegisterStartValue(instance);
 	// SpatialSetType::RegisterEndValue(instance);
