@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.5)
 set(TARGET_NAME mobilityduck)
 project(${TARGET_NAME})
 
+# Set the module path for custom Find modules
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/cmake" ${CMAKE_MODULE_PATH})
+
 # Detect architecture endianness (needed by PostGIS WKB)
 include(TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
@@ -74,16 +77,14 @@ include_directories(src/include)
 
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    # src/functions.cpp
-    # src/temporal/tint.cpp
+    src/temporal/tint.cpp
     # src/temporal/tbool.cpp
-    # src/temporal/temporal_types.cpp
-    # src/temporal/temporal_functions.cpp
-    # src/span.cpp
-    # src/tgeometry.cpp
-    # src/tgeompoint.cpp
-    src/set.cpp
-    src/geoset.cpp
+    src/temporal/temporal_types.cpp
+    src/temporal/temporal_functions.cpp
+    src/set.cpp    
+    src/span.cpp
+    src/tgeometry.cpp
+    src/tgeompoint.cpp
     )
 
 # Build extension targets
@@ -100,4 +101,4 @@ install(
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
-  )
+)

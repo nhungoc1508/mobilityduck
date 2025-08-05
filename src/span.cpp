@@ -71,7 +71,6 @@ meosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 // Using StringVector::AddStringOrBlob for storing WKB data
 inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
     auto &input_vec = args.data[0];
 
     // Get the target type from the result vector
@@ -115,9 +114,31 @@ inline void ExecuteSpanCreate(DataChunk &args, ExpressionState &state, Vector &r
         free(span);
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, args.size(),
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+            
+            Span *span = span_in(input.c_str(), target_meos_type);
+            
+            if (span == NULL) {
+                throw InvalidInputException("Invalid " + type_alias + " format: " + input);
+            }
+
+
+            size_t span_size = sizeof(*span);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+
+            memcpy(span_buffer, span, span_size);
+
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            
+            free(span_buffer);
+            free(span);
+            
+            return stored_data;
+        });
 }
 
 // Updated asText function - now works with string_t containing binary data

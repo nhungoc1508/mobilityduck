@@ -1,0 +1,134 @@
+# name: test/sql/mobilityduck.test
+# description: test mobilityduck extension
+# group: [sql]
+
+# Require statement will ensure this test is run with this extension loaded
+require mobilityduck
+
+# Test extension
+
+query I
+SELECT INTSET('{-1,-3,3}');
+----
+{-3, -1, 3}
+
+query I
+SELECT asText(INTSET('{-1,-3,3}'));
+----
+{-3, -1, 3}
+
+query I
+SELECT FLOATSET('{-1.2,-3.1,3}');
+----
+{-3.1, -1.2, 3}
+
+query I
+SELECT tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'); 
+----
+{"2001-01-01 08:00:00+00", "2001-01-03 09:30:00+00"}
+
+query I
+SELECT dateset('{2001-02-01}');
+----
+{2001-02-01}
+
+query I
+SELECT set([1, 2, 3]);
+----
+{1, 2, 3}
+
+query I
+SELECT set([1.2,1.5]);
+----
+{1.2, 1.5}
+
+query I 
+SELECT Set(5);
+----
+{5}
+
+query I
+SELECT Set(1.5);
+----
+{1,5}
+
+query I
+SELECT Set(TIMESTAMPTZ'2001-01-01 08:00:00');
+----
+{"2001-01-01 08:00:00+00"}
+
+query I 
+SELECT Set(DATE'2001-01-01'); 
+----
+{2001-01-01}
+
+query I 
+select set(TEXT 'car');
+----
+{"car"}
+
+query I 
+SELECT startValue(FLOATSET('{-1.2,-3.1,3}'));
+----
+-3.1
+
+query I 
+SELECT valueN(INTSET('{-2, 2, 7}'),1);
+----
+-2
+
+query I 
+SELECT valueN(INTSET('{-2, 2, 7}'),4);
+----
+NULL
+
+query I 
+SELECT * FROM setUnnest(INTSET('{1, 1, 5, -7, -7}'));
+----
+-7
+1
+5
+
+query I 
+SELECT * FROM setUnnest(dateset('{2001-02-01, 2022-02-18}'));
+----
+2001-02-01
+2022-02-18
+
+query I 
+SELECT set([DATE'2001-01-02', DATE '2025-01-01']);
+----
+{2001-01-02, 2025-01-01}
+
+query I 
+SELECT set(['car', 'bus']);
+----
+{"bus", "car"}
+
+query I 
+SELECT Set('car');
+----
+{"car"}
+
+query I 
+SELECT startValue(textset('{"highway", "car", "bike"}'));
+----
+bike
+
+query I 
+SELECT valueN(textset('{"highway", "car", "bike"}'),1);
+----
+bike
+
+query I 
+SELECT * FROM setUnnest(textset('{"highway", "car", "bike"}'));
+----
+bike
+car
+highway
+
+query I 
+SELECT * FROM setUnnest(tstzset('{2001-01-01 08:00:00, 2001-01-03 09:30:00}'));
+----
+2001-01-01 08:00:00+00
+2001-01-03 09:30:00+00
