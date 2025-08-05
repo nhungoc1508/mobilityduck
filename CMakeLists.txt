@@ -21,7 +21,7 @@ endif()
 # Dependency: GEOS
 find_package(GEOS REQUIRED)
 include_directories(SYSTEM ${GEOS_INCLUDE_DIR})
-math(EXPR POSTGIS_GEOS_VERSION "${GEOS_VERSION_MAJOR} * 10000 + ${GEOS_VERSION_MINOR} * 100 + ${GEOS_VERSION_MICRO}")
+math(EXPR POSTGIS_GEOS_VERSION "${GEOS_VERSION_MAJOR} * 10000 + ${GEOS_VERSION_MINOR} * 100 + ${GEOS_VERSION_PATCH}")
 message(STATUS "POSTGIS_GEOS_VERSION: ${POSTGIS_GEOS_VERSION}")
 
 # Dependency: PROJ
@@ -48,10 +48,6 @@ find_package(OpenSSL REQUIRED)
 # Use externally installed MEOS
 # -----------------------------
 include_directories(/usr/local/include)
-# include_directories(/usr/local/include/postgres)
-
-# include_directories(src/meos/include)
-# include_directories(src/meos/postgres)
 
 find_library(MEOS_LIBRARY meos PATHS /usr/local/lib)
 
@@ -86,23 +82,21 @@ include_directories(src/include)
 #     src/temporal/tbool.cpp
 #     src/temporal/temporal_types.cpp
 #     src/temporal/temporal_functions.cpp
-#     src/span.cpp
+    # src/span.cpp
 #     src/tgeometry.cpp
 #     src/tgeompoint.cpp
 #     src/set.cpp
 #     src/geomset.cpp)
-
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     src/temporal/tint.cpp
     # src/temporal/tbool.cpp
     src/temporal/temporal_types.cpp
     src/temporal/temporal_functions.cpp
+    src/set.cpp    
     src/span.cpp
     src/tgeometry.cpp
     src/tgeompoint.cpp
-    src/set.cpp
-    src/geomset.cpp
     )
 
 # Build extension targets
