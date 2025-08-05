@@ -675,10 +675,14 @@ void TemporalFunctions::TemporalToTstzspan(DataChunk &args, ExpressionState &sta
             }
             Span *ret = (Span*)malloc(sizeof(Span));
             temporal_set_tstzspan(temp, ret);
-            char *str = span_out(ret, 0);
+            size_t span_size = sizeof(*ret);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, ret, span_size);
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            free(span_buffer);
             free(ret);
-            free(temp);
-            return string_t(str);
+            return stored_data;
         }
     );
     if (args.size() == 1) {
@@ -700,11 +704,14 @@ void TemporalFunctions::TnumberToSpan(DataChunk &args, ExpressionState &state, V
                 return string_t();
             }
             Span *ret = tnumber_to_span(temp);
-            char *str = span_out(ret, 0);
-            string_t result_str(str);
+            size_t span_size = sizeof(*ret);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, ret, span_size);
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            free(span_buffer);
             free(ret);
-            free(temp);
-            return string_t(str);
+            return stored_data;
         }
     );
     if (args.size() == 1) {
@@ -732,9 +739,10 @@ void TemporalFunctions::TemporalValueset(DataChunk &args, ExpressionState &state
                 // TODO: handle tbool
             }
             Set *ret = set_make_free(values, count, basetype, false);
-            char *str = set_out(ret, 0);
+            size_t total_size = set_mem_size(ret);
+            string_t blob = StringVector::AddStringOrBlob(result, (const char*)ret, total_size);        
             free(ret);
-            return string_t(str);
+            return blob;
         }
     );
     if (args.size() == 1) {
