@@ -174,6 +174,148 @@ inline void ExecuteTgeometryFromTstzspan(DataChunk &args, ExpressionState &state
     }
 }
 
+
+TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, int *count) {
+    auto &child_vector = ListVector::GetEntry(tgeometry_arr_vec);
+    auto list_size = list_entry.length;
+    auto list_offset = list_entry.offset;
+    
+    if (list_size == 0) {
+        *count = 0;
+        return nullptr;
+    }
+    
+    *count = list_size;
+    
+    // Allocate array for TInstant pointers
+    TInstant **instants = (TInstant**)malloc(sizeof(TInstant*) * list_size);
+    if (!instants) {
+        *count = 0;
+        return nullptr;
+    }
+    
+    // Extract each TGEOMETRY element and convert to TInstant
+    for (idx_t i = 0; i < list_size; i++) {
+        auto element_idx = list_offset + i;
+        string_t tgeom_blob = FlatVector::GetData<string_t>(child_vector)[element_idx];
+        
+        // Convert blob back to Temporal/TInstant using direct memory access (like the main file)
+        const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+        size_t data_size = tgeom_blob.GetSize();
+        
+        if (data_size < sizeof(void*)) {
+            // Clean up previously allocated instants
+            for (idx_t j = 0; j < i; j++) {
+                if (instants[j]) free(instants[j]);
+            }
+            free(instants);
+            *count = 0;
+            return nullptr;
+        }
+        
+        // Create a copy of the data for deserialization
+        uint8_t *data_copy = (uint8_t*)malloc(data_size);
+        if (!data_copy) {
+            // Clean up previously allocated instants
+            for (idx_t j = 0; j < i; j++) {
+                if (instants[j]) free(instants[j]);
+            }
+            free(instants);
+            *count = 0;
+            return nullptr;
+        }
+        memcpy(data_copy, data, data_size);
+        
+        Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+        if (!temp) {
+            free(data_copy);
+            // Clean up previously allocated instants
+            for (idx_t j = 0; j < i; j++) {
+                if (instants[j]) free(instants[j]);
+            }
+            free(instants);
+            *count = 0;
+            return nullptr;
+        }
+        
+        instants[i] = (TInstant*)temp;
+    }
+    
+    return instants;
+}
+
+inline void ExecuteTGeometrySeqArr(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &tgeometry_arr_vec = args.data[0];    
+    auto &interp_vec = args.data[1];
+    
+    BinaryExecutor::Execute<list_entry_t, string_t, string_t>(
+        tgeometry_arr_vec, interp_vec, result, count,
+        [&](list_entry_t list_entry, string_t interp_str) -> string_t {
+            std::string interp_string = interp_str.GetString();
+            interpType interp = interptype_from_string(interp_string.c_str());
+            
+            bool lower_inc = true;
+            bool upper_inc = true;
+            
+            // Extract array elements using the updated function
+            int element_count;
+            TInstant **instants = temparr_extract(tgeometry_arr_vec, list_entry, &element_count);
+            
+            if (!instants || element_count == 0) {
+                throw InvalidInputException("Failed to extract TInstant array from input");
+            }
+            
+            TSequence *sequence_result = tsequence_make((const TInstant **) instants, element_count, 
+                                                    lower_inc, upper_inc, interp, true);
+            
+            if (!sequence_result) {
+                
+                for (int j = 0; j < element_count; j++) {
+                    if (instants[j]) {
+                        free(instants[j]);
+                    }
+                }
+                free(instants);
+                throw InvalidInputException("Failed to create TSequence");
+            }
+            
+            size_t data_size = temporal_mem_size(reinterpret_cast<Temporal*>(sequence_result));
+            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
+            if (!data_buffer) {
+                free(sequence_result);
+                for (int j = 0; j < element_count; j++) {
+                    if (instants[j]) {
+                        free(instants[j]);
+                    }
+                }
+                free(instants);
+                throw InvalidInputException("Failed to allocate memory for TSequence data");
+            }
+            
+            memcpy(data_buffer, sequence_result, data_size);
+            
+            string_t data_string_t(reinterpret_cast<const char*>(data_buffer), data_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, data_string_t);
+            
+            free(data_buffer);
+            free(sequence_result);
+            for (int j = 0; j < element_count; j++) {
+                if (instants[j]) {
+                    free(instants[j]);
+                }
+            }
+            free(instants);
+            
+            return stored_data;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
 /*
  * Conversions
 */
@@ -524,7 +666,7 @@ inline void ExecuteTGeometryInterp(DataChunk &args, ExpressionState &state, Vect
     UnaryExecutor::Execute<string_t, string_t>(
         tgeom_vec, result, count,
         [&](string_t tgeom_str_t) -> string_t {
-            // Deserialize TGEOMETRY from binary data
+
             const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
             size_t data_size = tgeom_str_t.GetSize();
 
@@ -572,7 +714,6 @@ inline void ExecuteTGeometryMemSize(DataChunk &args, ExpressionState &state, Vec
     UnaryExecutor::Execute<string_t, int32_t>(
         tgeom_vec, result, count,
         [&](string_t tgeom_str_t) -> int32_t {
-            // Deserialize TGEOMETRY from binary data
             const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
             size_t data_size = tgeom_str_t.GetSize();
 
@@ -604,7 +745,36 @@ inline void ExecuteTGeometryMemSize(DataChunk &args, ExpressionState &state, Vec
     }
 }
 
+inline void ExecuteTGeometryStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+    
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+            
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
+            
+            Datum geo = temporal_start_value(temp);
+            
+            char *str = geo_as_text(DatumGetGserializedP(geo), 0);
+            if (!str) {
+                throw InvalidInputException("Failed to convert geometry to text");
+            }
 
+            string_t result_str(str, strlen(str));
+            string_t stored_result = StringVector::AddString(result, result_str);
+            
+            free(str);
+            
+            return stored_result;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 
 inline void ExecuteTGeometryToTimestamp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -649,6 +819,86 @@ inline void ExecuteTGeometryToTimestamp(DataChunk &args, ExpressionState &state,
     }
 }
 
+inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
+    const char* default_interp = "step";
+    auto count = args.size();
+    auto &tgeometry_vec = args.data[0];
+    
+    // Create a constant vector with default interpolation if no second argument
+    Vector interp_vec(LogicalType::VARCHAR, count);
+    if (args.data.size() > 1) {
+        interp_vec.Reference(args.data[1]);
+    } else {
+        // Fill with default interpolation
+        for (idx_t i = 0; i < count; i++) {
+            FlatVector::GetData<string_t>(interp_vec)[i] = StringVector::AddString(interp_vec, default_interp);
+        }
+    }
+    
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        tgeometry_vec, interp_vec, result, count,
+        [&](string_t tgeom_blob, string_t interp_str) -> string_t {
+            // Deserialize TGEOMETRY data (consistent with other functions)
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t data_size = tgeom_blob.GetSize();
+            
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
+            }
+
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            if (!data_copy) {
+                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
+            }
+            memcpy(data_copy, data, data_size);
+
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+            }
+            
+            std::string interp_string = interp_str.GetString();
+            if (interp_string.empty()) {
+                interp_string = default_interp;
+            }
+            
+            interpType interp = interptype_from_string(interp_string.c_str());
+            TSequence *seq = temporal_to_tsequence(temp, interp);
+            
+            if (!seq) {
+                free(data_copy);
+                throw InvalidInputException("Failed to create TSequence");
+            }
+            
+            // Store TSequence using consistent serialization approach
+            size_t seq_data_size = temporal_mem_size(reinterpret_cast<Temporal*>(seq));
+            uint8_t *seq_data_buffer = (uint8_t*)malloc(seq_data_size);
+            if (!seq_data_buffer) {
+                free(data_copy);
+                free(seq);
+                throw InvalidInputException("Failed to allocate memory for TSequence data");
+            }
+            
+            memcpy(seq_data_buffer, seq, seq_data_size);
+            
+            string_t seq_data_string_t(reinterpret_cast<const char*>(seq_data_buffer), seq_data_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, seq_data_string_t);
+            
+            // Clean up
+            free(seq_data_buffer);
+            free(data_copy);
+            free(seq);
+            
+            return stored_data;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
 
 
 void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -673,6 +923,22 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),  
         ExecuteTgeometryFromTstzspan);
     ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
+
+    auto tgeometryseq_function_1param = ScalarFunction(
+        "tgeometrySeq", 
+        {TGeometryTypes::TGEOMETRY()},
+        TGeometryTypes::TGEOMETRY(),
+        ExecuteTGeometrySeq
+    );
+    ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_1param);
+
+     auto tgeometryseqarr_function = ScalarFunction(
+        "tgeometrySeq", 
+        {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR},
+        TGeometryTypes::TGEOMETRY(),
+        ExecuteTGeometrySeqArr
+    );
+    ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_function);
 
     auto tgeometry_to_timespan_function = ScalarFunction(
         "timeSpan",
@@ -737,6 +1003,23 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::TIMESTAMP_TZ,  
         ExecuteTGeometryToTimestamp);
     ExtensionUtil::RegisterFunction(instance, tgeometry_gettimestamptz_function);
+
+    auto tgeometryseq_function_2params = ScalarFunction(
+        "tgeometrySeq", 
+        {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
+        TGeometryTypes::TGEOMETRY(),
+        ExecuteTGeometrySeq
+    );
+    ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_2params);
+
+    auto tgeometry_start_value_function = ScalarFunction(
+        "startValue", 
+        {TGeometryTypes::TGEOMETRY()},
+        LogicalType::VARCHAR,
+        ExecuteTGeometryStartValue
+    );
+    ExtensionUtil::RegisterFunction(instance, tgeometry_start_value_function);
+    
 
 }
 

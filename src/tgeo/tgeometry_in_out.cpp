@@ -212,9 +212,9 @@ void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
 }
 
 
-void TGeometryTypes::RegisterCastFunctions(DatabaseInstance &db) {
-    // ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
-    // ExtensionUtil::RegisterCastFunction(db, TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
+void TGeometryTypes::RegisterCastFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterCastFunction(instance, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
+    ExtensionUtil::RegisterCastFunction(instance, TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
 }
 
 }
