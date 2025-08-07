@@ -1,0 +1,71 @@
+require mobilityduck
+
+query I
+SELECT tbox 'TBOXINT XT([1, 1],[2000-01-01,2000-01-02])'; -- Both X and T dimensions
+----
+TBOXINT XT([1, 2),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXFLOAT XT([1.0, 1.0],[2000-01-01,2000-01-02])'; -- Both X and T dimensions
+----
+TBOXFLOAT XT([1, 1],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXINT X([1, 1])'; -- Only X dimension
+----
+TBOXINT X([1, 2))
+
+query I
+SELECT tbox 'TBOXFLOAT X([1.0, 1.0])'; -- Only X dimension
+----
+TBOXFLOAT X([1, 1])
+
+query I
+SELECT tbox 'TBOX T([2000-01-01,2000-01-02])'; -- Only T dimension
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXINT XT([1,2][2000-01-01,2000-01-02])'; -- Optional comma
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(10, timestamptz '2000-01-01');
+----
+TBOXINT XT([10, 11),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(10.5, timestamptz '2000-01-01');
+----
+TBOXFLOAT XT([10.5, 10.5],[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(intspan '[1,2]', timestamptz '2000-01-01');
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(floatspan '[1,2]', timestamptz '2000-01-01');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(10, tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXINT XT([10, 11),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(10.5, tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXFLOAT XT([10.5, 10.5],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(intspan '[1,2]', tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(floatspan '[1,2]', tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])

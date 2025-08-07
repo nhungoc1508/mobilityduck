@@ -94,6 +94,8 @@ set(EXTENSION_SOURCES
     # src/temporal/temporal_types.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
+    src/temporal/tbox.cpp
+    src/temporal/tbox_functions.cpp
     src/set.cpp    
     src/span.cpp
     src/tgeometry.cpp

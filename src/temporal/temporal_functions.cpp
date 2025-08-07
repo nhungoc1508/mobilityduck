@@ -9,9 +9,8 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-#include "duckdb/common/operator/comparison_operators.hpp"
 
-#include "meos_wrapper_simple.hpp"
+#include "time_util.hpp"
 
 namespace duckdb {
 
@@ -31,13 +30,13 @@ meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     throw InternalException("Unknown alias: " + std::string(alias));
 }
 
-interval_t TemporalHelpers::MeosToDuckDBInterval(MeosInterval *interval) {
-    interval_t duckdb_interval;
-    duckdb_interval.months = interval->month;
-    duckdb_interval.days = interval->day;
-    duckdb_interval.micros = interval->time;
-    return duckdb_interval;
-}
+// interval_t TemporalHelpers::MeosToDuckDBInterval(MeosInterval *interval) {
+//     interval_t duckdb_interval;
+//     duckdb_interval.months = interval->month;
+//     duckdb_interval.days = interval->day;
+//     duckdb_interval.micros = interval->time;
+//     return duckdb_interval;
+// }
 
 vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type) {
     vector<Value> values;
@@ -53,17 +52,17 @@ vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count,
     return values;
 }
 
-timestamp_tz_t TemporalHelpers::DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
-    timestamp_tz_t meos_ts;
-    meos_ts.value = duckdb_ts.value - TIMESTAMP_ADAPT_GAP_MS;
-    return meos_ts;
-}
+// timestamp_tz_t TemporalHelpers::DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
+//     timestamp_tz_t meos_ts;
+//     meos_ts.value = duckdb_ts.value - TIMESTAMP_ADAPT_GAP_MS;
+//     return meos_ts;
+// }
 
-timestamp_tz_t TemporalHelpers::MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
-    timestamp_tz_t duckdb_ts;
-    duckdb_ts.value = meos_ts.value + TIMESTAMP_ADAPT_GAP_MS;
-    return duckdb_ts;
-}
+// timestamp_tz_t TemporalHelpers::MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
+//     timestamp_tz_t duckdb_ts;
+//     duckdb_ts.value = meos_ts.value + TIMESTAMP_ADAPT_GAP_MS;
+//     return duckdb_ts;
+// }
 
 bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto &target_type = result.GetType();
@@ -124,7 +123,7 @@ void TemporalFunctions::Tinstant_constructor(DataChunk &args, ExpressionState &s
         args.data[0], args.data[1], result, args.size(),
         [&](int64_t value, timestamp_tz_t ts) {
             meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-            timestamp_tz_t meos_ts = TemporalHelpers::DuckDBToMeosTimestamp(ts);
+            timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(ts);
             TInstant *inst = tinstant_make((Datum)value, temptype, (TimestampTz)meos_ts.value);
             Temporal *temp = (Temporal*)inst;
             // size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
@@ -400,7 +399,7 @@ void TemporalFunctions::Tinstant_timestamptz(DataChunk &args, ExpressionState &s
             }
             // ensure_temporal_isof_subtype(temp, TINSTANT);
             timestamp_tz_t ret = (timestamp_tz_t)((TInstant*)temp)->t;
-            timestamp_tz_t duckdb_ts = TemporalHelpers::MeosToDuckDBTimestamp(ret);
+            timestamp_tz_t duckdb_ts = MeosToDuckDBTimestamp(ret);
             free(temp);
             return duckdb_ts;
         }
@@ -424,7 +423,7 @@ void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &stat
                 return interval_t();
             }
             MeosInterval *ret = temporal_duration(temp, boundspan);
-            interval_t duckdb_interval = TemporalHelpers::MeosToDuckDBInterval(ret);
+            interval_t duckdb_interval = IntervalToIntervalt(ret);
             free(ret);
             free(temp);
             return duckdb_interval;
