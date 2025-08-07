@@ -53,7 +53,13 @@ static void LoadInternal(DatabaseInstance &instance) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+	
     });
+
+	Connection con(instance);
+
+	con.Query("INSTALL spatial;");
+	con.Query("LOAD spatial;");
 
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
@@ -83,13 +89,15 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterScalarFunctions(instance);
 	SetTypes::RegisterSetUnnest(instance);
 
-	//Geometry
+	//Geometry Set
 	SpatialSetType::RegisterTypes(instance);	
-	SpatialSetType::RegisterCastFunctions(instance);		
+	SpatialSetType::RegisterCastFunctions(instance);	
+	SpatialSetType::RegisterScalarFunctions(instance);	
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
 	LoadInternal(*db.instance);
+
 }
 std::string MobilityduckExtension::Name() {
 	return "mobilityduck";

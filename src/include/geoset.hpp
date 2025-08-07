@@ -11,6 +11,7 @@ namespace duckdb {
 struct SpatialSetType{    
     static LogicalType GeomSet();     
     static LogicalType GeogSet();   
+    static LogicalType WKB_BLOB();
 
     static void RegisterTypes(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);
@@ -29,6 +30,7 @@ struct SpatialSetFunctions{
     static void SpatialSRID(DataChunk &args, ExpressionState &state, Vector &result);
     static void SetSRID(DataChunk &args, ExpressionState &state, Vector &result_vec);
     static void TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void GeoSetStartValue(DataChunk &args, ExpressionState &state, Vector &result);
 };   
 
 } // namespace duckdb

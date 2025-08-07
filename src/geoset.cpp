@@ -10,7 +10,8 @@
 extern "C" {    
     #include "meos.h"    
     #include "meos_internal.h"   
-    #include "meos_geo.h"        
+    #include "meos_geo.h"   
+    #include "meos_internal_geo.h"     
 }
 
 namespace duckdb {
@@ -19,6 +20,12 @@ namespace duckdb {
 LogicalType SpatialSetType::GeomSet() {
     auto type = LogicalType(LogicalTypeId::BLOB);     
     type.SetAlias("GeomSet");
+    return type;
+}
+
+LogicalType SpatialSetType::WKB_BLOB(){
+    auto type = LogicalType(LogicalTypeId::BLOB);     
+    type.SetAlias("WKB_BLOB");
     return type;
 }
 
@@ -299,44 +306,58 @@ void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {
     
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"transform", {SpatialSetType::GeogSet(), LogicalType::INTEGER}, SpatialSetType::GeogSet(), SpatialSetFunctions::TransformSpatialSet));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"startValue", {SpatialSetType::GeomSet()},  
+		SpatialSetType::WKB_BLOB(),    // return geometry as WKB --> it will be casted to geometry type in spatial
+		SpatialSetFunctions::GeoSetStartValue
+	));
 }
 
-// // startValue
-// static void GeomSetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
-// 	auto &input = args.data[0];
-// 	input.Flatten(args.size());
+// startValue
+void SpatialSetFunctions::GeoSetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input = args.data[0];
+	input.Flatten(args.size());
+	auto input_data = FlatVector::GetData<string_t>(input);
+	auto result_data = FlatVector::GetData<string_t>(result);
 
-// 	for (idx_t i = 0; i < args.size(); i++) {
-// 		if (FlatVector::IsNull(input, i)) {
-// 			FlatVector::SetNull(result, i, true);
-// 			continue;
-// 		}
+	for (idx_t i = 0; i < args.size(); i++) {
+		if (FlatVector::IsNull(input, i)) {
+			FlatVector::SetNull(result, i, true);
+			continue;
+		}
 
-// 		auto ewkt = FlatVector::GetData<string_t>(input)[i].GetString();
-// 		const char *ptr = ewkt.c_str();
-// 		Set *s = set_in(ptr, T_GEOMSET);
+		const string_t &blob = input_data[i];
+		const uint8_t *data = (const uint8_t *)blob.GetData();
+		size_t size = blob.GetSize();
 
-// 		Datum d = set_start_value(s);  // returns geometry pointer
-// 		GSERIALIZED *in = DatumGetGserializedP(d);  // serialize to WKT
+		// Copy into MEOS Set*
+		Set *s = (Set *)malloc(size);
+		memcpy(s, data, size);
 
-//         char *text = geo_as_text(in,6);
+		Datum d = set_start_value(s);
+        GSERIALIZED *g = DatumGetGserializedP(d);
+             
+        
+        // Get size and data from the serialized geometry
+        // size_t geo_size = g->size; 
+        // const char* geo_data = reinterpret_cast<const char*>(g);            
+        // string_t stored_result = StringVector::AddString(result, geo_data, geo_size); 
+        // result_data[i] = stored_result;  
 
-// 		string_t str = StringVector::AddString(result, std::string(text));
-// 		FlatVector::GetData<string_t>(result)[i] = str;
+		size_t wkb_len = 0;
+		uint8_t *wkb = geo_as_ewkb(g, "NDR", &wkb_len);
+		
+		string_t str = StringVector::AddString(result, std::string((char *)wkb, wkb_len));
+		result_data[i] = str;
 
-// 		free(s);
-// 		free(text);
-// 	}
-// }
+		// Clean up
+		free(s);
+		free(wkb);  
+        
+	}
+}
 
-// void SpatialSetType::RegisterStartValue(DatabaseInstance &db) {
-// 	ExtensionUtil::RegisterFunction(db, ScalarFunction(
-// 		"startValue",
-// 		{SpatialSetType::GeomSet()},  // geomset as varchar
-// 		LogicalType::VARCHAR,    // return geometry as WKT --> later can define the type 
-// 		GeomSetStartValue
-// 	));
-// }
 
 //     // endValue
 // static void GeomSetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {

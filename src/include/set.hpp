@@ -34,12 +34,14 @@ struct SetFunctions{
     // for cast
     static bool SetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool SetConversion(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // other
     static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result);
-    static void AsText(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetConstructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetConversion(DataChunk &args, ExpressionState &state, Vector &result);
+    static void AsTextDefault15(DataChunk &args, ExpressionState &state, Vector &result);
+    static void AsTextWithDigits(DataChunk &args, ExpressionState &state, Vector &result);
+    static void AsTextWithFixedDigits(DataChunk &args, ExpressionState &state, Vector &result, int digits);
+    static void SetConstructor(DataChunk &args, ExpressionState &state, Vector &result);    
     static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result);
     static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result);
     static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result);
