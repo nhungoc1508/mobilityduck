@@ -9,6 +9,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include "duckdb/common/operator/comparison_operators.hpp"
 
 #include "meos_wrapper_simple.hpp"
 
@@ -64,7 +65,7 @@ timestamp_tz_t TemporalHelpers::MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
     return duckdb_ts;
 }
 
-bool TemporalFunctions::StringToTemporal(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto &target_type = result.GetType();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(target_type.GetAlias().c_str());
     bool success = true;
@@ -96,7 +97,7 @@ bool TemporalFunctions::StringToTemporal(Vector &source, Vector &result, idx_t c
     return success;
 }
 
-bool TemporalFunctions::TemporalToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -118,7 +119,7 @@ bool TemporalFunctions::TemporalToString(Vector &source, Vector &result, idx_t c
     return success;
 }
 
-void TemporalFunctions::TInstantConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tinstant_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<int64_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](int64_t value, timestamp_tz_t ts) {
@@ -138,7 +139,7 @@ void TemporalFunctions::TInstantConstructor(DataChunk &args, ExpressionState &st
     }
 }
 
-void TemporalFunctions::TemporalSubtype(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -162,7 +163,7 @@ void TemporalFunctions::TemporalSubtype(DataChunk &args, ExpressionState &state,
     }
 }
 
-void TemporalFunctions::TemporalInterp(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -185,7 +186,7 @@ void TemporalFunctions::TemporalInterp(DataChunk &args, ExpressionState &state, 
     }
 }
 
-void TemporalFunctions::TInstantValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -208,7 +209,7 @@ void TemporalFunctions::TInstantValue(DataChunk &args, ExpressionState &state, V
     }
 }
 
-void TemporalFunctions::TemporalStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -231,7 +232,7 @@ void TemporalFunctions::TemporalStartValue(DataChunk &args, ExpressionState &sta
     }
 }
 
-void TemporalFunctions::TemporalEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -254,7 +255,7 @@ void TemporalFunctions::TemporalEndValue(DataChunk &args, ExpressionState &state
     }
 }
 
-void TemporalFunctions::TemporalMinValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -277,7 +278,7 @@ void TemporalFunctions::TemporalMinValue(DataChunk &args, ExpressionState &state
     }
 }
 
-void TemporalFunctions::TemporalMaxValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, int64_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -300,7 +301,7 @@ void TemporalFunctions::TemporalMaxValue(DataChunk &args, ExpressionState &state
     }
 }
 
-void TemporalFunctions::TemporalValueN(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, int64_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) {
@@ -329,7 +330,7 @@ void TemporalFunctions::TemporalValueN(DataChunk &args, ExpressionState &state, 
     }
 }
 
-void TemporalFunctions::TemporalMinInstant(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_min_instant(DataChunk &args, ExpressionState &state, Vector &result) {
 
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
@@ -357,7 +358,7 @@ void TemporalFunctions::TemporalMinInstant(DataChunk &args, ExpressionState &sta
     }
 }
 
-void TemporalFunctions::TemporalMaxInstant(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_max_instant(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -384,7 +385,7 @@ void TemporalFunctions::TemporalMaxInstant(DataChunk &args, ExpressionState &sta
     }
 }
 
-void TemporalFunctions::TInstantTimestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, timestamp_tz_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -409,7 +410,7 @@ void TemporalFunctions::TInstantTimestamptz(DataChunk &args, ExpressionState &st
     }
 }
 
-void TemporalFunctions::TemporalDuration(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, bool, interval_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input, bool boundspan) {
@@ -434,7 +435,7 @@ void TemporalFunctions::TemporalDuration(DataChunk &args, ExpressionState &state
     }
 }
 
-void TemporalFunctions::TsequenceConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &array_vec = args.data[0];
     array_vec.Flatten(count);
@@ -516,7 +517,7 @@ void TemporalFunctions::TsequenceConstructor(DataChunk &args, ExpressionState &s
     }
 }
 
-void TemporalFunctions::TemporalToTsequence(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
     interpType interp = INTERP_NONE;
     if (args.size() > 1) {
         auto &interp_child = args.data[1];
@@ -552,7 +553,7 @@ void TemporalFunctions::TemporalToTsequence(DataChunk &args, ExpressionState &st
     }
 }
 
-void TemporalFunctions::TsequencesetConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &array_vec = args.data[0];
     array_vec.Flatten(count);
@@ -614,7 +615,7 @@ void TemporalFunctions::TsequencesetConstructor(DataChunk &args, ExpressionState
     }
 }
 
-void TemporalFunctions::TemporalToTsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
     interpType interp = INTERP_NONE;
     if (args.size() > 1) {
         auto &interp_child = args.data[1];
@@ -650,7 +651,7 @@ void TemporalFunctions::TemporalToTsequenceset(DataChunk &args, ExpressionState 
     }
 }
 
-void TemporalFunctions::TemporalToTstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -680,7 +681,7 @@ void TemporalFunctions::TemporalToTstzspan(DataChunk &args, ExpressionState &sta
     }
 }
 
-void TemporalFunctions::TnumberToSpan(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -709,7 +710,7 @@ void TemporalFunctions::TnumberToSpan(DataChunk &args, ExpressionState &state, V
     }
 }
 
-void TemporalFunctions::TemporalValueset(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) {
@@ -740,7 +741,7 @@ void TemporalFunctions::TemporalValueset(DataChunk &args, ExpressionState &state
     }
 }
 
-void TemporalFunctions::TemporalSequences(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result) {
     idx_t total_count = 0;
     UnaryExecutor::Execute<string_t, list_entry_t>(
         args.data[0], result, args.size(),
@@ -782,7 +783,7 @@ void TemporalFunctions::TemporalSequences(DataChunk &args, ExpressionState &stat
     ListVector::SetListSize(result, total_count);
 }
 
-void TemporalFunctions::TnumberShiftValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, int64_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input, int64_t shift) {
@@ -810,7 +811,7 @@ void TemporalFunctions::TnumberShiftValue(DataChunk &args, ExpressionState &stat
     }
 }
 
-void TemporalFunctions::TnumberScaleValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tnumber_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, int64_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input, int64_t duration) {
@@ -838,7 +839,7 @@ void TemporalFunctions::TnumberScaleValue(DataChunk &args, ExpressionState &stat
     }
 }
 
-void TemporalFunctions::TnumberShiftScaleValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t input, int64_t shift, int64_t duration) {

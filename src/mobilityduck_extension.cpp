@@ -1,17 +1,12 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
-// #include "types.hpp"
 // #include "intset.hpp"
 #include "set.hpp"
 // #include "geomset.hpp"
 
-// #include "functions.hpp"
-#include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
-#include "temporal/tint.hpp"
-#include "temporal/tbool.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"

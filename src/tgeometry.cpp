@@ -12,15 +12,15 @@ extern "C" {
 }
 
 namespace duckdb {
-
-LogicalType TGeometryTypes::TGEOMETRY() {
+    
+    LogicalType TGeometryTypes::TGEOMETRY() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TGEOMETRY");
-    return type;
-}
+        type.SetAlias("TGEOMETRY");
+        return type;
+    }
 
-inline void ExecuteTGeometryFromString(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
+    inline void ExecuteTGeometryFromString(DataChunk &args, ExpressionState &state, Vector &result) {
+        auto count = args.size();
     auto &input_geom_vec = args.data[0];
     
     UnaryExecutor::Execute<string_t, string_t>(
@@ -55,16 +55,16 @@ inline void ExecuteTGeometryFromString(DataChunk &args, ExpressionState &state, 
             
             return stored_data;
         });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
     }
-}
 
 
 
 inline void ExecuteTgeometryFromTimestamp(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
+        auto count = args.size();
     auto &value_vec = args.data[0];
     auto &t_vec = args.data[1];
 
@@ -107,13 +107,13 @@ inline void ExecuteTgeometryFromTimestamp(DataChunk &args, ExpressionState &stat
 
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
     }
-}
 
 inline void ExecuteTgeometryFromTstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
+        auto count = args.size();
     auto &input_geom_vec = args.data[0];
     auto &span_vec = args.data[1];
 
@@ -172,12 +172,12 @@ inline void ExecuteTgeometryFromTstzspan(DataChunk &args, ExpressionState &state
         });
 
     if (count == 1){
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
     }
-}
 
 inline void ExecuteTGeometryAsEWKT(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
+        auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
     UnaryExecutor::Execute<string_t, string_t>(
@@ -228,19 +228,19 @@ inline void ExecuteTGeometryAsEWKT(DataChunk &args, ExpressionState &state, Vect
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        if (count == 1) {
+            result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }
     }
-}
 
-void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
-    auto tgeometry_function = ScalarFunction(
-        "TGEOMETRY", 
-        {LogicalType::VARCHAR}, 
-        TGeometryTypes::TGEOMETRY(),
+    void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
+        auto tgeometry_function = ScalarFunction(
+            "TGEOMETRY", 
+            {LogicalType::VARCHAR}, 
+            TGeometryTypes::TGEOMETRY(), 
         ExecuteTGeometryFromString
     );
-    ExtensionUtil::RegisterFunction(instance, tgeometry_function);
+        ExtensionUtil::RegisterFunction(instance, tgeometry_function);
         
     // auto tgeometry_from_timestamp_function = ScalarFunction(
     //     "TGEOMETRY",
@@ -249,25 +249,25 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     //     ExecuteTgeometryFromTimestamp);
     // ExtensionUtil::RegisterFunction(instance, tgeometry_from_timestamp_function);
 
-     auto tgeometry_from_tstzspan_function = ScalarFunction(
-        "TGEOMETRY", // name
+        auto tgeometry_from_tstzspan_function = ScalarFunction(
+            "TGEOMETRY", // name
         {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
-        TGeometryTypes::TGEOMETRY(),  
-        ExecuteTgeometryFromTstzspan);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
+            TGeometryTypes::TGEOMETRY(),  
+            ExecuteTgeometryFromTstzspan);
+        ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
 
-    auto TgeometryAsEWKT = ScalarFunction(
-        "asEWKT",
-        {TGeometryTypes::TGEOMETRY()},
-        LogicalType::VARCHAR,
-        ExecuteTGeometryAsEWKT
-    );
+        auto TgeometryAsEWKT = ScalarFunction(
+            "asEWKT",
+            {TGeometryTypes::TGEOMETRY()},
+            LogicalType::VARCHAR,
+            ExecuteTGeometryAsEWKT
+        );
     ExtensionUtil::RegisterFunction(instance, TgeometryAsEWKT);
-}
+    }
 
-void TGeometryTypes::RegisterTypes(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterType(instance, "TGEOMETRY", TGeometryTypes::TGEOMETRY());
-}
+    void TGeometryTypes::RegisterTypes(DatabaseInstance &instance) {
+        ExtensionUtil::RegisterType(instance, "TGEOMETRY", TGeometryTypes::TGEOMETRY());
+    }
 
 void TGeometryTypes::RegisterCastFunctions(DatabaseInstance &db) {
     // ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
