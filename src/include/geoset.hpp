@@ -9,8 +9,8 @@
 namespace duckdb {
 
 struct SpatialSetType{    
-    static LogicalType GeomSet();     
-    static LogicalType GeogSet();   
+    static LogicalType geomset();     
+    static LogicalType geogset();   
     static LogicalType WKB_BLOB();
 
     static void RegisterTypes(DatabaseInstance &db);
@@ -20,17 +20,16 @@ struct SpatialSetType{
 
 struct SpatialSetFunctions{
     //cast
-    static bool GeoSetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool TextToGeoSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Geoset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    //other
-    static void GeoSetFromText(DataChunk &args, ExpressionState &state, Vector &result); 
-    static void GeoSetAsText(DataChunk &args, ExpressionState &state, Vector &result);
-    static void GeomMemSize(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SpatialSRID(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetSRID(DataChunk &args, ExpressionState &state, Vector &result_vec);
-    static void TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec);
-    static void GeoSetStartValue(DataChunk &args, ExpressionState &state, Vector &result);
+    //other    
+    static void Spatialset_as_text(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spatialset_srid(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spatialset_set_srid(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void Spatialset_transform(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
 };   
 
 } // namespace duckdb

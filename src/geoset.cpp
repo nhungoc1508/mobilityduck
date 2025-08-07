@@ -17,9 +17,9 @@ extern "C" {
 namespace duckdb {
 
 //GeomSet
-LogicalType SpatialSetType::GeomSet() {
+LogicalType SpatialSetType::geomset() {
     auto type = LogicalType(LogicalTypeId::BLOB);     
-    type.SetAlias("GeomSet");
+    type.SetAlias("geomset");
     return type;
 }
 
@@ -29,34 +29,18 @@ LogicalType SpatialSetType::WKB_BLOB(){
     return type;
 }
 
-LogicalType SpatialSetType::GeogSet() {
+LogicalType SpatialSetType::geogset() {
     auto type = LogicalType(LogicalTypeId::BLOB);     
-    type.SetAlias("GeogSet");
+    type.SetAlias("geogset");
     return type;
 }
 
 void SpatialSetType::RegisterTypes(DatabaseInstance &db){
-    ExtensionUtil::RegisterType(db, "geomSet", GeomSet());
-    ExtensionUtil::RegisterType(db, "geogSet", GeogSet());
+    ExtensionUtil::RegisterType(db, "geomset", geomset());
+    ExtensionUtil::RegisterType(db, "geogset", geogset());
 }
 
-void SpatialSetFunctions::GeoSetFromText(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-	UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t str) {
-            auto type = result.GetType();
-            auto set_type = (type == SpatialSetType::GeomSet()) ? T_GEOMSET:T_GEOGSET; 
-            Set *s = set_in(str.GetString().c_str(), set_type);
-            size_t total_size = VARSIZE(s); 
-            string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-            free(s);
-            return blob;                     
-        }
-    );	
-}
-
-void SpatialSetFunctions::GeoSetAsText(DataChunk &args, ExpressionState &state, Vector &result) {
+void SpatialSetFunctions::Spatialset_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 	UnaryExecutor::Execute<string_t, string_t>(
         input, result, args.size(),
@@ -78,7 +62,7 @@ void SpatialSetFunctions::GeoSetAsText(DataChunk &args, ExpressionState &state, 
 
 // Cast Function 
 
-bool SpatialSetFunctions::GeoSetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SpatialSetFunctions::Geoset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     auto result_data = FlatVector::GetData<string_t>(result); 
 
@@ -108,7 +92,7 @@ bool SpatialSetFunctions::GeoSetToText(Vector &source, Vector &result, idx_t cou
     return true;
 }
 
-bool SpatialSetFunctions::TextToGeoSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
 
     auto target_type = result.GetType();    
@@ -122,7 +106,7 @@ bool SpatialSetFunctions::TextToGeoSet(Vector &source, Vector &result, idx_t cou
         }
 
         const std::string input_blob = input_data[i].GetString();
-        auto set_type = (target_type == SpatialSetType::GeomSet()) ? T_GEOMSET:T_GEOGSET;
+        auto set_type = (target_type == SpatialSetType::geomset()) ? T_GEOMSET:T_GEOGSET;
         Set *s = set_in(input_blob.c_str(), set_type);        
         size_t total_size = VARSIZE(s); 
         result_data[i] = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
@@ -137,34 +121,34 @@ bool SpatialSetFunctions::TextToGeoSet(Vector &source, Vector &result, idx_t cou
 void SpatialSetType::RegisterCastFunctions(DatabaseInstance &instance) {    
     ExtensionUtil::RegisterCastFunction(
         instance,
-        SpatialSetType::GeomSet(),                      
+        SpatialSetType::geomset(),                      
         LogicalType::VARCHAR,   
-        SpatialSetFunctions::GeoSetToText
+        SpatialSetFunctions::Geoset_to_text
     ); // Blob to text
     ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR, 
-        SpatialSetType::GeomSet(),                                    
-        SpatialSetFunctions::TextToGeoSet   
+        SpatialSetType::geomset(),                                    
+        SpatialSetFunctions::Text_to_geoset   
     ); // text to blob
     ExtensionUtil::RegisterCastFunction(
         instance,
-        SpatialSetType::GeogSet(),                      
+        SpatialSetType::geogset(),                      
         LogicalType::VARCHAR,   
-        SpatialSetFunctions::GeoSetToText
+        SpatialSetFunctions::Geoset_to_text
     ); // Blob to text
     ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR, 
-        SpatialSetType::GeogSet(),                                    
-        SpatialSetFunctions::TextToGeoSet   
+        SpatialSetType::geogset(),                                    
+        SpatialSetFunctions::Text_to_geoset   
     ); // text to blob
  
 }
 
 //memSize
 
-void SpatialSetFunctions::GeomMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
+void SpatialSetFunctions::Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -180,7 +164,7 @@ void SpatialSetFunctions::GeomMemSize(DataChunk &args, ExpressionState &state, V
         });
 }
 
-void SpatialSetFunctions::SpatialSRID(DataChunk &args, ExpressionState &state, Vector &result) {
+void SpatialSetFunctions::Spatialset_srid(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -198,7 +182,7 @@ void SpatialSetFunctions::SpatialSRID(DataChunk &args, ExpressionState &state, V
 
 // Set SRID 
 
-void SpatialSetFunctions::SetSRID(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+void SpatialSetFunctions::Spatialset_set_srid(DataChunk &args, ExpressionState &state, Vector &result_vec) {
 	auto &input = args.data[0];
 	auto &srid_vec = args.data[1];
 
@@ -233,7 +217,7 @@ void SpatialSetFunctions::SetSRID(DataChunk &args, ExpressionState &state, Vecto
 
 }
 
-void SpatialSetFunctions::TransformSpatialSet(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+void SpatialSetFunctions::Spatialset_transform(DataChunk &args, ExpressionState &state, Vector &result_vec) {
 	auto &input_vec = args.data[0];
 	auto &srid_vec = args.data[1];
 
@@ -270,52 +254,46 @@ void SpatialSetFunctions::TransformSpatialSet(DataChunk &args, ExpressionState &
         free(result);		
 	}
 }
-void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {
-	ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"geomset", {LogicalType::VARCHAR}, SpatialSetType::GeomSet(), SpatialSetFunctions::GeoSetFromText));
+void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {	    
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"asText", {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"geogset", {LogicalType::VARCHAR}, SpatialSetType::GeogSet(), SpatialSetFunctions::GeoSetFromText));
+		"asText", {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+        "memSize", {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
     
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"asText", {SpatialSetType::GeomSet()}, LogicalType::VARCHAR, SpatialSetFunctions::GeoSetAsText));
+        "memSize", {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+        "SRID", {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
     
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"asText", {SpatialSetType::GeogSet()}, LogicalType::VARCHAR, SpatialSetFunctions::GeoSetAsText));
+        "SRID", {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-        "memSize", {SpatialSetType::GeomSet()}, LogicalType::INTEGER, SpatialSetFunctions::GeomMemSize));
+		"setSRID", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_set_srid));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"setSRID", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_set_srid));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
+		"transform", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-        "memSize", {SpatialSetType::GeogSet()}, LogicalType::INTEGER, SpatialSetFunctions::GeomMemSize));
+		"transform", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
-        "SRID", {SpatialSetType::GeomSet()}, LogicalType::INTEGER, SpatialSetFunctions::SpatialSRID));
-    
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-        "SRID", {SpatialSetType::GeogSet()}, LogicalType::INTEGER, SpatialSetFunctions::SpatialSRID));
-
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"set_srid", {SpatialSetType::GeomSet(), LogicalType::INTEGER}, SpatialSetType::GeomSet(), SpatialSetFunctions::SetSRID));
-
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"set_srid", {SpatialSetType::GeogSet(), LogicalType::INTEGER}, SpatialSetType::GeogSet(), SpatialSetFunctions::SetSRID));
-
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"transform", {SpatialSetType::GeomSet(), LogicalType::INTEGER}, SpatialSetType::GeomSet(), SpatialSetFunctions::TransformSpatialSet));
-    
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"transform", {SpatialSetType::GeogSet(), LogicalType::INTEGER}, SpatialSetType::GeogSet(), SpatialSetFunctions::TransformSpatialSet));
-
-    ExtensionUtil::RegisterFunction(db, ScalarFunction(
-		"startValue", {SpatialSetType::GeomSet()},  
+		"startValue", {SpatialSetType::geomset()},  
 		SpatialSetType::WKB_BLOB(),    // return geometry as WKB --> it will be casted to geometry type in spatial
-		SpatialSetFunctions::GeoSetStartValue
+		SpatialSetFunctions::Set_start_value
 	));
 }
 
 // startValue
-void SpatialSetFunctions::GeoSetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void SpatialSetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &input = args.data[0];
 	input.Flatten(args.size());
 	auto input_data = FlatVector::GetData<string_t>(input);

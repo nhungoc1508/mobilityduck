@@ -312,7 +312,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 ScalarFunction(
                     "valueSet",
                     {type},
-                    SetTypes::INTSET(),
+                    SetTypes::intset(),
                     TemporalFunctions::TemporalValueset
                 )
             );
@@ -332,7 +332,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 ScalarFunction(
                     "valueSet",
                     {type},
-                    SetTypes::FLOATSET(),
+                    SetTypes::floatset(),
                     TemporalFunctions::TemporalValueset
                 )
             );

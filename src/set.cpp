@@ -22,44 +22,44 @@ namespace duckdb {
         return type;                                                 \
     }
 
-DEFINE_SET_TYPE(INTSET)
-DEFINE_SET_TYPE(BIGINTSET)
-DEFINE_SET_TYPE(FLOATSET)
-DEFINE_SET_TYPE(TEXTSET)
-DEFINE_SET_TYPE(DATESET)
-DEFINE_SET_TYPE(TSTZSET)
+DEFINE_SET_TYPE(intset)
+DEFINE_SET_TYPE(bigintset)
+DEFINE_SET_TYPE(floatset)
+DEFINE_SET_TYPE(textset)
+DEFINE_SET_TYPE(dateset)
+DEFINE_SET_TYPE(tstzset)
 
 #undef DEFINE_SET_TYPE
 
 void SetTypes::RegisterTypes(DatabaseInstance &db) {
-    ExtensionUtil::RegisterType(db, "INTSET", INTSET());
-    ExtensionUtil::RegisterType(db, "BIGINTSET", BIGINTSET());
-    ExtensionUtil::RegisterType(db, "FLOATSET", FLOATSET());
-    ExtensionUtil::RegisterType(db, "TEXTSET", TEXTSET());
-    ExtensionUtil::RegisterType(db, "DATESET", DATESET());
-    ExtensionUtil::RegisterType(db, "TSTZSET", TSTZSET());    
+    ExtensionUtil::RegisterType(db, "intset", intset());
+    ExtensionUtil::RegisterType(db, "bigintset", bigintset());
+    ExtensionUtil::RegisterType(db, "floatset", floatset());
+    ExtensionUtil::RegisterType(db, "textset", textset());
+    ExtensionUtil::RegisterType(db, "dateset", dateset());
+    ExtensionUtil::RegisterType(db, "tstzset", tstzset());    
 }
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        INTSET(),
-        BIGINTSET(),
-        FLOATSET(),
-        TEXTSET(),
-        DATESET(),
-        TSTZSET()
+        intset(),
+        bigintset(),
+        floatset(),
+        textset(),
+        dateset(),
+        tstzset()
     };
     return types;
 }
 
 meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, meosType> alias_to_type = {
-        {"INTSET", T_INTSET},
-        {"BIGINTSET", T_BIGINTSET},
-        {"FLOATSET", T_FLOATSET},
-        {"TEXTSET", T_TEXTSET},
-        {"DATESET", T_DATESET},
-        {"TSTZSET", T_TSTZSET}                
+        {"intset", T_INTSET},
+        {"bigintset", T_BIGINTSET},
+        {"floatset", T_FLOATSET},
+        {"textset", T_TEXTSET},
+        {"dateset", T_DATESET},
+        {"tstzset", T_TSTZSET}                
     };
 
     auto it = alias_to_type.find(alias);
@@ -72,78 +72,33 @@ meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();
-    if (alias == "INTSET") return LogicalType::INTEGER;
-    if (alias == "BIGINTSET") return LogicalType::BIGINT;
-    if (alias == "FLOATSET") return LogicalType::DOUBLE;
-    if (alias == "TEXTSET") return LogicalType::VARCHAR;
-    if (alias == "DATESET") return LogicalType::DATE;
-    if (alias == "TSTZSET") return LogicalType::TIMESTAMP_TZ;    
+    if (alias == "intset") return LogicalType::INTEGER;
+    if (alias == "bigintset") return LogicalType::BIGINT;
+    if (alias == "floatset") return LogicalType::DOUBLE;
+    if (alias == "textset") return LogicalType::VARCHAR;
+    if (alias == "dateset") return LogicalType::DATE;
+    if (alias == "tstzset") return LogicalType::TIMESTAMP_TZ;    
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 
 
-void SetFunctions::SetFromText(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t str) -> string_t {        
-            Set *s = set_in(str.GetString().c_str(), set_type);
-            size_t total_size = VARSIZE(s); 
-            string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-            free(s);
-            return blob;         
-        }
-    );
-}
-
 //AsText
-void SetFunctions::AsTextWithFixedDigits(DataChunk &args, ExpressionState &state, Vector &result, int fixed_digits) {
+void SetFunctions::Set_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input_vec = args.data[0];
     input_vec.Flatten(args.size());
 
+    bool has_digits = args.ColumnCount() > 1;
+    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
+    if (has_digits) digits_vec_ptr->Flatten(args.size());
+
     for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i)) {
+        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
             FlatVector::SetNull(result, i, true);
             continue;
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-
-        char *cstr = set_out(s, fixed_digits);
-        auto str = StringVector::AddString(result, cstr);
-        FlatVector::GetData<string_t>(result)[i] = str;
-
-        free(s);
-        free(cstr);
-    }
-}
-
-void SetFunctions::AsTextDefault15(DataChunk &args, ExpressionState &state, Vector &result) {
-    AsTextWithFixedDigits(args, state, result, 15);
-}
-
-void SetFunctions::AsTextWithDigits(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    auto &digits_vec = args.data[1];
-
-    input_vec.Flatten(args.size());
-    digits_vec.Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = FlatVector::IsNull(digits_vec, i) ? 15 : FlatVector::GetData<int32_t>(digits_vec)[i];
+        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
         size_t size = blob.GetSize();
@@ -160,8 +115,9 @@ void SetFunctions::AsTextWithDigits(DataChunk &args, ExpressionState &state, Vec
     }
 }
 
+
 // Cast
-bool SetFunctions::SetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     auto result_data = FlatVector::GetData<string_t>(result); 
 
@@ -190,7 +146,7 @@ bool SetFunctions::SetToText(Vector &source, Vector &result, idx_t count, CastPa
     return true;
 }
 
-bool SetFunctions::TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
+bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
     source.Flatten(count);
 
     auto target_type = result.GetType();
@@ -232,13 +188,13 @@ void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             instance,
             set_type,                      
             LogicalType::VARCHAR,   
-            SetFunctions::SetToText   
+            SetFunctions::Set_to_text   
         ); // Blob to text
         ExtensionUtil::RegisterCastFunction(
             instance,
             LogicalType::VARCHAR, 
             set_type,                                    
-            SetFunctions::TextToSet   
+            SetFunctions::Text_to_set   
         ); // text to blob
         
         auto base_type = SetTypeMapping::GetChildType(set_type);
@@ -246,13 +202,13 @@ void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             instance,
             base_type,
             set_type,
-            SetFunctions::SetConversion
+            SetFunctions::Value_to_set
         );
     }
 }
 
 // Set constructor from list 
-void SetFunctions::SetConstructor(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
     auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
@@ -330,7 +286,7 @@ void SetFunctions::SetConstructor(DataChunk &args, ExpressionState &state, Vecto
 }
 
 // Conversion function: base type -> set 
-bool SetFunctions::SetConversion(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::Value_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto target_type = result.GetType();
     meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
     meosType base_type = settype_basetype(set_type);
@@ -450,7 +406,7 @@ bool SetFunctions::SetConversion(Vector &source, Vector &result, idx_t count, Ca
 }
 
 //memSize
-void SetFunctions::SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -468,7 +424,7 @@ void SetFunctions::SetMemSize(DataChunk &args, ExpressionState &state, Vector &r
 
 
 //numValue
-void SetFunctions::SetNumValues(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_num_values(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -489,7 +445,7 @@ void SetFunctions::SetNumValues(DataChunk &args, ExpressionState &state, Vector 
 }
 
 //startValue 
-void SetFunctions::SetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -607,7 +563,7 @@ void SetFunctions::SetStartValue(DataChunk &args, ExpressionState &state, Vector
 
 
 //endValue 
-void SetFunctions::SetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -724,7 +680,7 @@ void SetFunctions::SetEndValue(DataChunk &args, ExpressionState &state, Vector &
 }
 
 // valueN
-void SetFunctions::SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+void SetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec) {
     auto &set_vec = args.data[0];
     auto &index_vec = args.data[1];
 
@@ -792,7 +748,7 @@ void SetFunctions::SetValueN(DataChunk &args, ExpressionState &state, Vector &re
 
 //getValues
 
-void SetFunctions::GetSetValues(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     idx_t row_count = args.size();
     
@@ -889,64 +845,55 @@ void SetFunctions::GetSetValues(DataChunk &args, ExpressionState &state, Vector 
 }
 void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {    
     for (const auto &set_type : SetTypes::AllTypes()) {
-        auto base_type = SetTypeMapping::GetChildType(set_type); 
-
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(set_type.ToString(), {LogicalType::VARCHAR}, set_type, SetFunctions::SetFromText)
-        ); 
+        auto base_type = SetTypeMapping::GetChildType(set_type);         
 
         // Register: asText
-        if (set_type == SetTypes::FLOATSET()) {            
+        if (set_type == SetTypes::floatset()) {            
             ExtensionUtil::RegisterFunction( // asText(floatset)
-                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::AsTextDefault15)
+                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
             
             ExtensionUtil::RegisterFunction( // asText(floatset, int)
-                db, ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::AsTextWithDigits)
+                db, ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         } else {            
             ExtensionUtil::RegisterFunction( // All other set types
-                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::AsTextDefault15)
+                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         }
 
         ExtensionUtil::RegisterFunction(
             db,
-            ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::SetConstructor)                    
-        );
-
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("set", {base_type}, set_type, SetFunctions::SetConstructor)                    
+            ScalarFunction("set", {base_type}, set_type, SetFunctions::Set_constructor)                 
         );
 
         ExtensionUtil::RegisterFunction(
             db, 
-            ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::SetMemSize)
+            ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)
         );
         
         ExtensionUtil::RegisterFunction(
             db, 
-            ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::SetNumValues)
+            ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::Set_num_values)
         );
 
         ExtensionUtil::RegisterFunction(
             db,
-            ScalarFunction("startValue", {set_type}, base_type, SetFunctions::SetStartValue)
+            ScalarFunction("startValue", {set_type}, base_type, SetFunctions::Set_start_value)
         );
 
         ExtensionUtil::RegisterFunction(
             db,
-            ScalarFunction("endValue", {set_type}, base_type, SetFunctions::SetEndValue)
+            ScalarFunction("endValue", {set_type}, base_type, SetFunctions::Set_end_value)
         );
 
         ExtensionUtil::RegisterFunction(
             db,
-            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::SetValueN)
+            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
         );
 
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::GetSetValues)
+            db, ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
         );
     }
 }

@@ -16,6 +16,7 @@
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"
 #include "span.hpp"
+#include "spanset.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -93,6 +94,11 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SpatialSetType::RegisterTypes(instance);	
 	SpatialSetType::RegisterCastFunctions(instance);	
 	SpatialSetType::RegisterScalarFunctions(instance);	
+
+	//SpanSet
+	SpansetTypes::RegisterTypes(instance);
+	SpansetTypes::RegisterCastFunctions(instance);	
+	// SpansetTypes::RegisterScalarFunctions(instance);	
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {

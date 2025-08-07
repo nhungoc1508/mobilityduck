@@ -8,12 +8,12 @@ require mobilityduck
 
 # input 
 query I
-SELECT INTSET '{-1,-3,3}';
+SELECT intset '{-1,-3,3}';
 ----
 {-3, -1, 3}
 
 query I
-SELECT FLOATSET '{-1.2,-3.1,3}';
+SELECT floatset '{-1.2,-3.1,3}';
 ----
 {-3.1, -1.2, 3}
 
@@ -35,7 +35,7 @@ SELECT textset '{"highway", "car"}';
 # asText 
 
 query I
-SELECT asText(INTSET '{-1,-3,3}');
+SELECT asText(intset '{-1,-3,3}');
 ----
 {-3, -1, 3}
 
@@ -68,22 +68,22 @@ SELECT set(ARRAY['highway', 'primary', 'secondary']);
 # Conversion
 
 query I 
-SELECT 5::INTSET;
+SELECT 5::intset;
 ----
 {5}
 
 query I
-SELECT DOUBLE '1.5'::FLOATSET;
+SELECT DOUBLE '1.5'::floatset;
 ----
 {1,5}
 
 query I
-SELECT CAST(TIMESTAMPTZ'2001-01-01 08:00:00' AS TSTZSET);
+SELECT CAST(TIMESTAMPTZ'2001-01-01 08:00:00' AS tstzset);
 ----
 {"2001-01-01 08:00:00+00"}
 
 query I 
-SELECT CAST(DATE'2001-01-01' AS DATESET); 
+SELECT CAST(DATE'2001-01-01' AS dateset); 
 ----
 {2001-01-01}
 
@@ -98,22 +98,22 @@ SELECT memSize(tstzset '{2001-01-01, 2001-01-02, 2001-01-03}');
 48
 
 query I 
-SELECT startValue(FLOATSET '{-1.2,-3.1,3}');
+SELECT startValue(floatset '{-1.2,-3.1,3}');
 ----
 -3.1
 
 query I 
-SELECT valueN(INTSET '{-2, 2, 7}' ,1);
+SELECT valueN(intset '{-2, 2, 7}' ,1);
 ----
 -2
 
 query I 
-SELECT valueN(INTSET '{-2, 2, 7}', 4);
+SELECT valueN(intset '{-2, 2, 7}', 4);
 ----
 NULL
 
 query I 
-SELECT * FROM setUnnest(INTSET '{1, 1, 5, -7, -7}');
+SELECT * FROM setUnnest(intset '{1, 1, 5, -7, -7}');
 ----
 -7
 1

@@ -31,7 +31,7 @@ SELECT SRID(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,
 5676
 
 query I 
-SELECT set_srid(geomset '{POINT(1 1), POINT(2 2)}', 4326);
+SELECT setSRID(geomset '{POINT(1 1), POINT(2 2)}', 4326);
 ----
 {"POINT(1 1)", "POINT(2 2)"}
 

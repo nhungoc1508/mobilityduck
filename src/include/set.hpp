@@ -15,12 +15,12 @@ extern "C" {
 namespace duckdb {
 
 struct SetTypes {
-    static LogicalType INTSET();
-    static LogicalType BIGINTSET();
-    static LogicalType FLOATSET();
-    static LogicalType TEXTSET();
-    static LogicalType DATESET();
-    static LogicalType TSTZSET();
+    static LogicalType intset();
+    static LogicalType bigintset();
+    static LogicalType floatset();
+    static LogicalType textset();
+    static LogicalType dateset();
+    static LogicalType tstzset();
 
     static const std::vector<LogicalType> &AllTypes();
 
@@ -32,22 +32,20 @@ struct SetTypes {
 
 struct SetFunctions{
     // for cast
-    static bool SetToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool SetConversion(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Value_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    // other
-    static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result);
-    static void AsTextDefault15(DataChunk &args, ExpressionState &state, Vector &result);
-    static void AsTextWithDigits(DataChunk &args, ExpressionState &state, Vector &result);
-    static void AsTextWithFixedDigits(DataChunk &args, ExpressionState &state, Vector &result, int digits);
-    static void SetConstructor(DataChunk &args, ExpressionState &state, Vector &result);    
-    static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result);
-    static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec);
-    static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result);
+    // other    
+    static void Set_as_text(DataChunk &args, ExpressionState &state, Vector &result);
+    
+    static void Set_constructor(DataChunk &args, ExpressionState &state, Vector &result);    
+    static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_num_values(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void Set_values(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 struct SetTypeMapping {
