@@ -4,7 +4,7 @@
 // #include "types.hpp"
 // #include "intset.hpp"
 #include "set.hpp"
-// #include "geomset.hpp"
+#include "geoset.hpp"
 
 // #include "functions.hpp"
 #include "temporal/temporal_types.hpp"
@@ -16,6 +16,7 @@
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"
 #include "span.hpp"
+#include "spanset.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -24,21 +25,12 @@
 
 #include <mutex>
 
-extern "C"{
-	// #include <postgres.h>
-    // #include <utils/timestamp.h>
+extern "C"{	
     #include <meos.h>
 }
 
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
-
-// MEOS
-// extern "C" {
-// 	#include <postgres.h>
-//     #include <utils/timestamp.h>
-//     #include <meos.h>
-// }
 
 namespace duckdb {
 
@@ -62,7 +54,13 @@ static void LoadInternal(DatabaseInstance &instance) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+	
     });
+
+	Connection con(instance);
+
+	con.Query("INSTALL spatial;");
+	con.Query("LOAD spatial;");
 
 	// Register a scalar function
 	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
@@ -88,36 +86,24 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TGeometryTypes::RegisterCastFunctions(instance);
 
 	SetTypes::RegisterTypes(instance);
-	SetTypes::RegisterSet(instance);
-	SetTypes::RegisterSetAsText(instance);
 	SetTypes::RegisterCastFunctions(instance);
-	SetTypes::RegisterSetConstructors(instance);
-	SetTypes::RegisterSetConversion(instance);
-	SetTypes::RegisterSetMemSize(instance);
-	SetTypes::RegisterSetNumValues(instance);
-	SetTypes::RegisterSetStartValue(instance);
-	SetTypes::RegisterSetEndValue(instance);
-	SetTypes::RegisterSetValueN(instance);
-	SetTypes::RegisterSetGetValues(instance);
+	SetTypes::RegisterScalarFunctions(instance);
 	SetTypes::RegisterSetUnnest(instance);
 
-	//Geometry
-	// SpatialSetType::RegisterGeomSet(instance);
-	// SpatialSetType::RegisterGeomSetAsText(instance);
-	// SpatialSetType::RegisterMemSize(instance);
-	// SpatialSetType::RegisterGeogSet(instance);
-	// SpatialSetType::RegisterGeogSetAsText(instance);
-	
-	// SpatialSetType::RegisterSRID(instance);
-	// SpatialSetType::RegisterSetSRID(instance);
-	// // SpatialSetType::RegisterTransform(instance); (debug later)
+	//Geometry Set
+	SpatialSetType::RegisterTypes(instance);	
+	SpatialSetType::RegisterCastFunctions(instance);	
+	SpatialSetType::RegisterScalarFunctions(instance);	
 
-	// SpatialSetType::RegisterStartValue(instance);
-	// SpatialSetType::RegisterEndValue(instance);
+	//SpanSet
+	SpansetTypes::RegisterTypes(instance);
+	SpansetTypes::RegisterCastFunctions(instance);	
+	SpansetTypes::RegisterScalarFunctions(instance);	
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
 	LoadInternal(*db.instance);
+
 }
 std::string MobilityduckExtension::Name() {
 	return "mobilityduck";
