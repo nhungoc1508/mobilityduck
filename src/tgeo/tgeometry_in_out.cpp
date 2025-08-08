@@ -13,7 +13,7 @@ extern "C" {
 
 namespace duckdb {
 
-inline void ExecuteTGeometryAsText(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -62,7 +62,7 @@ inline void ExecuteTGeometryAsText(DataChunk &args, ExpressionState &state, Vect
     }
 }
 
-inline void ExecuteTGeometryAsEWKT(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -194,19 +194,19 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
 }
 
 void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
-    auto tgeometry_as_text_function = ScalarFunction(
+    auto TgeometryAsText = ScalarFunction(
             "asText", 
             {TGeometryTypes::TGEOMETRY()},
             LogicalType::VARCHAR,
-            ExecuteTGeometryAsText
+            Tspatial_as_text
         );
-        ExtensionUtil::RegisterFunction(instance, tgeometry_as_text_function);
+        ExtensionUtil::RegisterFunction(instance, TgeometryAsText);
 
     auto TgeometryAsEWKT = ScalarFunction(
         "asEWKT",
         {TGeometryTypes::TGEOMETRY()},
         LogicalType::VARCHAR,
-        ExecuteTGeometryAsEWKT
+        Tspatial_as_ewkt
     );
     ExtensionUtil::RegisterFunction(instance, TgeometryAsEWKT);
 }

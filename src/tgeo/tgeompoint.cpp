@@ -19,6 +19,13 @@ LogicalType TGeomPointTypes::TGEOMPOINT() {
     return type;
 }
 
+LogicalType TGeomPointTypes::GEOMPOINT() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("WKB_BLOB");
+    return type;
+}
+
+
 inline void ExecuteTGeomPointFromString(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
@@ -155,6 +162,55 @@ bool TgeomPointFunctions::TgeomPointToString(Vector &source, Vector &result, idx
     return true;   
 }
 
+inline void ExecuteTGeomPointStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+    
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_blob) -> string_t {
+            // Extract WKB data from the input blob (same as other functions)
+            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t wkb_size = input_blob.GetSize();
+
+            // Reconstruct temporal object from WKB
+            Temporal *temp = temporal_from_wkb(wkb_data, wkb_size);
+            if (!temp) {
+                throw InvalidInputException("Invalid WKB data for TGEOMPOINT");
+            }
+
+            // Get the start value as a Datum, then convert to GSERIALIZED*
+            Datum start_datum = temporal_start_value(temp);
+            GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
+            if (!start_geom) {
+                free(temp);
+                throw InvalidInputException("Failed to get start value from TGEOMPOINT");
+            }
+
+            // Convert geometry to EWKB format for consistent storage
+            size_t ewkb_size;
+            uint8_t *ewkb_data = geo_as_ewkb(start_geom, NULL, &ewkb_size);
+            if (!ewkb_data) {
+                free(temp);
+                throw InvalidInputException("Failed to convert start geometry to EWKB");
+            }
+
+            // Create string_t from EWKB data
+            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
+
+            // Clean up memory
+            free(ewkb_data);
+            free(temp);
+            
+            return stored_result;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void TGeomPointTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     // Main TGEOMPOINT constructor function
     auto tgeompoint_function = ScalarFunction(
@@ -172,6 +228,14 @@ void TGeomPointTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExecuteTGeomPointAsEWKT
     );
     ExtensionUtil::RegisterFunction(instance, TgeompointAsEWKT);
+
+    auto tgeometry_start_value_function = ScalarFunction(
+        "startValue", 
+        {TGeomPointTypes::TGEOMPOINT()},
+        TGeomPointTypes::GEOMPOINT(),
+        ExecuteTGeomPointStartValue
+    );
+    ExtensionUtil::RegisterFunction(instance, tgeometry_start_value_function);
 }
 
 void TGeomPointTypes::RegisterTypes(DatabaseInstance &instance) {
