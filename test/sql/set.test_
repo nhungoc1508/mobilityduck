@@ -88,7 +88,7 @@ SELECT CAST(DATE'2001-01-01' AS dateset);
 {2001-01-01}
 
 query I 
-select 'car'::TEXTSET);
+select 'car'::TEXTSET;
 ----
 {"car"}
 

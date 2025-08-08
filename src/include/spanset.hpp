@@ -35,6 +35,7 @@ struct SpansetFunctions{
     static bool Spanset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Text_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Value_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Set_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // other    
     static void Spanset_as_text(DataChunk &args, ExpressionState &state, Vector &result);
@@ -47,6 +48,8 @@ struct SpansetFunctions{
 struct SpansetTypeMapping {
     static meosType GetMeosTypeFromAlias(const std::string &alias);
     static LogicalType GetChildType(const LogicalType &type);
+    static LogicalType GetBaseType(const LogicalType &type);
+    static LogicalType GetSetType(const LogicalType &type);
 };
 
 } // namespace duckdb

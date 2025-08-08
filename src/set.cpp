@@ -132,9 +132,9 @@ bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, Cast
         const uint8_t *data = (const uint8_t *)(blob.GetData());
         size_t size = blob.GetSize();
 
-        Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);        
+        Set *s = (Set*)malloc(size);                
 
+        memcpy(s, data, size);             
         char *cstr = set_out(s, 15);  
         result_data[i] = StringVector::AddString(result, cstr);
 
@@ -146,40 +146,39 @@ bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, Cast
     return true;
 }
 
-bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
+bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
     meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
-    auto input_data = FlatVector::GetData<string_t>(source);
-    auto result_data = FlatVector::GetData<string_t>(result);
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) -> string_t {
+            std::string input_str(input.GetDataUnsafe(), input.GetSize());
+            Set *s = nullptr;
 
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
+            if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {
+                // Treat as a single text element for TEXTSET
+                text *txt = (text *)malloc(VARHDRSZ + input_str.size());
+                SET_VARSIZE(txt, VARHDRSZ + input_str.size());
+                memcpy(VARDATA(txt), input_str.c_str(), input_str.size());
+
+                s = value_set(PointerGetDatum(txt), T_TEXT);                
+            } else {
+                s = set_in(input_str.c_str(), set_type);                              
+            }            
+
+            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+            free(s);
+            return blob;
         }
+    );
 
-        const std::string input_str = input_data[i].GetString();
-        Set *s = nullptr;
-        if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {                           
-            text *txt = (text *)malloc(VARHDRSZ + input_str.size());
-            SET_VARSIZE(txt, VARHDRSZ + input_str.size());
-            memcpy(VARDATA(txt), input_str.c_str(), input_str.size());
-
-            s = value_set(PointerGetDatum(txt), T_TEXT);                
-        } else {
-            s = set_in(input_str.c_str(), set_type);     
-        }               
-        size_t total_size = VARSIZE(s); 
-        result_data[i] = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-        free(s);
-    }
-
-    result.SetVectorType(VectorType::FLAT_VECTOR);
     return true;
 }
+
 
 
 void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
@@ -286,7 +285,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
 }
 
 // Conversion function: base type -> set 
-bool SetFunctions::Value_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::Value_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
     auto target_type = result.GetType();
     meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
     meosType base_type = settype_basetype(set_type);
@@ -301,7 +300,7 @@ bool SetFunctions::Value_to_set(Vector &source, Vector &result, idx_t count, Cas
                     FlatVector::SetNull(result, i, true);
                     continue;
                 }
-                Set *s = value_set(Datum(input[i]), T_INT4);
+                Set *s = value_set(Datum(input[i]), T_INT4);                               
                 output[i] = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
                 free(s);
             }
@@ -335,38 +334,6 @@ bool SetFunctions::Value_to_set(Vector &source, Vector &result, idx_t count, Cas
             }
             break;
         }
-        // case T_TEXT: {
-        //     auto input = FlatVector::GetData<string_t>(source);
-        //     auto output = FlatVector::GetData<string_t>(result);
-
-        //     for (idx_t i = 0; i < count; ++i) {
-        //         if (FlatVector::IsNull(source, i)) {
-        //             FlatVector::SetNull(result, i, true);
-        //             continue;
-        //         }
-
-        //         std::string str = input[i].GetString();
-        //         Set *s = nullptr;
-
-        //         if (!str.empty() && str.front() == '{') {
-        //             std::cerr << "not here" << std::endl;
-                    
-        //         } else {
-        //             // Single value → singleton set
-        //             text *txt = (text *)malloc(VARHDRSZ + str.size());
-        //             SET_VARSIZE(txt, VARHDRSZ + str.size());
-        //             memcpy(VARDATA(txt), str.c_str(), str.size());
-
-        //             s = value_set(PointerGetDatum(txt), T_TEXT);
-        //         }
-
-        //         output[i] = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
-        //         free(s);
-        //     }
-
-        //     break;
-        // }
-
         case T_DATE: {
             auto input = FlatVector::GetData<date_t>(source);
             auto output = FlatVector::GetData<string_t>(result);
@@ -415,7 +382,7 @@ void SetFunctions::Set_mem_size(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
+            memcpy(s, data, size);            
             int mem_size = set_mem_size(s);  // Get memory size
             free(s);
             return mem_size;
@@ -864,7 +831,7 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
 
         ExtensionUtil::RegisterFunction(
             db,
-            ScalarFunction("set", {base_type}, set_type, SetFunctions::Set_constructor)                 
+            ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor)                 
         );
 
         ExtensionUtil::RegisterFunction(

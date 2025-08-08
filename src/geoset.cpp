@@ -240,7 +240,7 @@ void SpatialSetFunctions::Spatialset_transform(DataChunk &args, ExpressionState 
         size_t size = blob.GetSize();
         
         Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);        		     
+        memcpy(s, data, size);        	         	     
 		Set *result = spatialset_transform(s, srid_data[i]);
         
 		free(s);

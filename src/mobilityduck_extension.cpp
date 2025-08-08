@@ -98,7 +98,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	//SpanSet
 	SpansetTypes::RegisterTypes(instance);
 	SpansetTypes::RegisterCastFunctions(instance);	
-	// SpansetTypes::RegisterScalarFunctions(instance);	
+	SpansetTypes::RegisterScalarFunctions(instance);	
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
