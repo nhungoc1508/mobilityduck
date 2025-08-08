@@ -38,6 +38,90 @@ void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR,
         TboxFunctions::Tbox_out
     );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        LogicalType::INTEGER,
+        TBOX(),
+        TboxFunctions::Number_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        LogicalType::DOUBLE,
+        TBOX(),
+        TboxFunctions::Number_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        LogicalType::TIMESTAMP_TZ,
+        TBOX(),
+        TboxFunctions::Timestamptz_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SetTypes::INTSET(),
+        TBOX(),
+        TboxFunctions::Set_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SetTypes::FLOATSET(),
+        TBOX(),
+        TboxFunctions::Set_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SetTypes::TSTZSET(),
+        TBOX(),
+        TboxFunctions::Set_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpanTypes::INTSPAN(),
+        TBOX(),
+        TboxFunctions::Span_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpanTypes::FLOATSPAN(),
+        TBOX(),
+        TboxFunctions::Span_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpanTypes::TSTZSPAN(),
+        TBOX(),
+        TboxFunctions::Span_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TBOX(),
+        SpanTypes::INTSPAN(),
+        TboxFunctions::Tbox_to_intspan_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TBOX(),
+        SpanTypes::FLOATSPAN(),
+        TboxFunctions::Tbox_to_floatspan_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TBOX(),
+        SpanTypes::TSTZSPAN(),
+        TboxFunctions::Tbox_to_tstzspan_cast
+    );
 }
 
 void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -118,6 +202,226 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {SpanTypes::FLOATSPAN(), SpanTypes::TSTZSPAN()},
             TBOX(),
             TboxFunctions::Numspan_tstzspan_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Number_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {LogicalType::DOUBLE},
+            TBOX(),
+            TboxFunctions::Number_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {LogicalType::TIMESTAMP_TZ},
+            TBOX(),
+            TboxFunctions::Timestamptz_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SetTypes::INTSET()},
+            TBOX(),
+            TboxFunctions::Set_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SetTypes::FLOATSET()},
+            TBOX(),
+            TboxFunctions::Set_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SetTypes::TSTZSET()},
+            TBOX(),
+            TboxFunctions::Set_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpanTypes::INTSPAN()},
+            TBOX(),
+            TboxFunctions::Span_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpanTypes::FLOATSPAN()},
+            TBOX(),
+            TboxFunctions::Span_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpanTypes::TSTZSPAN()},
+            TBOX(),
+            TboxFunctions::Span_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "intspan",
+            {TBOX()},
+            SpanTypes::INTSPAN(),
+            TboxFunctions::Tbox_to_intspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "floatspan",
+            {TBOX()},
+            SpanTypes::FLOATSPAN(),
+            TboxFunctions::Tbox_to_floatspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "timeSpan",
+            {TBOX()},
+            SpanTypes::TSTZSPAN(),
+            TboxFunctions::Tbox_to_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "hasX",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_hasx
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "hasT",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_hast
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Xmin",
+            {TBOX()},
+            LogicalType::DOUBLE,
+            TboxFunctions::Tbox_xmin
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "XminInc",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_xmin_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Xmax",
+            {TBOX()},
+            LogicalType::DOUBLE,
+            TboxFunctions::Tbox_xmax
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "XmaxInc",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_xmax_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Tmin",
+            {TBOX()},
+            LogicalType::TIMESTAMP_TZ,
+            TboxFunctions::Tbox_tmin
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "TminInc",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_tmin_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Tmax",
+            {TBOX()},
+            LogicalType::TIMESTAMP_TZ,
+            TboxFunctions::Tbox_tmax
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "TmaxInc",
+            {TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_tmax_inc
         )
     );
 }
