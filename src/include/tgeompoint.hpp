@@ -11,6 +11,7 @@ namespace duckdb {
 
 struct TGeomPointTypes {
     static LogicalType TGEOMPOINT();
+    static LogicalType GEOMPOINT();
     static void RegisterTypes(DatabaseInstance &instance);
     static void RegisterScalarFunctions(DatabaseInstance &instance);
     static void RegisterCastFunctions(DatabaseInstance &instance);
