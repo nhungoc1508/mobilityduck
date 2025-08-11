@@ -80,12 +80,15 @@ static void LoadInternal(DatabaseInstance &instance) {
   	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
+
 	TGeomPointTypes::RegisterScalarFunctions(instance);
 	TGeomPointTypes::RegisterTypes(instance);
 	TGeomPointTypes::RegisterCastFunctions(instance);
+
 	TGeometryTypes::RegisterScalarFunctions(instance);
 	TGeometryTypes::RegisterTypes(instance);
 	TGeometryTypes::RegisterCastFunctions(instance);
+	TGeometryTypes::RegisterScalarInOutFunctions(instance);
 
 	SetTypes::RegisterTypes(instance);
 	SetTypes::RegisterSet(instance);
