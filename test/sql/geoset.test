@@ -1,0 +1,41 @@
+require mobilityduck
+
+query I 
+SELECT geomset '{"Point(1 1)", "Point(2 1)"}';
+----
+{"POINT(1 1)", "POINT(2 1)"}
+
+query I 
+SELECT geomset '{"Polygon((1 1,1 2,2 2,2 1,1 1))"}';
+----
+{"POLYGON((1 1,1 2,2 2,2 1,1 1))"}
+
+query I 
+SELECT geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}';
+----
+{"LINESTRING(1 1,2 2)", "POLYGON((1 1,1 2,2 2,2 1,1 1))"}
+
+query I 
+SELECT asText(geomset '{"Point(1 1)", "Point(2 1)"}');
+----
+{"POINT(1 1)", "POINT(2 1)"}
+
+query I 
+SELECT memSize(geomset '{"Point(1 1)", "Point(2 1)"}');
+----
+184
+
+query I 
+SELECT SRID(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
+----
+5676
+
+query I 
+SELECT setSRID(geomset '{POINT(1 1), POINT(2 2)}', 4326);
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+query I 
+SELECT transform(geomset 'SRID=4326;{"POINT(1 1)", "POINT(2 2)"}', 5676);
+----
+{"POINT(1942851.5332794231 110578.60739389929)", "POINT(2054702.0406264572 221269.95672158588)"}

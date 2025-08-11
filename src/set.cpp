@@ -15,66 +15,6 @@ extern "C" {
 
 namespace duckdb {
 
-static inline Datum
-Float8GetDatum(double X)
-{
-  union
-  {
-    double    value;
-    int64    retval;
-  }      myunion;
-
-  myunion.value = X;
-  return Datum(myunion.retval);
-}
-
-static inline double
-DatumGetFloat8(Datum X)
-{
-  union
-  {
-    int64    value;
-    double    retval;
-  }      myunion;
-
-  myunion.value = int64(X);
-  return myunion.retval;
-}
-
-#define CStringGetDatum(X) PointerGetDatum(X)
-#define PointerGetDatum(X) ((Datum) (X))    
-#define SET_VARSIZE(PTR, len)        SET_VARSIZE_4B(PTR, len)
-#define SET_VARSIZE_4B(PTR,len) \
-  (((varattrib_4b *) (PTR))->va_4byte.va_header = (((uint32) (len)) << 2))
-#define VARSIZE(PTR)            VARSIZE_4B(PTR)
-#define VARSIZE_4B(PTR) \
-  ((((varattrib_4b *) (PTR))->va_4byte.va_header >> 2) & 0x3FFFFFFF)
-#define VARDATA(PTR)            VARDATA_4B(PTR)
-#define VARDATA_4B(PTR)    (((varattrib_4b *) (PTR))->va_4byte.va_data) 
-#define FLEXIBLE_ARRAY_MEMBER	/* empty */
-
-#define VARSIZE_ANY(PTR) \
-  (VARATT_IS_1B_E(PTR) ? VARSIZE_EXTERNAL(PTR) : \
-   (VARATT_IS_1B(PTR) ? VARSIZE_1B(PTR) : \
-    VARSIZE_4B(PTR)))
-typedef union
-{
-  struct            /* Normal varlena (4-byte length) */
-  {
-    uint32    va_header;
-    char    va_data[FLEXIBLE_ARRAY_MEMBER];
-  }      va_4byte;
-  struct            /* Compressed-in-line format */
-  {
-    uint32    va_header;
-    uint32    va_tcinfo;  /* Original data size (excludes header) and
-                 * compression method; see va_extinfo */
-    char    va_data[FLEXIBLE_ARRAY_MEMBER]; /* Compressed data */
-  }      va_compressed;
-} varattrib_4b;
-
-#define VARHDRSZ		((int32) sizeof(int32))
-
 #define DEFINE_SET_TYPE(NAME)                                        \
     LogicalType SetTypes::NAME() {                                   \
         auto type = LogicalType(LogicalTypeId::BLOB);             \
@@ -82,44 +22,44 @@ typedef union
         return type;                                                 \
     }
 
-DEFINE_SET_TYPE(INTSET)
-DEFINE_SET_TYPE(BIGINTSET)
-DEFINE_SET_TYPE(FLOATSET)
-DEFINE_SET_TYPE(TEXTSET)
-DEFINE_SET_TYPE(DATESET)
-DEFINE_SET_TYPE(TSTZSET)
+DEFINE_SET_TYPE(intset)
+DEFINE_SET_TYPE(bigintset)
+DEFINE_SET_TYPE(floatset)
+DEFINE_SET_TYPE(textset)
+DEFINE_SET_TYPE(dateset)
+DEFINE_SET_TYPE(tstzset)
 
 #undef DEFINE_SET_TYPE
 
 void SetTypes::RegisterTypes(DatabaseInstance &db) {
-    ExtensionUtil::RegisterType(db, "INTSET", INTSET());
-    ExtensionUtil::RegisterType(db, "BIGINTSET", BIGINTSET());
-    ExtensionUtil::RegisterType(db, "FLOATSET", FLOATSET());
-    ExtensionUtil::RegisterType(db, "TEXTSET", TEXTSET());
-    ExtensionUtil::RegisterType(db, "DATESET", DATESET());
-    ExtensionUtil::RegisterType(db, "TSTZSET", TSTZSET());    
+    ExtensionUtil::RegisterType(db, "intset", intset());
+    ExtensionUtil::RegisterType(db, "bigintset", bigintset());
+    ExtensionUtil::RegisterType(db, "floatset", floatset());
+    ExtensionUtil::RegisterType(db, "textset", textset());
+    ExtensionUtil::RegisterType(db, "dateset", dateset());
+    ExtensionUtil::RegisterType(db, "tstzset", tstzset());    
 }
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        INTSET(),
-        BIGINTSET(),
-        FLOATSET(),
-        TEXTSET(),
-        DATESET(),
-        TSTZSET()
+        intset(),
+        bigintset(),
+        floatset(),
+        textset(),
+        dateset(),
+        tstzset()
     };
     return types;
 }
 
 meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, meosType> alias_to_type = {
-        {"INTSET", T_INTSET},
-        {"BIGINTSET", T_BIGINTSET},
-        {"FLOATSET", T_FLOATSET},
-        {"TEXTSET", T_TEXTSET},
-        {"DATESET", T_DATESET},
-        {"TSTZSET", T_TSTZSET}                
+        {"intset", T_INTSET},
+        {"bigintset", T_BIGINTSET},
+        {"floatset", T_FLOATSET},
+        {"textset", T_TEXTSET},
+        {"dateset", T_DATESET},
+        {"tstzset", T_TSTZSET}                
     };
 
     auto it = alias_to_type.find(alias);
@@ -132,75 +72,190 @@ meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();
-    if (alias == "INTSET") return LogicalType::INTEGER;
-    if (alias == "BIGINTSET") return LogicalType::BIGINT;
-    if (alias == "FLOATSET") return LogicalType::DOUBLE;
-    if (alias == "TEXTSET") return LogicalType::VARCHAR;
-    if (alias == "DATESET") return LogicalType::DATE;
-    if (alias == "TSTZSET") return LogicalType::TIMESTAMP_TZ;    
+    if (alias == "intset") return LogicalType::INTEGER;
+    if (alias == "bigintset") return LogicalType::BIGINT;
+    if (alias == "floatset") return LogicalType::DOUBLE;
+    if (alias == "textset") return LogicalType::VARCHAR;
+    if (alias == "dateset") return LogicalType::DATE;
+    if (alias == "tstzset") return LogicalType::TIMESTAMP_TZ;    
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 
 
-static void SetFromText(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t str) -> string_t {        
-            Set *s = set_in(str.GetString().c_str(), set_type);
-            size_t total_size = VARSIZE(s); 
-            string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-            free(s);
-            return blob;         
-        }
-    );
-}
-
-void SetTypes::RegisterSet(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(t.ToString(), {LogicalType::VARCHAR}, t, SetFromText)
+// Register all cast functions 
+void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
+    for (const auto &set_type : SetTypes::AllTypes()) {
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            set_type,                      
+            LogicalType::VARCHAR,   
+            SetFunctions::Set_to_text   
+        ); // Blob to text
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            LogicalType::VARCHAR, 
+            set_type,                                    
+            SetFunctions::Text_to_set   
+        ); // text to blob
+        
+        auto base_type = SetTypeMapping::GetChildType(set_type);
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            base_type,
+            set_type,
+            SetFunctions::Value_to_set_cast // set from base type
         );
+
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::intset(),
+            SetTypes::floatset(),
+            SetFunctions::Intset_to_floatset_cast // intset -> floatset 
+        );
+
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::floatset(),
+            SetTypes::intset(),
+            SetFunctions::Floatset_to_intset_cast // floatset --> intset
+        );
+        
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::dateset(),
+            SetTypes::tstzset(),
+            SetFunctions::Dateset_to_tstzset_cast // dateset -> tstzset
+        );
+        
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::tstzset(),
+            SetTypes::dateset(),
+            SetFunctions::Tstzset_to_dateset_cast // tstz -> dateset 
+        );
+
     }
 }
 
-//AsText
-static void AsText(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
+void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {    
+    for (const auto &set_type : SetTypes::AllTypes()) {
+        auto base_type = SetTypeMapping::GetChildType(set_type);         
 
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob_str) -> string_t {                        
-            const uint8_t *data = (const uint8_t *)blob_str.GetData();
-            size_t size = blob_str.GetSize();
+        // Register: asText
+        if (set_type == SetTypes::floatset()) {            
+            ExtensionUtil::RegisterFunction( // asText(floatset)
+                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            );
             
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-
-            char *cstr = set_out(s, 15); 
-            auto result_str = StringVector::AddString(result, cstr);                       
-            
-            free(s);
-            free(cstr);
-
-            return result_str;
+            ExtensionUtil::RegisterFunction( // asText(floatset, int)
+                db, ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            );
+        } else {            
+            ExtensionUtil::RegisterFunction( // All other set types
+                db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            );
         }
-    );
-}
 
-void SetTypes::RegisterSetAsText(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("asText", {t}, LogicalType::VARCHAR, AsText)
+            db,
+            ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set)                 
         );
-    }
 
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), SetFunctions::Floatset_to_intset)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), SetFunctions::Intset_to_floatset)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("dateset", {SetTypes::tstzset()}, SetTypes::dateset(), SetFunctions::Tstzset_to_dateset)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), SetFunctions::Dateset_to_tstzset)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::Set_num_values)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("startValue", {set_type}, base_type, SetFunctions::Set_start_value)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("endValue", {set_type}, base_type, SetFunctions::Set_end_value)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
+        );
+
+        if (set_type == SetTypes::intset() || set_type == SetTypes::bigintset() 
+            ||set_type == SetTypes::floatset() || set_type == SetTypes::dateset()){
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {set_type, LogicalType::INTEGER}, set_type, SetFunctions::Numset_shift)
+            ); 
+        }
+    }
 }
 
-// Cast
-bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+// --- AsText ---
+void SetFunctions::Set_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input_vec = args.data[0];
+    input_vec.Flatten(args.size());
+
+    bool has_digits = args.ColumnCount() > 1;
+    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
+    if (has_digits) digits_vec_ptr->Flatten(args.size());
+
+    for (idx_t i = 0; i < args.size(); i++) {
+        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
+        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
+
+        const uint8_t *data = (const uint8_t *)blob.GetData();
+        size_t size = blob.GetSize();
+
+        Set *s = (Set *)malloc(size);
+        memcpy(s, data, size);
+
+        char *cstr = set_out(s, digits);
+        auto str = StringVector::AddString(result, cstr);
+        FlatVector::GetData<string_t>(result)[i] = str;
+
+        free(s);
+        free(cstr);
+    }
+}
+
+
+// --- Cast From String ---
+bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     auto result_data = FlatVector::GetData<string_t>(result); 
 
@@ -215,13 +270,9 @@ bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &
         const uint8_t *data = (const uint8_t *)(blob.GetData());
         size_t size = blob.GetSize();
 
-        Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);
-        
-        if (!s) {
-            throw InvalidInputException("Failed to decode Set from WKB");
-        }
+        Set *s = (Set*)malloc(size);                
 
+        memcpy(s, data, size);             
         char *cstr = set_out(s, 15);  
         result_data[i] = StringVector::AddString(result, cstr);
 
@@ -233,53 +284,41 @@ bool SetBlobToText(Vector &source, Vector &result, idx_t count, CastParameters &
     return true;
 }
 
-bool TextToSet(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
     meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
-    auto input_data = FlatVector::GetData<string_t>(source);
-    auto result_data = FlatVector::GetData<string_t>(result);
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) -> string_t {
+            std::string input_str(input.GetDataUnsafe(), input.GetSize());
+            Set *s = nullptr;
 
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
+            if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {
+                // Treat as a single text element for TEXTSET
+                text *txt = (text *)malloc(VARHDRSZ + input_str.size());
+                SET_VARSIZE(txt, VARHDRSZ + input_str.size());
+                memcpy(VARDATA(txt), input_str.c_str(), input_str.size());
+
+                s = value_set(PointerGetDatum(txt), T_TEXT);                
+            } else {
+                s = set_in(input_str.c_str(), set_type);                              
+            }            
+
+            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+            free(s);
+            return blob;
         }
+    );
 
-        const std::string input_str = input_data[i].GetString();
-
-        Set *s = set_in(input_str.c_str(), set_type);        
-        size_t total_size = VARSIZE(s); 
-        result_data[i] = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-        free(s);
-    }
-
-    result.SetVectorType(VectorType::FLAT_VECTOR);
     return true;
 }
 
-
-void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
-    for (const auto &t : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterCastFunction(
-            instance,
-            t,                      
-            LogicalType::VARCHAR,   
-            SetBlobToText   
-        ); // Blob to text
-        ExtensionUtil::RegisterCastFunction(
-            instance,
-            LogicalType::VARCHAR, 
-            t,                                    
-            TextToSet   
-        ); // text to blob
-    }
-}
-
-// Set constructor from list 
-static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result) {
+// --- Set constructor from list ---
+void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
     auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
 
@@ -287,7 +326,7 @@ static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result)
         list_input, result, args.size(),
         [&](list_entry_t list_entry) -> string_t {
             auto &child = ListVector::GetEntry(list_input);
-            child.Flatten(args.size());  // ensure flat layout
+            child.Flatten(args.size());  
 
             idx_t offset = list_entry.offset;
             idx_t length = list_entry.length;
@@ -356,151 +395,270 @@ static void SetFromList(DataChunk &args, ExpressionState &state, Vector &result)
     );
 }
 
-void SetTypes::RegisterSetConstructors(DatabaseInstance &db) {
-    for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = SetTypeMapping::GetChildType(t); 
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("set", {LogicalType::LIST(child_type)}, t, SetFromList)                    
-        );
-    }    
+// Conversion function: base type -> set 
+static inline void Write_set(Vector &result, idx_t row, Set *s) {
+    auto out = FlatVector::GetData<string_t>(result);
+    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+    free(s);
 }
 
-// Conversion function: base type -> set 
-static void SetFromBase(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
-    auto base_type = settype_basetype(set_type);
+static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
+    source.Flatten(count);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    
+    auto handle_null = [&](idx_t row) {
+        FlatVector::SetNull(result, row, true);
+    };
 
     switch (base_type) {
-        case T_INT4:
-            UnaryExecutor::Execute<int32_t, string_t>(
-                input, result, args.size(),
-                [&](int32_t val) -> string_t {
-                    Set *s = value_set(Datum(val), T_INT4);                    
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;         
-                });
+        case T_INT4: {
+            auto in = FlatVector::GetData<int32_t>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+                Datum d = Datum(in[i]);               
+                Set *s = value_set(d, T_INT4);
+                Write_set(result, i, s);
+            }
             break;
-        
-        case T_INT8:
-            UnaryExecutor::Execute<int64_t, string_t>(
-                input, result, args.size(),
-                [&](int64_t val) -> string_t {
-                    Set *s = value_set(Datum(val), T_INT8);
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;            
-                });
+        }
+        case T_INT8: {
+            auto in = FlatVector::GetData<int64_t>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+                Datum d = Datum(in[i]);               
+                Set *s = value_set(d, T_INT8);
+                Write_set(result, i, s);
+            }
             break;
-        
-        case T_FLOAT8:
-            UnaryExecutor::Execute<double, string_t>(
-                input, result, args.size(),
-                [&](double val) -> string_t {
-                    Set *s = value_set(Float8GetDatum(val), T_FLOAT8);
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;    
-                });
+        }
+        case T_FLOAT8: {
+            auto in = FlatVector::GetData<double>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+                Datum d = Float8GetDatum(in[i]);
+                Set *s = value_set(d, T_FLOAT8);
+                Write_set(result, i, s);
+            }
             break;
-    
-
-        case T_TEXT:
-            UnaryExecutor::Execute<string_t, string_t>(
-                input, result, args.size(),
-                [&](string_t val) -> string_t {
-                    std::string str = val.GetString();
-                    size_t len = str.size();
-
-                    text *txt = (text *)malloc(VARHDRSZ + len);
-                    SET_VARSIZE(txt, VARHDRSZ + len);
-                    memcpy(VARDATA(txt), str.c_str(), len);
-
-                    Set *s = value_set(PointerGetDatum(txt), T_TEXT);
-
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;    
-                });
+        }
+        case T_TEXT: {
+            auto in = FlatVector::GetData<string_t>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) {
+                    handle_null(i);
+                    continue;
+                }                
+                const char *data_ptr = in[i].GetDataUnsafe();
+                size_t len = in[i].GetSize();                
+                text *txt = (text *)malloc(VARHDRSZ + len);
+                SET_VARSIZE(txt, VARHDRSZ + len);
+                memcpy(VARDATA(txt), data_ptr, len);
+                Set *s = value_set(PointerGetDatum(txt), T_TEXT);
+                Write_set(result, i, s);
+                free(txt); 
+            }
             break;
-        
-        case T_DATE:
-            UnaryExecutor::Execute<date_t, string_t>(
-                input, result, args.size(),
-                [&](date_t val) -> string_t {                    
-                    Set *s = value_set(Datum((int32_t)ToMeosDate(val)), T_DATE);
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;    
-                });
+        }
+            
+        case T_DATE: {
+            auto in = FlatVector::GetData<date_t>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+                int32_t days = (int32_t)ToMeosDate(in[i]);
+                Datum d = Datum(days);
+                Set *s = value_set(d, T_DATE);
+                Write_set(result, i, s);
+            }
             break;
-        
-
-        case T_TIMESTAMPTZ:
-            UnaryExecutor::Execute<timestamp_t, string_t>(
-                input, result, args.size(),
-                [&](timestamp_t val) -> string_t {                    
-                    Set *s = value_set(Datum(ToMeosTimestamp(val)), T_TIMESTAMPTZ);
-                    size_t size = VARSIZE(s);            
-                    string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-                    free(s);
-                    return blob;    
-                });
+        }
+        case T_TIMESTAMPTZ: {
+            auto in = FlatVector::GetData<timestamp_t>(source);
+            for (idx_t i = 0; i < count; ++i) {
+                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+                auto meos_ts = ToMeosTimestamp(in[i]);        
+                Datum d = Datum(meos_ts);
+                Set *s = value_set(d, T_TIMESTAMPTZ);
+                Write_set(result, i, s);
+            }
             break;
-        
+        }
         default:
-            throw NotImplementedException("SetFromBase: unsupported base type for set conversion");
+            throw NotImplementedException("SetConversion: unsupported base type for conversion to set");
     }
 }
 
-void SetTypes::RegisterSetConversion(DatabaseInstance &db) {
-    for (auto &t : SetTypes::AllTypes()) {
-        auto child_type = SetTypeMapping::GetChildType(t); 
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("set", {child_type}, t, SetFromBase)                    
-        );
-    }    
+// --- CAST (conversion: base -> set) ----
+
+bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    auto target_type = result.GetType();
+    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    meosType base_type = settype_basetype(set_type);
+
+    Value_to_set_core(source, result, count, base_type);
+    return true;
 }
 
-// //memSize
-static void SetMemSize(DataChunk &args, ExpressionState &state, Vector &result) {
+// --- SCALAR function (base -> set) ----
+void SetFunctions::Value_to_set(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &source = args.data[0];
+    auto out_type = result.GetType();
+    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    meosType base_type = settype_basetype(set_type);
+
+    Value_to_set_core(source, result, args.size(), base_type);
+}
+
+// --- Conversion: intset <-> floatset ---
+static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            const Set *src_set = (const Set *)blob.GetDataUnsafe();
+            VALIDATE_INTSET(src_set, NULL);
+
+            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
+            for (int j = 0; j < src_set->count; j++) {
+                int32_t v_src = Datum(SET_VAL_N(src_set, j));
+                values[j] = Float8GetDatum((double)v_src);
+            }
+
+            Set *dst_set = set_make_free(values, src_set->count, T_FLOAT8, true);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
+            free(dst_set);
+            return out;
+        }
+    );
+}
+
+static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            const Set *src_set = (const Set *)blob.GetDataUnsafe();
+            VALIDATE_FLOATSET(src_set, NULL);
+
+            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
+            for (int j = 0; j < src_set->count; j++) {
+                double v_src = DatumGetFloat8(SET_VAL_N(src_set, j));
+                values[j] = Datum((int32_t)v_src);
+            }
+
+            Set *dst_set = set_make_free(values, src_set->count, T_INT4, true);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
+            free(dst_set);
+            return out;
+        }
+    );
+}
+
+
+void SetFunctions::Intset_to_floatset(DataChunk &args, ExpressionState &state, Vector &result) {
+    Intset_to_floatset_common(args.data[0], result, args.size());
+}
+
+void SetFunctions::Floatset_to_intset(DataChunk &args, ExpressionState &state, Vector &result) {
+    Floatset_to_intset_common(args.data[0], result, args.size());
+}
+
+bool SetFunctions::Intset_to_floatset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Intset_to_floatset_common(source, result, count);
+    return true;    
+}
+
+bool SetFunctions::Floatset_to_intset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Floatset_to_intset_common(source, result, count);
+    return true;
+}
+
+// --- Conversion: tstzset <-> dateset ---
+
+// dateset -> tstzset
+static void Dateset_to_tstzset_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            const Set *src = (const Set *)blob.GetDataUnsafe();
+            VALIDATE_DATESET(src, nullptr);
+
+            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
+            for (int i = 0; i < src->count; i++) {
+                DateADT d = (DateADT)(SET_VAL_N(src, i));
+                TimestampTz ts = date_to_timestamptz(d);
+                vals[i] = int64(ts);
+            }
+            // All distinct dates -> distinct timestamptz
+            Set *dst = set_make_free(vals, src->count, T_TIMESTAMPTZ, false);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
+            free(dst);
+            return out;
+        }
+    );
+}
+
+// tstzset -> dateset
+static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            const Set *src = (const Set *)blob.GetDataUnsafe();
+            VALIDATE_TSTZSET(src, nullptr);
+
+            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
+            for (int i = 0; i < src->count; i++) {
+                TimestampTz ts = (TimestampTz)(SET_VAL_N(src, i));
+                DateADT d = timestamptz_to_date(ts);
+                vals[i] = int32(d);
+            }            
+            Set *dst = set_make_free(vals, src->count, T_DATE, true);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
+            free(dst);
+            return out;
+        }
+    );
+}
+
+// --- SCALAR: dateset -> tstzset ---
+void SetFunctions::Dateset_to_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
+    Dateset_to_tstzset_common(args.data[0], result, args.size());
+}
+
+// --- SCALAR: tstzset -> dateset ---
+void SetFunctions::Tstzset_to_dateset(DataChunk &args, ExpressionState &state, Vector &result) {
+    Tstzset_to_dateset_common(args.data[0], result, args.size());
+}
+
+// --- CAST: dateset -> tstzset ---
+bool SetFunctions::Dateset_to_tstzset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Dateset_to_tstzset_common(source, result, count);
+    return true;
+}
+
+// --- CAST: tstzset -> dateset ---
+bool SetFunctions::Tstzset_to_dateset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Tstzset_to_dateset_common(source, result, count);
+    return true;
+}
+
+// --- memSize ---
+void SetFunctions::Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
-        [&](string_t input_blob) -> int32_t {            
-            auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());            
+        [&](string_t input_blob) -> int32_t {                                 
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            int mem_size = set_mem_size(s);  // Get memory size
+            memcpy(s, data, size);            
+            int mem_size = set_mem_size(s);  
             free(s);
             return mem_size;
         });
 }
 
-void SetTypes::RegisterSetMemSize(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(
-                "memSize",
-                {set_type},
-                LogicalType::INTEGER,
-                SetMemSize));
-    }
-}
 
-//numValue
-static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result) {
+// --- numValue ---
+void SetFunctions::Set_num_values(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
 
     UnaryExecutor::Execute<string_t, int32_t>(
@@ -510,30 +668,14 @@ static void SetNumValues(DataChunk &args, ExpressionState &state, Vector &result
             size_t size = input_blob.GetSize();
             Set *s = (Set*)malloc(size);
             memcpy(s, data, size);
-            if (!s) {
-                throw InvalidInputException("Failed to parse WKB blob as Set");
-            }
-
             int count = set_num_values(s);
             free(s);
             return count;
         });
 }
 
-
-void SetTypes::RegisterSetNumValues(DatabaseInstance &db){
-    for (auto &set_type : SetTypes::AllTypes()) {
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction(
-                "numValues",
-                {set_type},
-                LogicalType::INTEGER,
-                SetNumValues));
-    }
-}
-
-//startValue 
-static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &result) {
+// --- startValue ---
+void SetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -547,9 +689,6 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
                     memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
                     Datum d = set_start_value(s);
                     free(s);
                     return int32(d);
@@ -564,9 +703,6 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
                     memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
                     Datum d = set_start_value(s);
                     free(s);
                     return int64(d);
@@ -580,10 +716,7 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
                     free(s);
                     return DatumGetFloat8(d);
@@ -597,10 +730,7 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
                     free(s);                                        
                     text *txt = (text *)DatumGetPointer(d);
@@ -617,10 +747,7 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
                     free(s);
                     return date_t(int32(FromMeosDate(d)));
@@ -634,10 +761,7 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
                     free(s);
                     return timestamp_t(int64(FromMeosTimestamp(d)));
@@ -649,19 +773,9 @@ static void SetStartValue(DataChunk &args, ExpressionState &state, Vector &resul
     }
 }
 
-void SetTypes::RegisterSetStartValue(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = SetTypeMapping::GetChildType(set_type); 
 
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("startValue", {set_type}, child_type, SetStartValue)
-        );
-    }
-}
-
-//endValue 
-static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result) {
+// --- endValue ---
+void SetFunctions::Set_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
     auto base_type = settype_basetype(set_type);
@@ -674,10 +788,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
                     return int32(d);
@@ -691,10 +802,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
                     return int64(d);
@@ -708,10 +816,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
                     return DatumGetFloat8(d);
@@ -725,10 +830,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);                                        
                     text *txt = (text *)DatumGetPointer(d);
@@ -745,10 +847,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
                     return date_t(int32(FromMeosDate(d)));
@@ -762,10 +861,7 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
                     const uint8_t *data = (const uint8_t *)input_blob.GetData();
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    if (!s) {
-                        throw InvalidInputException("Failed to parse WKB blob as Set");
-                    }
+                    memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
                     return timestamp_t(int64(FromMeosTimestamp(d)));
@@ -777,19 +873,8 @@ static void SetEndValue(DataChunk &args, ExpressionState &state, Vector &result)
     }
 }
 
-void SetTypes::RegisterSetEndValue(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {        
-        auto child_type = SetTypeMapping::GetChildType(set_type); 
-
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("endValue", {set_type}, child_type, SetEndValue)
-        );
-    }
-}
-
-// valueN
-static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+// --- valueN ---
+void SetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec) {
     auto &set_vec = args.data[0];
     auto &index_vec = args.data[1];
 
@@ -855,19 +940,9 @@ static void SetValueN(DataChunk &args, ExpressionState &state, Vector &result_ve
     }
 }
 
-void SetTypes::RegisterSetValueN(DatabaseInstance &db) {
-    for (auto &set_type : SetTypes::AllTypes()) {
-        LogicalType base_type = SetTypeMapping::GetChildType(set_type);
-        ExtensionUtil::RegisterFunction(
-            db,
-            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetValueN)
-        );
-    }
-}
+// --- getValues ---
 
-//getValues
-
-static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result) {
+void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
     idx_t row_count = args.size();
     
@@ -899,7 +974,7 @@ static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result
             continue;
         }
 
-        int count = s->count;
+        uint64_t count = s->count;
         Datum *values = set_vals(s);
         
         ListVector::SetListSize(result, total_offset + count);
@@ -963,16 +1038,68 @@ static void GetSetValues(DataChunk &args, ExpressionState &state, Vector &result
     }
 }
 
-void SetTypes::RegisterSetGetValues(DatabaseInstance &db) {    
-    for (const auto &t : SetTypes::AllTypes()) {
-        auto child = SetTypeMapping::GetChildType(t);
-        ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("getValues", {t}, LogicalType::LIST(child), GetSetValues)
-        );
+// --- shift ---
+static inline string_t Numset_shift_common( const string_t &blob, Datum shift_datum,
+                                        meosType validate_set_type,Vector &result) {
+    const Set *s = (const Set *)blob.GetDataUnsafe();
+    switch(validate_set_type){
+        case T_INTSET: VALIDATE_INTSET(s, NULL); break;
+        case T_FLOATSET: VALIDATE_FLOATSET(s, NULL); break;
+        case T_BIGINTSET: VALIDATE_BIGINTSET(s, NULL); break;
+        case T_DATESET: VALIDATE_DATESET(s,NULL); break; 
+        default: break; 
+
+    }    
+    Set *r = numset_shift_scale(s, shift_datum, 0, /*do_shift=*/true, /*do_scale=*/false);
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+    free(r);
+    return out;
+}
+
+void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
+    auto &set_vec  = args.data[0];
+    auto out_type  = result.GetType();    
+    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+
+    switch (set_type) {
+        case T_INTSET: { // shift(intset, integer) -> intset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t shift) -> string_t {
+                    return Numset_shift_common(blob, Datum(shift), set_type, result);
+                });
+            break;
+        }
+        case T_BIGINTSET: { // shift(bigintset, integer) -> bigintset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int64_t shift) -> string_t {
+                    return Numset_shift_common(blob, Datum(shift), set_type, result);
+                });
+            break;
+        }
+        case T_FLOATSET: { // shift(floatset, integer) -> floatset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, double shift) -> string_t {                    
+                    return Numset_shift_common(blob, Float8GetDatum(shift), set_type, result);
+                });
+            break;
+        }
+        case T_DATESET: { // shift(dateset, integer) -> dateset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t shift_days) -> string_t {
+                    return Numset_shift_common(blob, Datum(shift_days), set_type, result);
+                });
+            break;
+        }
+        default:
+            throw NotImplementedException("shift(<set>): unsupported base type");
     }
 }
 
-// Unnest
+// --- Unnest ---
 struct SetUnnestBindData : public TableFunctionData {
     string_t blob;
     meosType set_type;

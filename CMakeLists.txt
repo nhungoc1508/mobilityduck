@@ -75,18 +75,6 @@ include_directories(src/include)
 # include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis/liblwgeom")
 # include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis")
 
-# set(EXTENSION_SOURCES
-#     src/mobilityduck_extension.cpp
-#     src/functions.cpp
-#     src/temporal/tint.cpp
-#     src/temporal/tbool.cpp
-#     src/temporal/temporal_types.cpp
-#     src/temporal/temporal_functions.cpp
-    # src/span.cpp
-#     src/tgeometry.cpp
-#     src/tgeompoint.cpp
-#     src/set.cpp
-#     src/geomset.cpp)
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
     # src/temporal/tint.cpp
@@ -98,6 +86,8 @@ set(EXTENSION_SOURCES
     src/temporal/tbox_functions.cpp
     src/set.cpp    
     src/span.cpp
+    src/geoset.cpp
+    src/spanset.cpp
     src/tgeo/tgeometry.cpp
     src/tgeo/tgeometry_in_out.cpp
     src/tgeo/tgeompoint.cpp
