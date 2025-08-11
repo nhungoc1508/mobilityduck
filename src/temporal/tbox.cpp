@@ -62,21 +62,21 @@ void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 
     ExtensionUtil::RegisterCastFunction(
         instance,
-        SetTypes::INTSET(),
+        SetTypes::intset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
     ExtensionUtil::RegisterCastFunction(
         instance,
-        SetTypes::FLOATSET(),
+        SetTypes::floatset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
     ExtensionUtil::RegisterCastFunction(
         instance,
-        SetTypes::TSTZSET(),
+        SetTypes::tstzset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
@@ -239,7 +239,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "tbox",
-            {SetTypes::INTSET()},
+            {SetTypes::intset()},
             TBOX(),
             TboxFunctions::Set_to_tbox
         )
@@ -249,7 +249,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "tbox",
-            {SetTypes::FLOATSET()},
+            {SetTypes::floatset()},
             TBOX(),
             TboxFunctions::Set_to_tbox
         )
@@ -259,7 +259,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "tbox",
-            {SetTypes::TSTZSET()},
+            {SetTypes::tstzset()},
             TBOX(),
             TboxFunctions::Set_to_tbox
         )
