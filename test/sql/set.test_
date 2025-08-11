@@ -88,9 +88,34 @@ SELECT CAST(DATE'2001-01-01' AS dateset);
 {2001-01-01}
 
 query I 
-select 'car'::TEXTSET;
+SELECT 'car'::TEXTSET;
 ----
 {"car"}
+
+query I 
+SELECT intset '{1,2,3}'::floatset;
+----
+{1, 2, 3}
+
+query I 
+SELECT floatset '{1.5, 2.3, 3.7}'::intset;
+----
+{1, 2, 3}
+
+query I 
+SELECT intset(floatset '{1.5, 2.3, 3.7}');
+----
+{1, 2, 3}
+
+query I 
+SELECT tstzset '{2001-01-01 08:00:00, 2001-01-03 09:30:00}' :: dateset; 
+----
+{2001-01-01, 2001-01-03}
+
+query I 
+SELECT dateset '{2001-01-01, 2001-01-03}' :: tstzset;
+----
+{"2001-01-01 00:00:00+00", "2001-01-03 00:00:00+00"}
 
 query I 
 SELECT memSize(tstzset '{2001-01-01, 2001-01-02, 2001-01-03}');
@@ -111,6 +136,22 @@ query I
 SELECT valueN(intset '{-2, 2, 7}', 4);
 ----
 NULL
+
+query I 
+SELECT shift(intset '{1,2,3}', 4);
+----
+{5, 6, 7}
+
+
+query I 
+SELECT shift(dateset '{2000-01-01, 2000-01-02, 2000-01-03}', 30);
+----
+{2000-01-31, 2000-02-01, 2000-02-02}
+
+query I 
+SELECT shift(floatset'{1.5,2.5,3.5}', 4);
+----
+{5.5, 6.5, 7.5}
 
 query I 
 SELECT * FROM setUnnest(intset '{1, 1, 5, -7, -7}');
