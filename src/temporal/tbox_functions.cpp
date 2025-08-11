@@ -729,4 +729,310 @@ void TboxFunctions::Tbox_tmax_inc(DataChunk &args, ExpressionState &state, Vecto
     }
 }
 
+template <typename TB>
+void TboxFunctions::TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalType type, Vector &result, idx_t count) {
+    BinaryExecutor::Execute<string_t, TB, string_t>(
+        tbox, shift, result, count,
+        [&](string_t tbox_str, TB shift) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_shift_value: unable to cast binary to tbox");
+            }
+            Datum datum;
+            if (type == LogicalType::INTEGER) {
+                datum = Int32GetDatum(shift);
+            } else if (type == LogicalType::DOUBLE) {
+                datum = Float8GetDatum(shift);
+            } else {
+                throw InternalException("Tbox_shift_value: type must be integer or double");
+            }
+            TBox *shifted_tbox = tbox_shift_scale_value(tbox, datum, 0, true, false);
+            size_t shifted_tbox_size = sizeof(TBox);
+            char *shifted_tbox_data = (char*)malloc(shifted_tbox_size);
+            memcpy(shifted_tbox_data, shifted_tbox, shifted_tbox_size);
+            free(tbox);
+            free(shifted_tbox);
+            return string_t(shifted_tbox_data, shifted_tbox_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    const auto &arg_type = args.data[1].GetType();
+    if (arg_type.id() == LogicalTypeId::INTEGER) {
+        TboxShiftValueExecutor<int64_t>(args.data[0], args.data[1], arg_type, result, args.size());
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
+        TboxShiftValueExecutor<double>(args.data[0], args.data[1], arg_type, result, args.size());
+    } else {
+        throw InternalException("Tbox_shift_value: type must be integer or double");
+    }
+}
+
+void TboxFunctions::Tbox_shift_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox_str, interval_t interval_duckdb) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_shift_time: unable to cast binary to tbox");
+            }
+            MeosInterval shift = IntervaltToInterval(interval_duckdb);
+            TBox *shifted_tbox = tbox_shift_scale_time(tbox, &shift, NULL);
+            size_t shifted_tbox_size = sizeof(TBox);
+            char *shifted_tbox_data = (char*)malloc(shifted_tbox_size);
+            memcpy(shifted_tbox_data, shifted_tbox, shifted_tbox_size);
+            free(tbox);
+            free(shifted_tbox);
+            return string_t(shifted_tbox_data, shifted_tbox_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+template <typename TB>
+void TboxFunctions::TboxScaleValueExecutor(Vector &tbox, Vector &width, LogicalType type, Vector &result, idx_t count) {
+    BinaryExecutor::Execute<string_t, TB, string_t>(
+        tbox, width, result, count,
+        [&](string_t tbox_str, TB width) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_scale_value: unable to cast binary to tbox");
+            }
+            Datum datum;
+            if (type == LogicalType::INTEGER) {
+                datum = Int32GetDatum(width);
+            } else if (type == LogicalType::DOUBLE) {
+                datum = Float8GetDatum(width);
+            } else {
+                throw InternalException("Tbox_scale_value: type must be integer or double");
+            }
+            TBox *scaled_tbox = tbox_shift_scale_value(tbox, 0, datum, false, true);
+            size_t scaled_tbox_size = sizeof(TBox);
+            char *scaled_tbox_data = (char*)malloc(scaled_tbox_size);
+            memcpy(scaled_tbox_data, scaled_tbox, scaled_tbox_size);
+            free(tbox);
+            free(scaled_tbox);
+            return string_t(scaled_tbox_data, scaled_tbox_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    const auto &arg_type = args.data[1].GetType();
+    if (arg_type.id() == LogicalTypeId::INTEGER) {
+        TboxScaleValueExecutor<int64_t>(args.data[0], args.data[1], arg_type, result, args.size());
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
+        TboxScaleValueExecutor<double>(args.data[0], args.data[1], arg_type, result, args.size());
+    } else {
+        throw InternalException("Tbox_scale_value: type must be integer or double");
+    }
+}
+
+void TboxFunctions::Tbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox_str, interval_t interval_duckdb) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_scale_time: unable to cast binary to tbox");
+            }
+            MeosInterval duration = IntervaltToInterval(interval_duckdb);
+            TBox *scaled_tbox = tbox_shift_scale_time(tbox, NULL, &duration);
+            size_t scaled_tbox_size = sizeof(TBox);
+            char *scaled_tbox_data = (char*)malloc(scaled_tbox_size);
+            memcpy(scaled_tbox_data, scaled_tbox, scaled_tbox_size);
+            free(tbox);
+            free(scaled_tbox);
+            return string_t(scaled_tbox_data, scaled_tbox_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+template <typename TB>
+void TboxFunctions::TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vector &width, LogicalType type, Vector &result, idx_t count) {
+    TernaryExecutor::Execute<string_t, TB, TB, string_t>(
+        tbox, shift, width, result, count,
+        [&](string_t tbox_str, TB shift, TB width) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_shift_scale_value: unable to cast binary to tbox");
+            }
+            Datum shift_datum;
+            Datum width_datum;
+            if (type == LogicalType::INTEGER) {
+                shift_datum = Int32GetDatum(shift);
+                width_datum = Int32GetDatum(width);
+            } else if (type == LogicalType::DOUBLE) {
+                shift_datum = Float8GetDatum(shift);
+                width_datum = Float8GetDatum(width);
+            } else {
+                throw InternalException("Tbox_shift_scale_value: type must be integer or double");
+            }
+            TBox *shifted_scaled_tbox = tbox_shift_scale_value(tbox, shift_datum, width_datum, true, true);
+            size_t shifted_scaled_tbox_size = sizeof(TBox);
+            char *shifted_scaled_tbox_data = (char*)malloc(shifted_scaled_tbox_size);
+            memcpy(shifted_scaled_tbox_data, shifted_scaled_tbox, shifted_scaled_tbox_size);
+            free(tbox);
+            free(shifted_scaled_tbox);
+            return string_t(shifted_scaled_tbox_data, shifted_scaled_tbox_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    const auto &arg_type = args.data[1].GetType();
+    if (arg_type.id() == LogicalTypeId::INTEGER) {
+        TboxShiftScaleValueExecutor<int64_t>(args.data[0], args.data[1], args.data[2], arg_type, result, args.size());
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
+        TboxShiftScaleValueExecutor<double>(args.data[0], args.data[1], args.data[2], arg_type, result, args.size());
+    } else {
+        throw InternalException("Tbox_shift_scale_value: type must be integer or double");
+    }
+}
+
+void TboxFunctions::Tbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t tbox_str, interval_t duckdb_shift, interval_t duckdb_duration) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_shift_scale_time: unable to cast binary to tbox");
+            }
+            MeosInterval shift = IntervaltToInterval(duckdb_shift);
+            MeosInterval duration = IntervaltToInterval(duckdb_duration);
+            TBox *shifted_scaled_tbox = tbox_shift_scale_time(tbox, &shift, &duration);
+            size_t shifted_scaled_tbox_size = sizeof(TBox);
+            char *shifted_scaled_tbox_data = (char*)malloc(shifted_scaled_tbox_size);
+            memcpy(shifted_scaled_tbox_data, shifted_scaled_tbox, shifted_scaled_tbox_size);
+            free(tbox);
+            free(shifted_scaled_tbox);
+            return string_t(shifted_scaled_tbox_data, shifted_scaled_tbox_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+template <typename TB>
+void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, meosType basetype, Vector &result, idx_t count) {
+    BinaryExecutor::ExecuteWithNulls<string_t, TB, string_t>(
+        tbox, value, result, count,
+        [&](string_t tbox_str, TB value, ValidityMask &mask, idx_t idx) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_expand_value: unable to cast binary to tbox");
+            }
+            Datum datum;
+            if (basetype == T_INT4) {
+                datum = Int32GetDatum(value);
+            } else if (basetype == T_FLOAT8) {
+                datum = Float8GetDatum(value);
+            } else {
+                throw InternalException("Unsupported basetype in TboxExpandValueExecutor");
+            }
+            TBox *ret = tbox_expand_value(tbox, datum, basetype);
+            if (!ret) {
+                free(tbox);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = sizeof(TBox);
+            char *ret_data = (char*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            free(tbox);
+            free(ret);
+            return string_t(ret_data, ret_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    const auto &arg_type = args.data[1].GetType();
+    if (arg_type.id() == LogicalTypeId::INTEGER) {
+        TboxExpandValueExecutor<int64_t>(args.data[0], args.data[1], T_INT4, result, args.size());
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
+        TboxExpandValueExecutor<double>(args.data[0], args.data[1], T_FLOAT8, result, args.size());
+    } else {
+        throw InternalException("Tbox_expand_value: type must be integer or double");
+    }
+}
+
+void TboxFunctions::Tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox_str, interval_t interval_duckdb, ValidityMask &mask, idx_t idx) {
+            TBox *tbox = nullptr;
+            if (tbox_str.GetSize() > 0) {
+                tbox = (TBox*)malloc(tbox_str.GetSize());
+                memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+            }
+            if (!tbox) {
+                throw InternalException("Failure in Tbox_expand_time: unable to cast binary to tbox");
+            }
+            MeosInterval interval = IntervaltToInterval(interval_duckdb);
+            TBox *ret = tbox_expand_time(tbox, &interval);
+            if (!ret) {
+                free(tbox);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = sizeof(TBox);
+            char *ret_data = (char*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            free(tbox);
+            free(ret);
+            return string_t(ret_data, ret_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb

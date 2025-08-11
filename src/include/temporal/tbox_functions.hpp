@@ -16,7 +16,7 @@ class ExtensionLoader;
 
 struct TboxFunctions {
     /* ***************************************************
-     * Cast functions: VARCHAR <-> TBOX
+     * In/out functions: VARCHAR <-> TBOX
      ****************************************************/
     static bool Tbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
@@ -94,6 +94,30 @@ struct TboxFunctions {
     /* ***************************************************
      * Transformation functions
      ****************************************************/
+
+    template <typename TB>
+    static void TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalType type, Vector &result, idx_t count);
+    static void Tbox_shift_value(DataChunk &args, ExpressionState &state, Vector &result);
+    
+    static void Tbox_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
+
+    template <typename TB>
+    static void TboxScaleValueExecutor(Vector &tbox, Vector &scale, LogicalType type, Vector &result, idx_t count);
+    static void Tbox_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Tbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
+
+    template <typename TB>
+    static void TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vector &scale, LogicalType type, Vector &result, idx_t count);
+    static void Tbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Tbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
+
+    template <typename TB>
+    static void TboxExpandValueExecutor(Vector &tbox, Vector &value, meosType basetype, Vector &result, idx_t count);
+    static void Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

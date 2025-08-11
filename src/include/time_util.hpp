@@ -35,6 +35,14 @@ inline interval_t IntervalToIntervalt(MeosInterval *interval) {
     return duckdb_interval;
 }
 
+inline MeosInterval IntervaltToInterval(interval_t duckdb_interval) {
+    MeosInterval meos_interval;
+    meos_interval.time = duckdb_interval.micros;
+    meos_interval.day = duckdb_interval.days;
+    meos_interval.month = duckdb_interval.months;
+    return meos_interval;
+}
+
 inline timestamp_tz_t DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
     timestamp_tz_t meos_ts;
     meos_ts.value = duckdb_ts.value - EPOCH_OFFSET_MICROS;

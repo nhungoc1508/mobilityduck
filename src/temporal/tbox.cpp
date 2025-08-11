@@ -424,6 +424,126 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TboxFunctions::Tbox_tmax_inc
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftValue",
+            {TBOX(), LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Tbox_shift_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftValue",
+            {TBOX(), LogicalType::DOUBLE},
+            TBOX(),
+            TboxFunctions::Tbox_shift_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftTime",
+            {TBOX(), LogicalType::INTERVAL},
+            TBOX(),
+            TboxFunctions::Tbox_shift_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleValue",
+            {TBOX(), LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Tbox_scale_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleValue",
+            {TBOX(), LogicalType::DOUBLE},
+            TBOX(),
+            TboxFunctions::Tbox_scale_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleTime",
+            {TBOX(), LogicalType::INTERVAL},
+            TBOX(),
+            TboxFunctions::Tbox_scale_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleValue",
+            {TBOX(), LogicalType::INTEGER, LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Tbox_shift_scale_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleValue",
+            {TBOX(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+            TBOX(),
+            TboxFunctions::Tbox_shift_scale_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleTime",
+            {TBOX(), LogicalType::INTERVAL, LogicalType::INTERVAL},
+            TBOX(),
+            TboxFunctions::Tbox_shift_scale_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "expandValue",
+            {TBOX(), LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Tbox_expand_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "expandValue",
+            {TBOX(), LogicalType::DOUBLE},
+            TBOX(),
+            TboxFunctions::Tbox_expand_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "expandTime",
+            {TBOX(), LogicalType::INTERVAL},
+            TBOX(),
+            TboxFunctions::Tbox_expand_time
+        )
+    );
 }
 
 } // namespace duckdb
