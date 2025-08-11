@@ -1,17 +1,13 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
-// #include "types.hpp"
 // #include "intset.hpp"
 #include "set.hpp"
 #include "geoset.hpp"
 
-// #include "functions.hpp"
-#include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
-#include "temporal/tint.hpp"
-#include "temporal/tbool.hpp"
+#include "temporal/tbox.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"
@@ -74,16 +70,23 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TemporalTypes::RegisterTypes(instance);
 	TemporalTypes::RegisterCastFunctions(instance);
 	TemporalTypes::RegisterScalarFunctions(instance);
+
+	TboxType::RegisterType(instance);
+	TboxType::RegisterCastFunctions(instance);
+	TboxType::RegisterScalarFunctions(instance);
   
   	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
+
 	TGeomPointTypes::RegisterScalarFunctions(instance);
 	TGeomPointTypes::RegisterTypes(instance);
 	TGeomPointTypes::RegisterCastFunctions(instance);
+
 	TGeometryTypes::RegisterScalarFunctions(instance);
 	TGeometryTypes::RegisterTypes(instance);
 	TGeometryTypes::RegisterCastFunctions(instance);
+	TGeometryTypes::RegisterScalarInOutFunctions(instance);
 
 	SetTypes::RegisterTypes(instance);
 	SetTypes::RegisterCastFunctions(instance);

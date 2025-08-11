@@ -82,12 +82,15 @@ set(EXTENSION_SOURCES
     # src/temporal/temporal_types.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
+    src/temporal/tbox.cpp
+    src/temporal/tbox_functions.cpp
     src/set.cpp    
     src/span.cpp
-    src/tgeometry.cpp
-    src/tgeompoint.cpp
     src/geoset.cpp
     src/spanset.cpp
+    src/tgeo/tgeometry.cpp
+    src/tgeo/tgeometry_in_out.cpp
+    src/tgeo/tgeompoint.cpp
     )
 
 # Build extension targets
