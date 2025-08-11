@@ -60,14 +60,14 @@ void TemporalTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             instance,
             LogicalType::VARCHAR,
             type,
-            TemporalFunctions::StringToTemporal
+            TemporalFunctions::Temporal_in
         );
 
         ExtensionUtil::RegisterCastFunction(
             instance,
             type,
             LogicalType::VARCHAR,
-            TemporalFunctions::TemporalToString
+            TemporalFunctions::Temporal_out
         );
     }
 }
@@ -80,7 +80,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), LogicalType::TIMESTAMP_TZ},
                 type,
-                TemporalFunctions::TInstantConstructor
+                TemporalFunctions::Tinstant_constructor
             )
         );
 
@@ -90,7 +90,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "tempSubtype",
                 {type},
                 LogicalType::VARCHAR,
-                TemporalFunctions::TemporalSubtype
+                TemporalFunctions::Temporal_subtype
             )
         );
 
@@ -100,7 +100,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "interp",
                 {type},
                 LogicalType::VARCHAR,
-                TemporalFunctions::TemporalInterp
+                TemporalFunctions::Temporal_interp
             )
         );
 
@@ -110,7 +110,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "getValue",
                 {type},
                 TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::TInstantValue
+                TemporalFunctions::Tinstant_value
             )
         );
 
@@ -120,7 +120,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "startValue",
                 {type},
                 TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::TemporalStartValue
+                TemporalFunctions::Temporal_start_value
             )
         );
 
@@ -130,7 +130,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "endValue",
                 {type},
                 TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::TemporalEndValue
+                TemporalFunctions::Temporal_end_value
             )
         );
 
@@ -141,7 +141,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "minValue",
                     {type},
                     TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                    TemporalFunctions::TemporalMinValue
+                    TemporalFunctions::Temporal_min_value
                 )
             );
 
@@ -151,7 +151,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "maxValue",
                     {type},
                     TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                    TemporalFunctions::TemporalMaxValue
+                    TemporalFunctions::Temporal_max_value
                 )
             );
 
@@ -161,7 +161,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "minInstant",
                     {type},
                     type,
-                    TemporalFunctions::TemporalMinInstant
+                    TemporalFunctions::Temporal_min_instant
                 )
             );
     
@@ -171,7 +171,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "maxInstant",
                     {type},
                     type,
-                    TemporalFunctions::TemporalMaxInstant
+                    TemporalFunctions::Temporal_max_instant
                 )
             );
         }
@@ -182,7 +182,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "valueN",
                 {type, LogicalType::BIGINT},
                 TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::TemporalValueN
+                TemporalFunctions::Temporal_value_n
             )
         );
 
@@ -192,7 +192,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "getTimestamp",
                 {type},
                 LogicalType::TIMESTAMP_TZ,
-                TemporalFunctions::TInstantTimestamptz
+                TemporalFunctions::Tinstant_timestamptz
             )
         );
 
@@ -202,7 +202,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "duration",
                 {type, LogicalType::BOOLEAN},
                 LogicalType::INTERVAL,
-                TemporalFunctions::TemporalDuration
+                TemporalFunctions::Temporal_duration
             )
         );
 
@@ -212,7 +212,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type)},
                 type,
-                TemporalFunctions::TsequenceConstructor
+                TemporalFunctions::Tsequence_constructor
             )
         );
 
@@ -222,7 +222,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR},
                 type,
-                TemporalFunctions::TsequenceConstructor
+                TemporalFunctions::Tsequence_constructor
             )
         );
 
@@ -232,7 +232,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR, LogicalType::BOOLEAN},
                 type,
-                TemporalFunctions::TsequenceConstructor
+                TemporalFunctions::Tsequence_constructor
             )
         );
 
@@ -242,7 +242,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
                 type,
-                TemporalFunctions::TsequenceConstructor
+                TemporalFunctions::Tsequence_constructor
             )
         );
         
@@ -252,7 +252,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {type, LogicalType::VARCHAR},
                 type,
-                TemporalFunctions::TemporalToTsequence
+                TemporalFunctions::Temporal_to_tsequence
             )
         );
 
@@ -262,7 +262,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {type},
                 type,
-                TemporalFunctions::TemporalToTsequence
+                TemporalFunctions::Temporal_to_tsequence
             )
         );
 
@@ -272,7 +272,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {LogicalType::LIST(type)},
                 type,
-                TemporalFunctions::TsequencesetConstructor
+                TemporalFunctions::Tsequenceset_constructor
             )
         );
 
@@ -282,7 +282,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {type},
                 type,
-                TemporalFunctions::TemporalToTsequenceset
+                TemporalFunctions::Temporal_to_tsequenceset
             )
         );
 
@@ -292,7 +292,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "timeSpan",
                 {type},
                 SpanTypes::TSTZSPAN(),
-                TemporalFunctions::TemporalToTstzspan
+                TemporalFunctions::Temporal_to_tstzspan
             )
         );
 
@@ -303,7 +303,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "valueSpan",
                     {type},
                     SpanTypes::INTSPAN(),
-                    TemporalFunctions::TnumberToSpan
+                    TemporalFunctions::Tnumber_to_span
                 )
             );
 
@@ -313,7 +313,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "valueSet",
                     {type},
                     SetTypes::INTSET(),
-                    TemporalFunctions::TemporalValueset
+                    TemporalFunctions::Temporal_valueset
                 )
             );
         } else if (type.GetAlias() == "TFLOAT") {
@@ -323,7 +323,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "valueSpan",
                     {type},
                     SpanTypes::FLOATSPAN(),
-                    TemporalFunctions::TnumberToSpan
+                    TemporalFunctions::Tnumber_to_span
                 )
             );
 
@@ -333,7 +333,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "valueSet",
                     {type},
                     SetTypes::FLOATSET(),
-                    TemporalFunctions::TemporalValueset
+                    TemporalFunctions::Temporal_valueset
                 )
             );
         }
@@ -344,7 +344,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 "sequences",
                 {type},
                 LogicalType::LIST(type),
-                TemporalFunctions::TemporalSequences
+                TemporalFunctions::Temporal_sequences
             )
         );
 
@@ -355,7 +355,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "shiftValue",
                     {type, LogicalType::BIGINT},
                     type,
-                    TemporalFunctions::TnumberShiftValue
+                    TemporalFunctions::Tnumber_shift_value
                 )
             );
 
@@ -365,7 +365,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "scaleValue",
                     {type, LogicalType::BIGINT},
                     type,
-                    TemporalFunctions::TnumberScaleValue
+                    TemporalFunctions::Tnumber_scale_value
                 )
             );
 
@@ -375,7 +375,7 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     "shiftScaleValue",
                     {type, LogicalType::BIGINT, LogicalType::BIGINT},
                     type,
-                    TemporalFunctions::TnumberShiftScaleValue
+                    TemporalFunctions::Tnumber_shift_scale_value
                 )
             );
         }
