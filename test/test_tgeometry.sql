@@ -79,13 +79,13 @@ SELECT memSize(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(
 --***true
 
 -- select getValue(tgeometry 'Point(1 1)@2000-01-01');
--- --*** POINT(1 1)   
+--*** POINT(1 1)   
 
 -- select valueN(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', 1);
 -- --*** POINT(1 1)   
 
--- select endValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')
--- --***POINT(3 3) 
+select endValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')
+--***POINT(3 3) 
 
 -- SELECT asEWKT(startInstant(tgeometry 'Point(1 1)@2000-01-01'));
 -- SELECT asEWKT(startInstant(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'));
