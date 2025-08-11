@@ -55,6 +55,17 @@ struct SetFunctions{
     static void Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
     static void Set_values(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numset_shift(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Numset_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzset_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Numset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatset_floor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatset_ceil(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatset_round(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    
 };
 
 struct SetTypeMapping {
