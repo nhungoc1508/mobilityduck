@@ -6,12 +6,31 @@ This repository is based on https://github.com/duckdb/extension-template.
 
 MobilityDuck is a binding for DuckDB built on top of [MEOS (Mobility Engine, Open Source)](https://libmeos.org/), a C library that enables the manipulation of temporal and spatiotemporal data based on [MobilityDB](https://mobilitydb.com/)'s data types and functions.
 
-## Requirements
+With MobilityDuck, users can use these data types and functions directly in DuckDB queries. 
+---
+## 1. Requirements
+You will need the following dependencies installed before buidling MobilityDuck: 
+
 ```sh
 apt install build-essential cmake libgeos-dev libproj-dev libjson-c-dev libgsl-dev
 ```
+MobilityDuck links against MEOS. Build & install it first.
 
-## Building MobilityDuck
+```sh
+# 1) Clone MobilityDB 
+git clone https://github.com/MobilityDB/MobilityDB.git
+
+# 2) Configure a Release build
+mkdir build && cd build
+cmake -DMEOS=ON ..
+
+# 3) Build and install MEOS to /usr/local
+make
+sudo make install
+```
+
+
+## 2. Building MobilityDuck
 ### Clone the repository
 ```sh
 git clone --recurse-submodules https://github.com/nhungoc1508/mobilityduck.git
