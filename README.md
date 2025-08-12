@@ -7,6 +7,7 @@ This repository is based on https://github.com/duckdb/extension-template.
 MobilityDuck is a binding for DuckDB built on top of [MEOS (Mobility Engine, Open Source)](https://libmeos.org/), a C library that enables the manipulation of temporal and spatiotemporal data based on [MobilityDB](https://mobilitydb.com/)'s data types and functions.
 
 With MobilityDuck, users can use these data types and functions directly in DuckDB queries. 
+
 ---
 ## 1. Requirements
 You will need the following dependencies installed before buidling MobilityDuck: 
@@ -29,7 +30,7 @@ make
 sudo make install
 ```
 
-
+---
 ## 2. Building MobilityDuck
 ### Clone the repository
 ```sh
@@ -57,7 +58,7 @@ The main binaries that will be built are:
 - `unittest` is the test runner of duckdb. Again, the extension is already linked into the binary.
 - `mobilityduck.duckdb_extension` is the loadable binary as it would be distributed.
 
-## Running the extension
+## 3. Running the extension
 To run the extension code, start the shell with `./build/release/duckdb`.
 
 Now we can use the features from the extension directly in DuckDB. Some examples:
@@ -105,7 +106,7 @@ D SELECT * FROM setUnnest(textset('{"highway", "car", "bike"}'));
 └─────────┘
 ```
 
-## Running the tests
+## 4. Running the tests
 Test files are located in `./test/sql`. These SQL tests can be run using:
 ```sh
 make test
