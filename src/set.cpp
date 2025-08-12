@@ -324,6 +324,21 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             db,
             ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_radians)
         );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_lower)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("upper", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_upper)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_initcap)
+        );
         
     }
 }
@@ -620,16 +635,8 @@ static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t coun
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src_set = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_INTSET(src_set, NULL);
-
-            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
-            for (int j = 0; j < src_set->count; j++) {
-                int32_t v_src = Datum(SET_VAL_N(src_set, j));
-                values[j] = Float8GetDatum((double)v_src);
-            }
-
-            Set *dst_set = set_make_free(values, src_set->count, T_FLOAT8, true);
+            const Set *src_set = (const Set *)blob.GetDataUnsafe();            
+            Set *dst_set = intset_to_floatset(src_set);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
             free(dst_set);
             return out;
@@ -642,15 +649,7 @@ static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t coun
         source, result, count,
         [&](string_t blob) -> string_t {
             const Set *src_set = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_FLOATSET(src_set, NULL);
-
-            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
-            for (int j = 0; j < src_set->count; j++) {
-                double v_src = DatumGetFloat8(SET_VAL_N(src_set, j));
-                values[j] = Datum((int32_t)v_src);
-            }
-
-            Set *dst_set = set_make_free(values, src_set->count, T_INT4, true);
+            Set *dst_set = floatset_to_intset(src_set);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
             free(dst_set);
             return out;
@@ -684,17 +683,8 @@ static void Dateset_to_tstzset_common(Vector &source, Vector &result, idx_t coun
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_DATESET(src, nullptr);
-
-            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
-            for (int i = 0; i < src->count; i++) {
-                DateADT d = (DateADT)(SET_VAL_N(src, i));
-                TimestampTz ts = date_to_timestamptz(d);
-                vals[i] = int64(ts);
-            }
-            // All distinct dates -> distinct timestamptz
-            Set *dst = set_make_free(vals, src->count, T_TIMESTAMPTZ, false);
+            const Set *src = (const Set *)blob.GetDataUnsafe();            
+            Set *dst = dateset_to_tstzset(src);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
             free(dst);
             return out;
@@ -707,16 +697,8 @@ static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t coun
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_TSTZSET(src, nullptr);
-
-            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
-            for (int i = 0; i < src->count; i++) {
-                TimestampTz ts = (TimestampTz)(SET_VAL_N(src, i));
-                DateADT d = timestamptz_to_date(ts);
-                vals[i] = int32(d);
-            }            
-            Set *dst = set_make_free(vals, src->count, T_DATE, true);
+            const Set *src = (const Set *)blob.GetDataUnsafe();                        
+            Set *dst = tstzset_to_dateset(src);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
             free(dst);
             return out;
@@ -1495,6 +1477,63 @@ void SetFunctions::Floatset_radians(DataChunk &args, ExpressionState &state, Vec
             return out;            
         });
     }
+
+// --- Textset lower ---
+void SetFunctions::Textset_lower(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_lower(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Textset upper ---
+void SetFunctions::Textset_upper(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_upper(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Textset initcap ---
+void SetFunctions::Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_initcap(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
 
 // --- Unnest ---
 struct SetUnnestBindData : public TableFunctionData {

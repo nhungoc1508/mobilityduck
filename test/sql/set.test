@@ -235,6 +235,21 @@ SELECT radians(floatset '{0, 45, 90}');
 {0, 0.785398163397448, 1.570796326794897}
 
 query I 
+SELECT lower(textset '{"AAA", "BBB", "CCC"}');
+----
+{"aaa", "bbb", "ccc"}
+
+query I
+SELECT upper(textset '{"aaa", "bbb", "ccc"}');
+----
+{"AAA", "BBB", "CCC"}
+
+query I
+SELECT initcap(textset '{"aaa", "bbb", "ccc"}');
+----
+{"Aaa", "Bbb", "Ccc"}
+
+query I 
 SELECT * FROM setUnnest(intset '{1, 1, 5, -7, -7}');
 ----
 -7

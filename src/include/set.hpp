@@ -65,7 +65,9 @@ struct SetFunctions{
     static void Floatset_round(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result);
-    
+    static void Textset_lower(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Textset_upper(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 struct SetTypeMapping {
