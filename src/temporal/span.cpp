@@ -1,6 +1,6 @@
 #define MOBILITYDUCK_EXTENSION_TYPES
 
-#include "span.hpp"
+#include "temporal/span.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
 #include <string>

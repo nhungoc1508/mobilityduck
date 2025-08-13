@@ -1,41 +1,51 @@
 require mobilityduck
 
 query I 
-SELECT geomset '{"Point(1 1)", "Point(2 1)"}';
+SELECT SRID(geomset '{Point(1 1), Point(2 2)}');
 ----
-{"POINT(1 1)", "POINT(2 1)"}
+0
 
 query I 
-SELECT geomset '{"Polygon((1 1,1 2,2 2,2 1,1 1))"}';
+SELECT SRID(geogset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
 ----
-{"POLYGON((1 1,1 2,2 2,2 1,1 1))"}
+4326
 
-query I 
-SELECT geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}';
-----
-{"LINESTRING(1 1,2 2)", "POLYGON((1 1,1 2,2 2,2 1,1 1))"}
-
-query I 
-SELECT asText(geomset '{"Point(1 1)", "Point(2 1)"}');
-----
-{"POINT(1 1)", "POINT(2 1)"}
-
-query I 
-SELECT memSize(geomset '{"Point(1 1)", "Point(2 1)"}');
-----
-184
-
-query I 
+query I
 SELECT SRID(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
 ----
 5676
 
-query I 
-SELECT setSRID(geomset '{POINT(1 1), POINT(2 2)}', 4326);
+query I
+SELECT asEWKT(setSRID(geomset '{"Point(1 1)", "Point(2 2)"}', 5676));
 ----
-{"POINT(1 1)", "POINT(2 2)"}
+SRID=5676;{"POINT(1 1)", "POINT(2 2)"}
 
 query I 
-SELECT transform(geomset 'SRID=4326;{"POINT(1 1)", "POINT(2 2)"}', 5676);
+SELECT startValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}')::GEOMETRY;
 ----
-{"POINT(1942851.5332794231 110578.60739389929)", "POINT(2054702.0406264572 221269.95672158588)"}
+LINESTRING (1 1, 2 2)
+
+query I
+SELECT endValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}')::GEOMETRY;
+----
+POLYGON ((1 1, 1 2, 2 2, 2 1, 1 1))
+
+query I
+SELECT numValues(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
+----
+2
+
+query I 
+SELECT numValues(geogset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
+----
+2
+
+query I
+SELECT valueN(geomset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}', 1)::GEOMETRY;
+----
+LINESTRING (1 1, 2 2)
+
+query I
+SELECT asEWKT(transform(geomset 'SRID=4326;{Point(2.340088 49.400250), Point(6.575317 51.553167)}', 3812), 6);
+----
+SRID=3812;{"POINT(502773.429981 511805.120402)", "POINT(803028.908265 751590.742629)"}

@@ -84,10 +84,10 @@ set(EXTENSION_SOURCES
     src/temporal/temporal_functions.cpp
     src/temporal/tbox.cpp
     src/temporal/tbox_functions.cpp
-    src/set.cpp    
-    src/span.cpp
+    src/temporal/set.cpp    
+    src/temporal/span.cpp
     src/geoset.cpp
-    src/spanset.cpp
+    src/temporal/spanset.cpp
     src/tgeo/tgeometry.cpp
     src/tgeo/tgeometry_in_out.cpp
     src/tgeo/tgeompoint.cpp
