@@ -9,9 +9,14 @@ load_dotenv("generator.env")
 
 CPP_RETURN_TYPE_MAP = {
     "boolean": "bool",
-    "integer": "int64_t",
+    "integer": "int32_t",
+    "int4": "int32_t",
     "timestamptz": "timestamp_tz_t",
-    "float": "double"
+    "float": "double",
+    "interval": "interval_t",
+    "cstring": "string_t",
+    "text": "string_t",
+    "bytea": "string_t"
 }
 
 EXECUTOR_MAP = {
@@ -30,15 +35,32 @@ MOBILITYDUCK_CUSTOM_TYPES = [
     # spanset types
     'intspanset', 'bigintspanset', 'floatspanset', 'textspanset', 'datespanset', 'tstzspanset',
     # geom/geog types
-    'tgeometry', 'tgeompoint'
+    'tgeometry', 'tgeompoint',
+    # generic types
+    "temporal", "span", "set", "spanset"
 ]
 
 PG_TYPE_MAP = {
-    "TBOX_P": "TBox *"
+    "TBOX_P": "TBox *",
+    "SPAN_P": "Span *",
+    "SET_P": "Set *",
+    "BOOL": "bool",
+    "INT32": "int32_t",
+    "FLOAT8": "double",
+    "TIMESTAMPTZ": "timestamp_tz_t",
+    "INTERVAL_P": "MeosInterval *",
+    "CSTRING": "string_t",
+    "TEXT_P": "string_t",
+    "BYTEA_P": "string_t"
 }
 
 RESERVED_KWS_MAP = {
     "result": "ret"
+}
+
+BASETYPE_MAP = {
+    "integer": "T_INT4",
+    "float": "T_FLOAT8"
 }
 
 @dataclass
@@ -47,6 +69,7 @@ class SQLFunction:
     name: str
     return_type: str
     parameters: List[Tuple[str, str]]  # (type, name) pairs
+    hash_str: str
     c_function: str
     sql_definition: str
     category: str = "unknown"
@@ -56,7 +79,7 @@ class SQLFunction:
     is_cast: bool = False
 
     def __str__(self):
-        return f"SQLFunction(name={self.name}\n\treturn_type={self.return_type}\n\tparameters={self.parameters}\n\tc_function={self.c_function}\n\tcategory={self.category}\n\tis_operator={self.is_operator}\n\tis_aggregate={self.is_aggregate}\n\tis_cast={self.is_cast})"
+        return f"SQLFunction(name={self.name}\n\treturn_type={self.return_type}\n\tparameters={self.parameters}\n\thash_str={self.hash_str}\n\tc_function={self.c_function}\n\tcategory={self.category}\n\tis_operator={self.is_operator}\n\tis_aggregate={self.is_aggregate}\n\tis_cast={self.is_cast})"
 
 class MobilityDBSQLParser:
     def __init__(self, mobilitydb_sql_dir: str = os.getenv("MOBILITYDB_SQL_DIR")):
@@ -152,6 +175,7 @@ class MobilityDBSQLParser:
             func_line_number = content[:start_pos].count('\n') + 1
 
             parameters = self._parse_parameters(params_str)
+            hash_str = self._generate_hash_str(func_name, parameters)
             category = self._determine_category(func_name, parameters, return_type, func_line_number)
             is_operator = self._is_operator_function(category)
             is_aggregate = self._is_aggregate_function(category)
@@ -161,6 +185,7 @@ class MobilityDBSQLParser:
                 name=func_name,
                 return_type=return_type,
                 parameters=parameters,
+                hash_str=hash_str,
                 c_function=c_function,
                 sql_definition=match.group(0),
                 category=category,
@@ -183,7 +208,7 @@ class MobilityDBSQLParser:
             param_str = param_str.strip()
             if param_str:
                 parts = param_str.split()
-                if len(parts) >= 1:
+                if len(parts) >= 1 and "DEFAULT" not in param_str:
                     param_type = parts[0]
                     param_name = parts[1] if len(parts) > 1 else f"arg{len(parameters)}"
                     parameters.append((param_type, param_name))
@@ -211,6 +236,9 @@ class MobilityDBSQLParser:
 
         return parts
 
+    def _generate_hash_str(self, func_name: str, parameters: List[Tuple[str, str]]) -> str:
+        return f"{func_name}_{'_'.join([param[0] for param in parameters])}"
+
     def _determine_category(self, func_name: str, parameters: List[Tuple[str, str]], return_type: str, func_line_number: int) -> str:
         # Determine the category of the function based on its line number and self.category_marks
         # self.category_marks is a dict: {section_name: line_number}
@@ -236,21 +264,20 @@ class MobilityDBSQLParser:
             if cast_def["function"] == func_name and cast_def["function_args"] == [param[0] for param in parameters]:
                 return True
         return False
-    
-    # def parse_all_sql_files(self) -> List[SQLFunction]:
 
 @dataclass
 class CFunction:
     name: str
     parameters: List[Tuple[str, str]]
     needs_basetype: bool
+    meos_func: str
     meos_args: List[str]
     meos_return_type: str
     nullable: bool
     implementation: str
 
     def __str__(self):
-        return f"CFunction(name={self.name}\n\tparameters={self.parameters}\n\tneeds_basetype={self.needs_basetype}\n\tmeos_args={self.meos_args}\n\tmeos_return_type={self.meos_return_type}\n\tnullable={self.nullable}\n\timplementation={self.implementation})"
+        return f"CFunction(name={self.name}\n\tparameters={self.parameters}\n\tneeds_basetype={self.needs_basetype}\n\tmeos_func={self.meos_func}\n\tmeos_args={self.meos_args}\n\tmeos_return_type={self.meos_return_type}\n\tnullable={self.nullable}\n\timplementation={self.implementation}\n\tdisambiguation_key={self.disambiguation_key})"
 
 class MobilityDBCParser:
     def __init__(self, mobilitydb_src_dir: str = os.getenv("MOBILITYDB_SRC_DIR")):
@@ -278,13 +305,14 @@ class MobilityDBCParser:
                 implementation = impl_match.group(1)
                 parameters = self._parse_parameters(implementation)
                 needs_basetype = self._needs_basetype(implementation)
-                meos_args = self._extract_meos_args(implementation, func_name)
+                meos_func, meos_args = self._extract_meos_func_args(implementation)
                 meos_return_type, nullable = self._extract_meos_return_type(implementation)
 
             c_func = CFunction(
                 name=func_name,
                 parameters=parameters,
                 needs_basetype=needs_basetype,
+                meos_func=meos_func,
                 meos_args=meos_args,
                 meos_return_type=meos_return_type,
                 nullable=nullable,
@@ -379,17 +407,40 @@ class MobilityDBCParser:
     def _needs_basetype(self, implementation: str) -> bool:
         return "meosType basetype =" in implementation
 
-    def _extract_meos_args(self, implementation: str, func_name: str) -> List[str]:
-        # Match the function call inside PG_RETURN_* and capture args
-        func_name = func_name.lower()
-        pattern = re.compile(r'\b' + re.escape(func_name) + r'\s*\((.*)\)(?=\s*;)')
-        match = re.search(pattern, implementation)
-        args = []
-        if match:
-            args_str = match.group(1)
-            # Split by commas and strip
-            args = [arg.strip() for arg in args_str.split(",")]
-        return args
+    def _parse_meos_func_args(self, implementation):
+        lines = [line.strip() for line in implementation.split("\n") if line != ""]
+        if 'PG_RETURN_' in lines[-1]:
+            return_line = lines[-1]
+        else:
+            return_line = ""
+        if len(return_line.split("(")) > 2:
+            func_name, args_str = return_line.split("(")[1:]
+            args_str = args_str.replace(")", "").replace(";", "")
+            args = args_str.split(",")
+            args = [arg.strip() for arg in args]
+        else:
+            func_name = None
+            args = [return_line.split("(")[1].replace(")", "").replace(";", "").strip()]
+        return func_name, args
+
+    # def _extract_meos_args(self, implementation: str, func_name: str) -> List[str]:
+    #     # Match the function call inside PG_RETURN_* and capture args
+    #     func_name = func_name.lower()
+    #     pattern = re.compile(r'\b' + re.escape(func_name) + r'\s*\((.*)\)(?=\s*;)')
+    #     match = re.search(pattern, implementation)
+    #     args = []
+    #     if match:
+    #         args_str = match.group(1)
+    #         # Split by commas and strip
+    #         args = [arg.strip() for arg in args_str.split(",")]
+    #         if args[-1].endswith(')'):
+    #             args[-1] = args[-1][:-1]
+    #         args = [RESERVED_KWS_MAP[arg] if arg in RESERVED_KWS_MAP else arg for arg in args]
+    #     return args
+
+    def _extract_meos_func_args(self, implementation: str) -> Tuple[str, List[str]]:
+        func, args = self._parse_meos_func_args(implementation)
+        return func, args
 
 @dataclass
 class DuckDBTemplate:
@@ -403,16 +454,14 @@ class DuckDBTemplateGenerator:
 
     def _build_templates(self) -> Dict[str, str]:
         return {
-            'scalar_func': """
-void {struct_name}::{function_name}(DataChunk &args, ExpressionState &state, Vector &result) {{
+            'scalar_func': """void {struct_name}::{function_name}(DataChunk &args, ExpressionState &state, Vector &result) {{
     {implementation}
     if (args.size() == 1) {{
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }}
 }}
 """,
-            'cast_func': """
-bool {struct_name}::{function_name}(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {{
+            'cast_func': """bool {struct_name}::{function_name}(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {{
     bool success = true;
     try {{
         {implementation}
@@ -426,40 +475,126 @@ bool {struct_name}::{function_name}(Vector &source, Vector &result, idx_t count,
         }
 
     def generate_function(self, sql_func: SQLFunction, c_func: CFunction) -> DuckDBTemplate:
+        all_templates = []
+        # print(sql_func)
+        # print(c_func)
         # If in/out -- only cast
-        if sql_func.category != 'input/output':
+        excluded_categories = ["selectivity", "topological", "position", "set", "extent", "comparison"]
+        return_type = sql_func.return_type if sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES else CPP_RETURN_TYPE_MAP[sql_func.return_type]
+        struct_name = self._get_struct_name(sql_func.name)
+        implementation = self._generate_implementation(sql_func, c_func)
+        if sql_func.category not in excluded_categories and not any(token in sql_func.name for token in ["recv", "send"]):
             template = self.templates['scalar_func']
-            return_type = sql_func.return_type if sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES else CPP_RETURN_TYPE_MAP[sql_func.return_type]
-            struct_name = self._get_struct_name(sql_func.name)
-            implementation = self._generate_implementation(sql_func, c_func)
-            print(f"Struct name: {struct_name}")
-            print(f"Function name: {sql_func.c_function}")
-            print(f"Implementation:\n{implementation}")
             cpp_code = template.format(
                 struct_name=struct_name,
                 function_name=sql_func.c_function,
                 implementation=implementation
             )
-
-            return DuckDBTemplate(
+            print(cpp_code)
+            all_templates.append(DuckDBTemplate(
                 name=sql_func.name,
                 template_type="scalar_func",
                 cpp_code=cpp_code
+            ))
+
+        if sql_func.is_cast:
+            template = self.templates['cast_func']
+            cpp_code = template.format(
+                struct_name=struct_name,
+                function_name=sql_func.c_function,
+                implementation=implementation
             )
-        else:
-            return None
+            print(cpp_code)
+            all_templates.append(DuckDBTemplate(
+                name=sql_func.name,
+                template_type="cast_func",
+                cpp_code=cpp_code
+            ))
+        
+        return all_templates
 
     def _get_struct_name(self, function_name: str) -> str:
         return "TemporaryStruct"
 
+    def _validate_meos_args(self, c_func_args: List[str], c_func_params: List[str]) -> List[str]:
+        meos_args = [arg if arg not in RESERVED_KWS_MAP else RESERVED_KWS_MAP[arg] for arg in c_func_args]
+        # Check meos_args for timestamp-related variables
+        # c_func.parameters=[('SPAN_P', 'span', 0, None), ('TIMESTAMPTZ', 't', 1, 'TimestampTz')]
+        # c_func.meos_args=['span', 't']
+        for i in range(len(c_func_params)):
+            for j in range(len(c_func_args)):
+                if c_func_params[i][0] == "TIMESTAMPTZ" and c_func_params[i][1] == c_func_args[j]:
+                    meos_args[j] = "(TimestampTz)meos_ts"
+        # for i in range(len(c_func_args)):
+        #     if c_func_params[i][0] == "TIMESTAMPTZ" and c_func_params[i][1] == c_func_args[i]:
+        #         meos_args[i] = "(TimestampTz)meos_ts"
+        return meos_args
+
+    def _parse_meos_case_2(self, processing_lines):
+        line = processing_lines[0]
+        line_parts = [part.strip() for part in line.split("=")]
+        function = line_parts[1]
+        func_name, args_str = function.split("(")
+        args_str = args_str.replace(")", "").replace(";", "")
+        args = args_str.split(",")
+        args = [arg.strip() for arg in args]
+        return func_name, args
+
+    def _parse_meos_case_3(self, processing_lines):
+        line = processing_lines[1]
+        func_name, args_str = line.split("(")
+        args_str = args_str.replace(")", "").replace(";", "")
+        args = args_str.split(",")
+        args = [arg.strip() for arg in args]
+        return func_name, args
+
+    def _parse_meos_case_4(self, processing_lines):
+        if "=" not in processing_lines[0]:
+            # E.g. ['double result;', 'if (! tbox_xmin(box, &result))', 'PG_RETURN_NULL();', 'PG_RETURN_FLOAT8(result);']
+            var_dec_line, func_line = processing_lines[:2]
+            var_type, var_name = var_dec_line.split(" ")
+            var_name = var_name.replace(";", "")
+            if var_name in RESERVED_KWS_MAP:
+                var_name = RESERVED_KWS_MAP[var_name]
+            function = func_line.split("!")[1].strip()
+            func_name, args_str = function.split("(")
+            args_str = args_str.replace(")", "").replace(";", "")
+            args = args_str.split(",")
+            args = [arg.strip() for arg in args]
+            clean_args = []
+            for arg in args:
+                if "&" in arg:
+                    clean_arg = arg if arg.replace("&", "") not in RESERVED_KWS_MAP else "&" + RESERVED_KWS_MAP[arg.replace("&", "")]
+                    clean_args.append(clean_arg)
+                else:
+                    clean_args.append(arg)
+            return var_type, var_name, func_name, clean_args
+        else:
+            # E.g. ['TBox *result = tbox_expand_value(box, value, basetype);', 'if (! result)', 'PG_RETURN_NULL();', 'PG_RETURN_TBOX_P(result);']
+            func_line = processing_lines[0]
+            line_parts = [part.strip() for part in func_line.split("=")]
+            function = line_parts[1]
+            func_name, args_str = function.split("(")
+            args_str = args_str.replace(")", "").replace(";", "")
+            args = args_str.split(",")
+            args = [arg.strip() for arg in args]
+            return None, None, func_name, args
+
+    def _parse_meos_case_4_not_nullable(self, processing_lines):
+        # e.g. ['uint8_t *wkb = (uint8_t *) VARDATA(bytea_wkb);', 'TBox *result = tbox_from_wkb(wkb, VARSIZE(bytea_wkb) - VARHDRSZ);', 'PG_FREE_IF_COPY(bytea_wkb, 0);', 'PG_RETURN_TBOX_P(result);']
+        processing_code = []
+        for line in processing_lines:
+            clean_line = "\n\t\t\t" + line.replace("result", "ret")
+            if "PG_" not in clean_line:
+                processing_code.append(clean_line)
+        return processing_code
+
     def _generate_implementation(self, sql_func: SQLFunction, c_func: CFunction) -> str:
-        print(sql_func)
-        print(c_func)
         implementation = ""
         # UnaryExecutor::Execute<string_t, bool>(
         num_args = len(sql_func.parameters)
         executor = EXECUTOR_MAP[num_args]
-        implementation += f"\t{executor}::Execute{'WithNulls' if c_func.nullable else ''}"
+        implementation += f"{executor}::Execute{'WithNulls' if c_func.nullable else ''}"
         executor_params = []
         for param in sql_func.parameters:
             if param[0] in MOBILITYDUCK_CUSTOM_TYPES:
@@ -486,21 +621,180 @@ bool {struct_name}::{function_name}(Vector &source, Vector &result, idx_t count,
         # TBox *tbox = ...
         input_lines = []
         for (param_type, param_name, idx, cast) in c_func.parameters:
-            cpp_type = PG_TYPE_MAP[param_type]
             if param_name in RESERVED_KWS_MAP:
                 param_name = RESERVED_KWS_MAP[param_name]
-            input_template = """
+            if param_type == 'DATUM':
+                cpp_type = "Datum"
+                input_template = """
+            Datum {param_name} = DataHelpers::getDatum(args{idx});
+"""
+                input_lines.append(input_template.format(param_name=param_name, idx=idx, func_name=c_func.name))
+            else:
+                cpp_type = PG_TYPE_MAP[param_type]
+                if cpp_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES:
+                    input_template = """
             {cpp_type}{param_name} = nullptr;
             if (args{idx}.GetSize() > 0) {{
                 {param_name} = ({cpp_type})malloc(args{idx}.GetSize());
                 memcpy({param_name}, args{idx}.GetDataUnsafe(), args{idx}.GetSize());
             }}
-            if (!{param_name}) {{
+"""
+                    error_template = """\tif (!{param_name}) {{
                 throw InternalException("Failure in {func_name}: unable to cast binary to {cpp_type}");
             }}
 """
-            input_lines.append(input_template.format(cpp_type=cpp_type, param_name=param_name, idx=idx, func_name=c_func.name))
-        implementation += "\n\t\t".join(input_lines)
+
+                    input_lines.append(input_template.format(cpp_type=cpp_type, param_name=param_name, idx=idx, func_name=c_func.name))
+                    input_lines.append(error_template.format(param_name=param_name, func_name=c_func.name, cpp_type=cpp_type))
+                elif cpp_type == "timestamp_tz_t":
+                    input_line = f"\n\t\ttimestamp_tz_t meos_ts = DuckDBToMeosTimestamp(args{idx});\n"
+                    input_lines.append(input_line)
+                elif cpp_type == "MeosInterval *":
+                    input_line = f"\n\t\tMeosInterval *{param_name} = IntervaltToInterval(args{idx});\n"
+                    input_lines.append(input_line)
+                elif cpp_type in PG_TYPE_MAP.values():
+                    input_line = f"\n\t\t\t{cpp_type} {param_name} = args{idx};\n"
+                    input_lines.append(input_line)
+                else:
+                    print(f"Unsupported parameter type: {param_type}")
+                    raise ValueError(f"Unsupported parameter type: {param_type}")
+
+        implementation += "\t\t".join(input_lines)
+
+        # TODO: processing
+        # basetype
+        if c_func.needs_basetype:
+            for i in range(len(sql_func.parameters)):
+                if c_func.parameters[i][0] == "DATUM":
+                    basetype = BASETYPE_MAP[sql_func.parameters[i][0]]
+                    implementation += f"\t\t\tmeosType basetype = DataHelpers::getMeosType(args{i});\n"
+                    break
+
+        # Parse processing line(s)
+        processing_lines = []
+        impl_lines = [line.strip() for line in c_func.implementation.split("\n") if line != ""]
+        for line in impl_lines:
+            if "PG_GETARG" in line or "meosType basetype" in line:
+                continue
+            else:
+                processing_lines.append(line)
+
+        processing_code = []
+        output_type = PG_TYPE_MAP[c_func.meos_return_type]
+        # print(processing_lines)
+        if len(processing_lines) == 1:
+            """
+            Case: 1 line:
+            PG_RETURN_*(meos_func(meos_args))
+            TODO: check meos_args for reserved keywords
+            """
+            meos_args = self._validate_meos_args(c_func.meos_args, c_func.parameters)
+            line = f"\t\t\t{output_type} ret = {c_func.meos_func}({', '.join(meos_args)});"
+            processing_code.append(line)
+            # print("Case 1")
+            # print(processing_code)
+        elif len(processing_lines) == 2:
+            """
+            Case: 2 lines:
+            ['TBox *result = span_tbox(s);', 'PG_RETURN_TBOX_P(result);']
+            meos_func = None, meos_args = [result]
+            Need to parse line[-2]
+            """
+            meos_func, meos_args_og = self._parse_meos_case_2(processing_lines)
+            meos_args = self._validate_meos_args(meos_args_og, c_func.parameters)
+            line = f"\t\t\t{output_type} ret = {meos_func}({', '.join(meos_args)});"
+            processing_code.append(line)
+            # print("Case 2")
+            # print(processing_code)
+        elif len(processing_lines) == 3:
+            """
+            Case: 3 lines:
+            ['TBox *result = palloc(sizeof(TBox));', 'spanset_tbox_slice(d, result);', 'PG_RETURN_TBOX_P(result);']
+            meos_func = None, meos_args = [result]
+            Has a palloc()
+            """
+            meos_func, meos_args_og = self._parse_meos_case_3(processing_lines)
+            meos_args = self._validate_meos_args(meos_args_og, c_func.parameters)
+            processing_code.append(f"\t\t\t{output_type}ret = ({output_type})malloc(sizeof({output_type[:-2]}));")
+            processing_code.append(f"\n\t\t\t{meos_func}({', '.join(meos_args)});")
+            # print("Case 3")
+            # print(processing_code)
+        elif len(processing_lines) == 4 and c_func.nullable:
+            """
+            Case: 4 lines:
+            - Subcase: ['double result;', 'if (! tbox_xmin(box, &result))', 'PG_RETURN_NULL();', 'PG_RETURN_FLOAT8(result);']
+            - Subcase: ['TBox *result = tbox_expand_value(box, value, basetype);', 'if (! result)', 'PG_RETURN_NULL();', 'PG_RETURN_TBOX_P(result);']
+            meos_func = None, meos_args = [result]
+            Has a null check, nullable=True
+            """
+            var_type, var_name, meos_func, meos_args_og = self._parse_meos_case_4(processing_lines)
+            meos_args = self._validate_meos_args(meos_args_og, c_func.parameters)
+            # print(var_type, var_name, meos_func, meos_args)
+            if var_type is not None:
+                # Subcase 1
+                if var_type == "TimestampTz":
+                    var_name = "ret_meos"
+                    for i in range(len(meos_args)):
+                        if meos_args[i] == "&ret":
+                            meos_args[i] = "&ret_meos"
+                processing_code.append(f"\t\t\t{var_type} {var_name};")
+                processing_code.append(f"\n\t\t\tif (!{meos_func}({', '.join(meos_args)})) {{")
+                processing_code.append(f"\n\t\t\t\tfree({meos_args[0]});")
+                processing_code.append("\n\t\t\t\tmask.SetInvalid(idx);")
+                output_type_str = "string_t" if output_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES else output_type
+                processing_code.append(f"\n\t\t\t\treturn {output_type_str}();")
+                processing_code.append("\n\t\t\t}")
+                if var_type == "TimestampTz":
+                    processing_code.append("\n\t\t\ttimestamp_tz_t ret = MeosToDuckDBTimestamp((timestamp_tz_t)ret_meos);")
+            else:
+                # Subcase 2
+                processing_code.append(f"\t\t\t{output_type}ret = {meos_func}({', '.join(meos_args)});")
+                processing_code.append("\n\t\t\tif (!ret) {")
+                processing_code.append(f"\n\t\t\t\tfree({meos_args[0]});")
+                processing_code.append("\n\t\t\t\tmask.SetInvalid(idx);")
+                output_type_str = "string_t" if output_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES else output_type
+                processing_code.append(f"\n\t\t\t\treturn {output_type_str}();")
+                processing_code.append("\n\t\t\t}")
+            # print(processing_code)
+            # print("Case 4")
+        elif len(processing_lines) == 4 and not c_func.nullable:
+            processing_code = self._parse_meos_case_4_not_nullable(processing_lines)
+            # print(processing_code)
+            # print("Case 4 not nullable")
+        else:
+            """
+            Case: special case:
+            ["/* Can't do anything with null inputs */", 'if (! box1 && ! box2)', 'PG_RETURN_NULL();', 'TBox *result = palloc(sizeof(TBox));', '/* One of the boxes is null, return the other one */', 'if (! box1)', '{', 'memcpy(result, box2, sizeof(TBox));', 'PG_RETURN_TBOX_P(result);', '}', 'if (! box2)', '{', 'memcpy(result, box1, sizeof(TBox));', 'PG_RETURN_TBOX_P(result);', '}', '/* Both boxes are not null */', 'memcpy(result, box1, sizeof(TBox));', 'tbox_expand(box2, result);', 'PG_RETURN_TBOX_P(result);']
+            """
+            processing_code.append("\n\t\t\t// TODO: handle this case");
+            # print("Case else")
+        # free(...);
+        # return ret;
+        implementation += "\t\t".join(processing_code)
+        output_lines = []
+        if "*" in output_type and sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES:
+            # Need to return string_t
+            output_template = """
+            string_t blob = StringVector::AddStringOrBlob(result, (const char *)ret, VARSIZE(ret));
+"""
+            output_lines.append(output_template)
+        else:
+            output_template = """
+"""
+            output_lines.append(output_template)
+        for (param_type, param_name, idx, cast) in c_func.parameters:
+            if "_P" in param_type:
+                output_lines.append(f"\n\t\t\tfree({param_name});")
+
+        if (output_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES):
+            output_lines.append(f"\n\t\t\tfree(ret);")
+
+        implementation += "\t\t".join(output_lines)
+        implementation += "\n\t\t"
+        if "*" in output_type and sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES:
+            implementation += f"\treturn blob;\n\t\t}}\n\t);"
+        else:
+            implementation += f"\treturn ret;\n\t\t}}\n\t);"
 
         return implementation
 
@@ -552,23 +846,57 @@ class CodeGenerator:
         for sql_func in sql_functions:
             for c_func in c_functions:
                 if sql_func.c_function == c_func.name:
-                    mapping[sql_func.name] = c_func
+                    # print(f"Matched {sql_func.hash_str} to {c_func.name}")
+                    mapping[sql_func.hash_str] = c_func
                     break
         return mapping
+
+    def disambiguate_functions(self, sql_functions: List[SQLFunction], c_functions: List[CFunction]):
+        mapping = dict()
+        for c_func in c_functions:
+            for sql_func in sql_functions:
+                if sql_func.c_function == c_func.name:
+                    if c_func.name not in mapping:
+                        mapping[c_func.name] = []
+                    mapping[c_func.name].append(sql_func)
+        disamg = dict()
+        for name, sql_funcs in mapping.items():
+            if name not in disamg:
+                disamg[name] = []
+            disamg_keys = []
+            if len(sql_funcs) == 1:
+                # Not overloaded
+                disamg_keys.append(name)
+                if sql_funcs[0].is_cast:
+                    # Also a cast function
+                    disamg_keys.append(f"{name}_cast")
+            else:
+                # Overloaded
+                for sql_func in sql_funcs:
+                    disamg_suffix = '_'.join([param[0] for param in sql_func.parameters])
+                    disamg_keys.append(f"{name}_{disamg_suffix}")
+                    if sql_func.is_cast:
+                        # Also a cast function
+                        disamg_keys.append(f"{name}_{disamg_suffix}_cast")
+            for disamg_key in disamg_keys:
+                disamg[name].append(disamg_key)
+        
+        return disamg
 
     def generate_duckdb_templates(self, sql_functions: List[SQLFunction], sql_to_c_mapping: Dict[str, CFunction]) -> List[DuckDBTemplate]:
         templates = []
         for sql_func in sql_functions:
-            if sql_func.name in sql_to_c_mapping:
-                c_func = sql_to_c_mapping[sql_func.name]
+            if sql_func.hash_str in sql_to_c_mapping:
+                c_func = sql_to_c_mapping[sql_func.hash_str]
                 try:
-                    template = self.template_generator.generate_function(sql_func, c_func)
-                    templates.append(template)
-                    print(f"Generated template for {sql_func.name}")
+                    templates = self.template_generator.generate_function(sql_func, c_func)
+                    templates.extend(templates)
+                    # print(f"Generated template for {sql_func.name}")
                 except Exception as e:
-                    print(f"Error generating template for {sql_func.name}: {e}")
-                    print("-" * 80)
-                print("-" * 80)
+                    # print(f"Error generating template for {sql_func.name}: {e}")
+                    # print("-" * 80)
+                    continue
+                # print("-" * 80)
         return templates
 
 def main():
@@ -585,7 +913,20 @@ def main():
     sql_functions = generator.parse_sql_functions(args.sql_files)
     c_functions = generator.parse_c_functions(args.c_files)
     generator.sql_to_c_mapping = generator.match_sql_and_c_functions(sql_functions, c_functions)
-    templates = generator.generate_duckdb_templates(sql_functions, generator.sql_to_c_mapping)
+    disamg_mapping = generator.disambiguate_functions(sql_functions, c_functions)
+    for sql_func in sql_functions:
+        for c_func in c_functions:
+            if sql_func.c_function == c_func.name:
+                if c_func.name in disamg_mapping:
+                    print(f"{sql_func.name} --> {c_func.name}")
+                    print(disamg_mapping[c_func.name])
+                    print("-" * 20)
+    # for sql_func_hash, disamg_keys in mapped_sql_funcs.items():
+    #     print(sql_func_hash)
+    #     for disamg_key in disamg_keys:
+    #         print(f"\t{disamg_key}")
+    #     print("-" * 20)
+    # templates = generator.generate_duckdb_templates(sql_functions, generator.sql_to_c_mapping)
 
 if __name__ == "__main__":
     main()
