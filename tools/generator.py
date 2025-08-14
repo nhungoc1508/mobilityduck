@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import shutil
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
@@ -263,6 +264,8 @@ class MobilityDBSQLParser:
         for cast_def in self.cast_definitions:
             if cast_def["function"] == func_name and cast_def["function_args"] == [param[0] for param in parameters]:
                 return True
+        if func_name.endswith("_in") or func_name.endswith("_out"):
+            return True
         return False
 
 @dataclass
@@ -423,21 +426,6 @@ class MobilityDBCParser:
             args = [return_line.split("(")[1].replace(")", "").replace(";", "").strip()]
         return func_name, args
 
-    # def _extract_meos_args(self, implementation: str, func_name: str) -> List[str]:
-    #     # Match the function call inside PG_RETURN_* and capture args
-    #     func_name = func_name.lower()
-    #     pattern = re.compile(r'\b' + re.escape(func_name) + r'\s*\((.*)\)(?=\s*;)')
-    #     match = re.search(pattern, implementation)
-    #     args = []
-    #     if match:
-    #         args_str = match.group(1)
-    #         # Split by commas and strip
-    #         args = [arg.strip() for arg in args_str.split(",")]
-    #         if args[-1].endswith(')'):
-    #             args[-1] = args[-1][:-1]
-    #         args = [RESERVED_KWS_MAP[arg] if arg in RESERVED_KWS_MAP else arg for arg in args]
-    #     return args
-
     def _extract_meos_func_args(self, implementation: str) -> Tuple[str, List[str]]:
         func, args = self._parse_meos_func_args(implementation)
         return func, args
@@ -449,8 +437,9 @@ class DuckDBTemplate:
     cpp_code: str
 
 class DuckDBTemplateGenerator:
-    def __init__(self):
+    def __init__(self, struct_name: str = "TemporaryStruct"):
         self.templates = self._build_templates()
+        self.struct_name = struct_name
 
     def _build_templates(self) -> Dict[str, str]:
         return {
@@ -474,20 +463,20 @@ class DuckDBTemplateGenerator:
 """
         }
 
-    def generate_function(self, sql_func: SQLFunction, c_func: CFunction) -> DuckDBTemplate:
+    def generate_function(self, sql_func: SQLFunction, c_func: CFunction, disamg_key: str) -> DuckDBTemplate:
         all_templates = []
         # print(sql_func)
         # print(c_func)
         # If in/out -- only cast
         excluded_categories = ["selectivity", "topological", "position", "set", "extent", "comparison"]
         return_type = sql_func.return_type if sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES else CPP_RETURN_TYPE_MAP[sql_func.return_type]
-        struct_name = self._get_struct_name(sql_func.name)
-        implementation = self._generate_implementation(sql_func, c_func)
-        if sql_func.category not in excluded_categories and not any(token in sql_func.name for token in ["recv", "send"]):
+        struct_name = self.struct_name
+        if sql_func.category not in excluded_categories and not any(token in sql_func.name for token in ["recv", "send"]) and not disamg_key.endswith("_cast"):
+            implementation = self._generate_implementation(sql_func, c_func, is_cast=False)
             template = self.templates['scalar_func']
             cpp_code = template.format(
                 struct_name=struct_name,
-                function_name=sql_func.c_function,
+                function_name=disamg_key,
                 implementation=implementation
             )
             print(cpp_code)
@@ -497,11 +486,12 @@ class DuckDBTemplateGenerator:
                 cpp_code=cpp_code
             ))
 
-        if sql_func.is_cast:
+        elif disamg_key.endswith("_cast"):
+            implementation = self._generate_implementation(sql_func, c_func, is_cast=True)
             template = self.templates['cast_func']
             cpp_code = template.format(
                 struct_name=struct_name,
-                function_name=sql_func.c_function,
+                function_name=disamg_key,
                 implementation=implementation
             )
             print(cpp_code)
@@ -513,9 +503,6 @@ class DuckDBTemplateGenerator:
         
         return all_templates
 
-    def _get_struct_name(self, function_name: str) -> str:
-        return "TemporaryStruct"
-
     def _validate_meos_args(self, c_func_args: List[str], c_func_params: List[str]) -> List[str]:
         meos_args = [arg if arg not in RESERVED_KWS_MAP else RESERVED_KWS_MAP[arg] for arg in c_func_args]
         # Check meos_args for timestamp-related variables
@@ -525,9 +512,6 @@ class DuckDBTemplateGenerator:
             for j in range(len(c_func_args)):
                 if c_func_params[i][0] == "TIMESTAMPTZ" and c_func_params[i][1] == c_func_args[j]:
                     meos_args[j] = "(TimestampTz)meos_ts"
-        # for i in range(len(c_func_args)):
-        #     if c_func_params[i][0] == "TIMESTAMPTZ" and c_func_params[i][1] == c_func_args[i]:
-        #         meos_args[i] = "(TimestampTz)meos_ts"
         return meos_args
 
     def _parse_meos_case_2(self, processing_lines):
@@ -589,7 +573,7 @@ class DuckDBTemplateGenerator:
                 processing_code.append(clean_line)
         return processing_code
 
-    def _generate_implementation(self, sql_func: SQLFunction, c_func: CFunction) -> str:
+    def _generate_implementation(self, sql_func: SQLFunction, c_func: CFunction, is_cast: bool = False) -> str:
         implementation = ""
         # UnaryExecutor::Execute<string_t, bool>(
         num_args = len(sql_func.parameters)
@@ -604,13 +588,16 @@ class DuckDBTemplateGenerator:
         implementation += f"<{', '.join(executor_params)}"
         implementation += f", {'string_t' if sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES else CPP_RETURN_TYPE_MAP[sql_func.return_type]}>(\n"
         # args.data[0], result, args.size(),
-        arg_strs = []
-        for i in range(num_args):
-            arg_strs.append(f"args.data[{i}]")
-        implementation += f"\t\t"
-        implementation += f", ".join(arg_strs)
-        implementation += f", "
-        implementation += f"result, args.size(),\n\t\t[&]("
+        if not is_cast:
+            arg_strs = []
+            for i in range(num_args):
+                arg_strs.append(f"args.data[{i}]")
+            implementation += f"\t\t"
+            implementation += f", ".join(arg_strs)
+            implementation += f", "
+            implementation += f"result, args.size(),\n\t\t[&]("
+        else:
+            implementation += f"\t\tsource, result, count,\n\t\t[&]("
         # [&](string_t tbox_str) {
         param_strs = []
         for i, param_type in enumerate(executor_params):
@@ -647,13 +634,17 @@ class DuckDBTemplateGenerator:
                     input_lines.append(input_template.format(cpp_type=cpp_type, param_name=param_name, idx=idx, func_name=c_func.name))
                     input_lines.append(error_template.format(param_name=param_name, func_name=c_func.name, cpp_type=cpp_type))
                 elif cpp_type == "timestamp_tz_t":
-                    input_line = f"\n\t\ttimestamp_tz_t meos_ts = DuckDBToMeosTimestamp(args{idx});\n"
+                    input_line = f"\n\t\t\ttimestamp_tz_t meos_ts = DuckDBToMeosTimestamp(args{idx});\n"
                     input_lines.append(input_line)
                 elif cpp_type == "MeosInterval *":
-                    input_line = f"\n\t\tMeosInterval *{param_name} = IntervaltToInterval(args{idx});\n"
+                    input_line = f"\n\t\t\tMeosInterval *{param_name} = IntervaltToInterval(args{idx});\n"
                     input_lines.append(input_line)
                 elif cpp_type in PG_TYPE_MAP.values():
-                    input_line = f"\n\t\t\t{cpp_type} {param_name} = args{idx};\n"
+                    if c_func.name.endswith("_in") and cpp_type == "string_t":
+                        input_line = f"\n\t\t\tstd::string {param_name}_0(args{idx}.GetDataUnsafe(), args{idx}.GetSize());\n"
+                        input_line += f"\n\t\t\tconst char *{param_name} = {param_name}_0.c_str();\n"
+                    else:
+                        input_line = f"\n\t\t\t{cpp_type} {param_name} = args{idx};\n"
                     input_lines.append(input_line)
                 else:
                     print(f"Unsupported parameter type: {param_type}")
@@ -801,15 +792,16 @@ class DuckDBTemplateGenerator:
 class CodeGenerator:
     def __init__(self, output_dir: str = "generated",
                  mobilitydb_sql_dir: str = os.getenv("MOBILITYDB_SQL_DIR"),
-                 mobilitydb_src_dir: str = os.getenv("MOBILITYDB_SRC_DIR")):
+                 mobilitydb_src_dir: str = os.getenv("MOBILITYDB_SRC_DIR"),
+                 struct_name: str = "TemporaryStruct"):
         self.output_dir = Path(output_dir)
         self.mobilitydb_sql_dir = mobilitydb_sql_dir
         self.output_dir.mkdir(exist_ok=True)
-
+        self.struct_name = struct_name
         self.sql_parser = MobilityDBSQLParser(mobilitydb_sql_dir)
         self.c_parser = MobilityDBCParser(mobilitydb_src_dir)
         self.sql_to_c_mapping = dict()
-        self.template_generator = DuckDBTemplateGenerator()
+        self.template_generator = DuckDBTemplateGenerator(struct_name=struct_name)
         
     def parse_sql_functions(self, sql_files: List[str] = None):
         print("Starting SQL function parsing...")
@@ -883,21 +875,95 @@ class CodeGenerator:
         
         return disamg
 
-    def generate_duckdb_templates(self, sql_functions: List[SQLFunction], sql_to_c_mapping: Dict[str, CFunction]) -> List[DuckDBTemplate]:
+    def generate_duckdb_templates(self, sql_functions: List[SQLFunction], c_functions: List[CFunction], disamg_mapping: Dict[str, List[str]]) -> List[DuckDBTemplate]:
         templates = []
+        implemented_functions = set()
         for sql_func in sql_functions:
-            if sql_func.hash_str in sql_to_c_mapping:
-                c_func = sql_to_c_mapping[sql_func.hash_str]
-                try:
-                    templates = self.template_generator.generate_function(sql_func, c_func)
-                    templates.extend(templates)
-                    # print(f"Generated template for {sql_func.name}")
-                except Exception as e:
-                    # print(f"Error generating template for {sql_func.name}: {e}")
-                    # print("-" * 80)
-                    continue
-                # print("-" * 80)
+            for c_func in c_functions:
+                if sql_func.c_function == c_func.name:
+                    if c_func.name in disamg_mapping:
+                        funcs = disamg_mapping[c_func.name]
+                        for disamg_key in funcs:
+                            if disamg_key not in implemented_functions:
+                                try:
+                                    implemented_functions.add(disamg_key)
+                                    print(f"SQL: {sql_func.name} --> C: {c_func.name} --> {disamg_key}")
+                                    templs = self.template_generator.generate_function(sql_func, c_func, disamg_key)
+                                    templates.extend(templs)
+                                except Exception as e:
+                                    print(f"Error generating template for {sql_func.name}: {e}")
+                                    print("-" * 80)
+                                    continue
+                                print("-" * 80)
         return templates
+
+    def generate_duckdb_cpp_header(self, class_name: str):
+        # Hardcoded name for now
+        header_file = f"gen/{class_name}_functions.hpp"
+        header_template = """#include "meos_wrapper_simple.hpp"
+#include "common.hpp"
+#include "{header_file}"
+#include "time_util.hpp"
+#include "type_util.hpp"
+#include "tydef.hpp"
+
+#include "duckdb/common/exception.hpp"
+
+namespace duckdb {{
+
+"""
+        return header_template.format(header_file=header_file)
+
+    def generate_duckdb_footer(self):
+        return """} // namespace duckdb"""
+
+    def generate_duckdb_cpp(self, class_name: str, templates: List[DuckDBTemplate]):
+        cpp_code = ""
+        cpp_code += self.generate_duckdb_cpp_header(class_name)
+        for template in templates:
+            cpp_code += template.cpp_code + "\n"
+        cpp_code += self.generate_duckdb_footer()
+        
+        filename = f"{class_name}_functions.cpp"
+        with open(self.output_dir / filename, "w") as f:
+            f.write(cpp_code)
+
+    def generate_duckdb_hpp_header(self):
+        return """#pragma once
+
+#include "meos_wrapper_simple.hpp"
+#include "duckdb/common/typedefs.hpp"
+#include "duckdb/function/scalar_function.hpp"
+#include "duckdb/main/extension_util.hpp"
+
+namespace duckdb {
+
+class ExtensionLoader;
+
+"""
+
+    def generate_duckdb_hpp_footer(self):
+        return """\n} // namespace duckdb"""
+
+    def generate_duckdb_header(self, class_name: str, struct_name: str, templates: List[DuckDBTemplate]):
+        header_code = self.generate_duckdb_hpp_header()
+        header_code += f"struct {struct_name} {{\n"
+        for template in templates:
+            headline = template.cpp_code.split("\n")[0]
+            headline = headline.replace(f"{struct_name}::", "").replace(" {", "")
+            header_code += f"\tstatic {headline};\n"
+        header_code += "};\n"
+        header_code += self.generate_duckdb_hpp_footer()
+
+        filename = f"{class_name}_functions.hpp"
+        with open(self.output_dir / filename, "w") as f:
+            f.write(header_code)
+
+    def move_to_gen_dir(self):
+        for file in self.output_dir.glob("*.hpp"):
+            shutil.move(file, "../src/include/gen/" + file.name)
+        for file in self.output_dir.glob("*.cpp"):
+            shutil.move(file, "../src/gen/" + file.name)
 
 def main():
     import argparse
@@ -909,24 +975,17 @@ def main():
 
     args = parser.parse_args()
 
-    generator = CodeGenerator(output_dir=args.output_dir)
+    struct_name = "TboxFunctions"
+    generator = CodeGenerator(output_dir=args.output_dir, struct_name=struct_name)
     sql_functions = generator.parse_sql_functions(args.sql_files)
     c_functions = generator.parse_c_functions(args.c_files)
     generator.sql_to_c_mapping = generator.match_sql_and_c_functions(sql_functions, c_functions)
     disamg_mapping = generator.disambiguate_functions(sql_functions, c_functions)
-    for sql_func in sql_functions:
-        for c_func in c_functions:
-            if sql_func.c_function == c_func.name:
-                if c_func.name in disamg_mapping:
-                    print(f"{sql_func.name} --> {c_func.name}")
-                    print(disamg_mapping[c_func.name])
-                    print("-" * 20)
-    # for sql_func_hash, disamg_keys in mapped_sql_funcs.items():
-    #     print(sql_func_hash)
-    #     for disamg_key in disamg_keys:
-    #         print(f"\t{disamg_key}")
-    #     print("-" * 20)
-    # templates = generator.generate_duckdb_templates(sql_functions, generator.sql_to_c_mapping)
+    templates = generator.generate_duckdb_templates(sql_functions, c_functions, disamg_mapping)
+    print(f"Generated {len(templates)} templates")
+    generator.generate_duckdb_header("tbox_temp", struct_name, templates)
+    generator.generate_duckdb_cpp("tbox_temp", templates)
+    generator.move_to_gen_dir()
 
 if __name__ == "__main__":
     main()
