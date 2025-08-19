@@ -35,11 +35,19 @@ inline interval_t IntervalToIntervalt(MeosInterval *interval) {
     return duckdb_interval;
 }
 
-inline MeosInterval IntervaltToInterval(interval_t duckdb_interval) {
-    MeosInterval meos_interval;
-    meos_interval.time = duckdb_interval.micros;
-    meos_interval.day = duckdb_interval.days;
-    meos_interval.month = duckdb_interval.months;
+// inline MeosInterval IntervaltToInterval(interval_t duckdb_interval) {
+//     MeosInterval meos_interval;
+//     meos_interval.time = duckdb_interval.micros;
+//     meos_interval.day = duckdb_interval.days;
+//     meos_interval.month = duckdb_interval.months;
+//     return meos_interval;
+// }
+
+inline MeosInterval* IntervaltToInterval(interval_t duckdb_interval) {
+    MeosInterval *meos_interval = (MeosInterval *)malloc(sizeof(MeosInterval));
+    meos_interval->time = duckdb_interval.micros;
+    meos_interval->day = duckdb_interval.days;
+    meos_interval->month = duckdb_interval.months;
     return meos_interval;
 }
 

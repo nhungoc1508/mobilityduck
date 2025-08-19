@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.5)
 set(TARGET_NAME mobilityduck)
 project(${TARGET_NAME})
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Set the module path for custom Find modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/cmake" ${CMAKE_MODULE_PATH})
 
@@ -82,8 +85,10 @@ set(EXTENSION_SOURCES
     # src/temporal/temporal_types.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
-    src/temporal/tbox.cpp
-    src/temporal/tbox_functions.cpp
+    # src/temporal/tbox.cpp
+    # src/temporal/tbox_functions.cpp
+    src/gen/tbox_temp.cpp
+    src/gen/tbox_temp_functions.cpp
     src/set.cpp    
     src/span.cpp
     src/geoset.cpp

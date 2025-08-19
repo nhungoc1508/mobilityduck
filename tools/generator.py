@@ -64,6 +64,11 @@ BASETYPE_MAP = {
     "float": "T_FLOAT8"
 }
 
+CONVERTED_FUNCTIONS = [
+    "spanset_tbox_slice",
+    "span_tbox"
+]
+
 @dataclass
 class SQLFunction:
     """Represents a MobilityDB SQL function"""
@@ -209,10 +214,22 @@ class MobilityDBSQLParser:
             param_str = param_str.strip()
             if param_str:
                 parts = param_str.split()
-                if len(parts) >= 1 and "DEFAULT" not in param_str:
-                    param_type = parts[0]
-                    param_name = parts[1] if len(parts) > 1 else f"arg{len(parameters)}"
-                    parameters.append((param_type, param_name))
+                if len(parts) >= 1:
+                    if "DEFAULT" not in param_str:
+                        param_type = parts[0]
+                        param_name = parts[1] if len(parts) > 1 else f"arg{len(parameters)}"
+                        parameters.append((param_type, param_name, None))
+                    else:
+                        if len(parts) == 3: # e.g. integer DEFAULT 0
+                            param_type = parts[0]
+                            param_name = f"arg{len(parameters)}"
+                            default_value = parts[2]
+                            parameters.append((param_type, param_name, default_value))
+                        elif len(parts) == 4: # e.g. maxdecimaldigits int4 DEFAULT 15
+                            param_type = parts[1]
+                            param_name = parts[0]
+                            default_value = parts[3]
+                            parameters.append((param_type, param_name, default_value))
 
         return parameters
 
@@ -280,7 +297,7 @@ class CFunction:
     implementation: str
 
     def __str__(self):
-        return f"CFunction(name={self.name}\n\tparameters={self.parameters}\n\tneeds_basetype={self.needs_basetype}\n\tmeos_func={self.meos_func}\n\tmeos_args={self.meos_args}\n\tmeos_return_type={self.meos_return_type}\n\tnullable={self.nullable}\n\timplementation={self.implementation}\n\tdisambiguation_key={self.disambiguation_key})"
+        return f"CFunction(name={self.name}\n\tparameters={self.parameters}\n\tneeds_basetype={self.needs_basetype}\n\tmeos_func={self.meos_func}\n\tmeos_args={self.meos_args}\n\tmeos_return_type={self.meos_return_type}\n\tnullable={self.nullable}\n\timplementation={self.implementation})"
 
 class MobilityDBCParser:
     def __init__(self, mobilitydb_src_dir: str = os.getenv("MOBILITYDB_SRC_DIR")):
@@ -465,8 +482,8 @@ class DuckDBTemplateGenerator:
 
     def generate_function(self, sql_func: SQLFunction, c_func: CFunction, disamg_key: str) -> DuckDBTemplate:
         all_templates = []
-        # print(sql_func)
-        # print(c_func)
+        print(sql_func)
+        print(c_func)
         # If in/out -- only cast
         excluded_categories = ["selectivity", "topological", "position", "set", "extent", "comparison"]
         return_type = sql_func.return_type if sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES else CPP_RETURN_TYPE_MAP[sql_func.return_type]
@@ -567,11 +584,29 @@ class DuckDBTemplateGenerator:
     def _parse_meos_case_4_not_nullable(self, processing_lines):
         # e.g. ['uint8_t *wkb = (uint8_t *) VARDATA(bytea_wkb);', 'TBox *result = tbox_from_wkb(wkb, VARSIZE(bytea_wkb) - VARHDRSZ);', 'PG_FREE_IF_COPY(bytea_wkb, 0);', 'PG_RETURN_TBOX_P(result);']
         processing_code = []
+        size_arg = None
         for line in processing_lines:
             clean_line = "\n\t\t\t" + line.replace("result", "ret")
+            if "VARDATA" in clean_line:
+                line_tokens = clean_line.split(" ")
+                size_arg = line_tokens[-1].split("(")[1].replace(")", "").replace(";", "").strip()
+                token_line = f"{size_arg}.GetDataUnsafe()"
+                clean_line = clean_line.replace(size_arg, token_line).replace("VARDATA", "")
+            elif "VARSIZE" in clean_line:
+                clean_line = clean_line.replace(f"VARSIZE({size_arg}) - VARHDRSZ", f"{size_arg}.GetSize()")
             if "PG_" not in clean_line:
                 processing_code.append(clean_line)
         return processing_code
+
+    def _get_size_meos_type(self, meos_type: str, var_name: str) -> str:
+        VAR_SIZE_TYPES = ["Set", "SpanSet", "Temporal", "TInstant", "TSequence", "TSequenceSet"]
+        STATIC_SIZE_TYPES = ["Span", "TBox", "STBox"]
+        if meos_type in VAR_SIZE_TYPES:
+            return f"VARSIZE({var_name})"
+        elif meos_type in STATIC_SIZE_TYPES:
+            return f"sizeof({meos_type})"
+        else:
+            raise ValueError(f"Unsupported meos type: {meos_type}")
 
     def _generate_implementation(self, sql_func: SQLFunction, c_func: CFunction, is_cast: bool = False) -> str:
         implementation = ""
@@ -603,6 +638,8 @@ class DuckDBTemplateGenerator:
         for i, param_type in enumerate(executor_params):
             param_strs.append(f"{param_type} args{i}")
         implementation += f", ".join(param_strs)
+        if c_func.nullable:
+            implementation += ", ValidityMask &mask, idx_t idx"
         implementation += ") {"
 
         # TBox *tbox = ...
@@ -613,9 +650,9 @@ class DuckDBTemplateGenerator:
             if param_type == 'DATUM':
                 cpp_type = "Datum"
                 input_template = """
-            Datum {param_name} = DataHelpers::getDatum(args{idx});
+            Datum {param_name} = DataHelpers::getDatum<{cpp_type}>(args{idx});
 """
-                input_lines.append(input_template.format(param_name=param_name, idx=idx, func_name=c_func.name))
+                input_lines.append(input_template.format(param_name=param_name, cpp_type=executor_params[idx], idx=idx, func_name=c_func.name))
             else:
                 cpp_type = PG_TYPE_MAP[param_type]
                 if cpp_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES:
@@ -658,7 +695,7 @@ class DuckDBTemplateGenerator:
             for i in range(len(sql_func.parameters)):
                 if c_func.parameters[i][0] == "DATUM":
                     basetype = BASETYPE_MAP[sql_func.parameters[i][0]]
-                    implementation += f"\t\t\tmeosType basetype = DataHelpers::getMeosType(args{i});\n"
+                    implementation += f"\t\t\tmeosType basetype = DataHelpers::getMeosType<{executor_params[i]}>(args{i});\n"
                     break
 
         # Parse processing line(s)
@@ -682,7 +719,7 @@ class DuckDBTemplateGenerator:
             meos_args = self._validate_meos_args(c_func.meos_args, c_func.parameters)
             line = f"\t\t\t{output_type} ret = {c_func.meos_func}({', '.join(meos_args)});"
             processing_code.append(line)
-            # print("Case 1")
+            print("Case 1")
             # print(processing_code)
         elif len(processing_lines) == 2:
             """
@@ -692,10 +729,12 @@ class DuckDBTemplateGenerator:
             Need to parse line[-2]
             """
             meos_func, meos_args_og = self._parse_meos_case_2(processing_lines)
+            if meos_func in CONVERTED_FUNCTIONS:
+                meos_func = f"DataHelpers::{meos_func}"
             meos_args = self._validate_meos_args(meos_args_og, c_func.parameters)
             line = f"\t\t\t{output_type} ret = {meos_func}({', '.join(meos_args)});"
             processing_code.append(line)
-            # print("Case 2")
+            print("Case 2")
             # print(processing_code)
         elif len(processing_lines) == 3:
             """
@@ -705,10 +744,12 @@ class DuckDBTemplateGenerator:
             Has a palloc()
             """
             meos_func, meos_args_og = self._parse_meos_case_3(processing_lines)
+            if meos_func in CONVERTED_FUNCTIONS:
+                meos_func = f"DataHelpers::{meos_func}"
             meos_args = self._validate_meos_args(meos_args_og, c_func.parameters)
             processing_code.append(f"\t\t\t{output_type}ret = ({output_type})malloc(sizeof({output_type[:-2]}));")
             processing_code.append(f"\n\t\t\t{meos_func}({', '.join(meos_args)});")
-            # print("Case 3")
+            print("Case 3")
             # print(processing_code)
         elif len(processing_lines) == 4 and c_func.nullable:
             """
@@ -747,11 +788,11 @@ class DuckDBTemplateGenerator:
                 processing_code.append(f"\n\t\t\t\treturn {output_type_str}();")
                 processing_code.append("\n\t\t\t}")
             # print(processing_code)
-            # print("Case 4")
+            print("Case 4")
         elif len(processing_lines) == 4 and not c_func.nullable:
             processing_code = self._parse_meos_case_4_not_nullable(processing_lines)
             # print(processing_code)
-            # print("Case 4 not nullable")
+            print("Case 4 not nullable")
         else:
             """
             Case: special case:
@@ -765,16 +806,23 @@ class DuckDBTemplateGenerator:
         output_lines = []
         if "*" in output_type and sql_func.return_type in MOBILITYDUCK_CUSTOM_TYPES:
             # Need to return string_t
+#             output_template = """
+#             string_t blob = StringVector::AddStringOrBlob(result, (const char *)ret, VARSIZE(ret));
+# """
+            size_str = self._get_size_meos_type(output_type[:-2], "ret")
             output_template = """
-            string_t blob = StringVector::AddStringOrBlob(result, (const char *)ret, VARSIZE(ret));
+            size_t ret_size = {size_str};
+            char *ret_data = (char*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t blob(ret_data, ret_size);
 """
-            output_lines.append(output_template)
+            output_lines.append(output_template.format(size_str=size_str))
         else:
             output_template = """
 """
             output_lines.append(output_template)
         for (param_type, param_name, idx, cast) in c_func.parameters:
-            if "_P" in param_type:
+            if "_P" in param_type and param_type not in ["BYTEA_P", "TEXT_P"]:
                 output_lines.append(f"\n\t\t\tfree({param_name});")
 
         if (output_type[:-2].lower() in MOBILITYDUCK_CUSTOM_TYPES):
