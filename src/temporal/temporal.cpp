@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_functions.hpp"
+#include "spanset.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -193,6 +194,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 {type},
                 LogicalType::TIMESTAMP_TZ,
                 TemporalFunctions::Tinstant_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "getTime",
+                {type},
+                SpansetTypes::tstzspanset(),
+                TemporalFunctions::Temporal_time
             )
         );
 

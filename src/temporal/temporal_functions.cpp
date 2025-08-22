@@ -2,6 +2,7 @@
 #include "common.hpp"
 // #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
+#include "spanset.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -18,7 +19,10 @@ static const alias_type_struct DUCKDB_ALIAS_TYPE_CATALOG[] = {
     {(char*)"TINT", T_TINT},
     {(char*)"TFLOAT", T_TFLOAT},
     {(char*)"TBOOL", T_TBOOL},
-    {(char*)"TTEXT", T_TTEXT}
+    {(char*)"TTEXT", T_TTEXT},
+    {(char*)"TGEOMPOINT", T_TGEOMPOINT},
+    {(char*)"TGEOGPOINT", T_TGEOGPOINT},
+    {(char*)"TGEOMETRY", T_TGEOMETRY}
 };
 
 meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
@@ -29,14 +33,6 @@ meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     }
     throw InternalException("Unknown alias: " + std::string(alias));
 }
-
-// interval_t TemporalHelpers::MeosToDuckDBInterval(MeosInterval *interval) {
-//     interval_t duckdb_interval;
-//     duckdb_interval.months = interval->month;
-//     duckdb_interval.days = interval->day;
-//     duckdb_interval.micros = interval->time;
-//     return duckdb_interval;
-// }
 
 vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type) {
     vector<Value> values;
@@ -52,17 +48,9 @@ vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count,
     return values;
 }
 
-// timestamp_tz_t TemporalHelpers::DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
-//     timestamp_tz_t meos_ts;
-//     meos_ts.value = duckdb_ts.value - TIMESTAMP_ADAPT_GAP_MS;
-//     return meos_ts;
-// }
-
-// timestamp_tz_t TemporalHelpers::MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
-//     timestamp_tz_t duckdb_ts;
-//     duckdb_ts.value = meos_ts.value + TIMESTAMP_ADAPT_GAP_MS;
-//     return duckdb_ts;
-// }
+/* ***************************************************
+ * In/out functions: VARCHAR <-> Temporal
+ ****************************************************/
 
 bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto &target_type = result.GetType();
@@ -82,7 +70,6 @@ bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count,
                     success = false;
                     return string_t();
                 }
-                // size_t temp_size = VARSIZE_ANY_EXHDR(temp) + VARHDRSZ;
                 size_t temp_size = temporal_mem_size(temp);
                 char *temp_data = (char*)malloc(temp_size);
                 memcpy(temp_data, temp, temp_size);
@@ -118,6 +105,10 @@ bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count
     return success;
 }
 
+/* ***************************************************
+ * Constructor functions
+ ****************************************************/
+
 void TemporalFunctions::Tinstant_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<int64_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -137,6 +128,220 @@ void TemporalFunctions::Tinstant_constructor(DataChunk &args, ExpressionState &s
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
+void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto row_count = args.size();
+    auto arg_count = args.ColumnCount();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(row_count);
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+
+    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    bool lower_inc = true;
+    bool upper_inc = true;
+
+    if (arg_count > 1) {
+        auto &interp_child = args.data[1];
+        interp_child.Flatten(row_count);
+        auto interp_str = interp_child.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+    if (arg_count > 2) {
+        auto &lower_inc_child = args.data[2];
+        lower_inc = lower_inc_child.GetValue(0).GetValue<bool>();
+    }
+    if (arg_count > 3) {
+        auto &upper_inc_child = args.data[3];
+        upper_inc = upper_inc_child.GetValue(0).GetValue<bool>();
+    }
+
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, row_count,
+        [&](const list_entry_t &list) {
+            auto offset = list.offset;
+            auto length = list.length;
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            if (!instants) {
+                throw InternalException("Memory allocation failed in TsequenceConstructor");
+            }
+            for (idx_t i = 0; i < length; i++) {
+                /* Input raw MEOS binary */
+                idx_t child_idx = offset + i;
+                auto wkb_data = child_data[child_idx];
+                Temporal *temp = nullptr;
+                if (wkb_data.GetSize() > 0) {
+                    temp = (Temporal*)malloc(wkb_data.GetSize());
+                    memcpy(temp, wkb_data.GetDataUnsafe(), wkb_data.GetSize());
+                }
+                if (!temp) {
+                    free(instants);
+                    throw InternalException("Failure in TsequenceConstructor: unable to convert WKB to temporal");
+                }
+                instants[i] = (TInstant*)temp;
+            }
+
+            TSequence *seq = tsequence_make((const TInstant **)instants, length,
+                lower_inc, upper_inc, interp, true);
+            if (!seq) {
+                for (idx_t j = 0; j < length; j++) {
+                    free(instants[j]);
+                }
+                free(instants);
+                throw InternalException("Failure in TsequenceConstructor: unable to create sequence");
+            }
+
+            size_t temp_size = temporal_mem_size((Temporal*)seq);
+            char *temp_data = (char*)malloc(temp_size);
+            memcpy(temp_data, (Temporal*)seq, temp_size);
+            string_t result_str(temp_data, temp_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(seq);
+            for (idx_t j = 0; j < length; j++) {
+                free(instants[j]);
+            }
+            free(instants);
+            free(temp_data);
+            return stored_data;
+        }
+    );
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, count,
+        [&](const list_entry_t &list) {
+            auto offset = list.offset;
+            auto length = list.length;
+
+            TSequence **sequences = (TSequence **)malloc(length * sizeof(TSequence *));
+            if (!sequences) {
+                throw InternalException("Memory allocation failed in TsequencesetConstructor");
+            }
+            for (idx_t i = 0; i < length; i++) {
+                idx_t child_idx = offset + i;
+                auto wkb_data = child_data[child_idx];
+                Temporal *temp = nullptr;
+                if (wkb_data.GetSize() > 0) {
+                    temp = (Temporal*)malloc(wkb_data.GetSize());
+                    memcpy(temp, wkb_data.GetDataUnsafe(), wkb_data.GetSize());
+                }
+                if (!temp) {
+                    free(sequences);
+                    throw InternalException("Failure in TsequencesetConstructor: unable to convert WKB to temporal");
+                }
+                sequences[i] = (TSequence*)temp;
+            }
+
+            TSequenceSet *seqset = tsequenceset_make((const TSequence **)sequences, length, true);
+            if (!seqset) {
+                for (idx_t j = 0; j < length; j++) {
+                    free(sequences[j]);
+                }
+                free(sequences);
+                throw InternalException("Failure in TsequencesetConstructor: unable to create sequence set");
+            }
+
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seqset) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)seqset);
+            char *temp_data = (char*)malloc(temp_size);
+            memcpy(temp_data, (Temporal*)seqset, temp_size);
+            string_t result_str(temp_data, temp_size);
+            free(seqset);
+            for (idx_t j = 0; j < length; j++) {
+                free(sequences[j]);
+            }
+            free(sequences);
+            return result_str;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Conversion functions: [TYPE] -> Temporal
+ ****************************************************/
+
+ void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalToTstzspan: unable to cast string to temporal");
+                return string_t();
+            }
+            Span *ret = (Span*)malloc(sizeof(Span));
+            temporal_set_tstzspan(temp, ret);
+            size_t span_size = sizeof(*ret);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, ret, span_size);
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            free(span_buffer);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TnumberToSpan: unable to cast string to temporal");
+                return string_t();
+            }
+            Span *ret = tnumber_to_span(temp);
+            size_t span_size = sizeof(*ret);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, ret, span_size);
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            free(span_buffer);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Accessor functions
+ ****************************************************/
 
 void TemporalFunctions::Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -201,6 +406,37 @@ void TemporalFunctions::Tinstant_value(DataChunk &args, ExpressionState &state, 
             Datum ret = tinstant_value((TInstant*)temp);
             free(temp);
             return (int64_t)ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalValueset: unable to cast string to temporal");
+                return string_t();
+            }
+            int32_t count;
+            Datum *values = temporal_values_p(temp, &count);
+            meosType basetype = temptype_basetype((meosType)temp->temptype);
+            if (temp->temptype == T_TBOOL) {
+                // TODO: handle tbool
+            }
+            Set *ret = set_make_free(values, count, basetype, false);
+            size_t total_size = set_mem_size(ret);
+            string_t blob = StringVector::AddStringOrBlob(result, (const char*)ret, total_size);        
+            free(ret);
+            return blob;
         }
     );
     if (args.size() == 1) {
@@ -409,6 +645,35 @@ void TemporalFunctions::Tinstant_timestamptz(DataChunk &args, ExpressionState &s
     }
 }
 
+void TemporalFunctions::Temporal_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetData(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalTime: unable to cast string to temporal");
+                return string_t();
+            }
+            SpanSet *ret = temporal_time(temp);
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
+            uint8_t *temp_data = (uint8_t*)malloc(temp_size);
+            memcpy(temp_data, (Temporal*)ret, temp_size);
+            string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, bool, interval_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -427,312 +692,6 @@ void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &stat
             free(ret);
             free(temp);
             return duckdb_interval;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &array_vec = args.data[0];
-    array_vec.Flatten(count);
-    auto *list_entries = ListVector::GetData(array_vec);
-    auto &child_vec = ListVector::GetEntry(array_vec);
-
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
-    bool lower_inc = true;
-    bool upper_inc = true;
-
-    if (args.size() > 1) {
-        auto &interp_child = args.data[1];
-        interp_child.Flatten(count);
-        auto interp_str = interp_child.GetValue(0).ToString();
-        interp = interptype_from_string(interp_str.c_str());
-    }
-    if (args.size() > 2) {
-        auto &lower_inc_child = args.data[2];
-        lower_inc = lower_inc_child.GetValue(0).GetValue<bool>();
-    }
-    if (args.size() > 3) {
-        auto &upper_inc_child = args.data[3];
-        upper_inc = upper_inc_child.GetValue(0).GetValue<bool>();
-    }
-
-    child_vec.Flatten(ListVector::GetListSize(array_vec));
-    auto child_data = FlatVector::GetData<string_t>(child_vec);
-
-    UnaryExecutor::Execute<list_entry_t, string_t>(
-        array_vec, result, count,
-        [&](const list_entry_t &list) {
-            auto offset = list.offset;
-            auto length = list.length;
-            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
-            if (!instants) {
-                throw InternalException("Memory allocation failed in TsequenceConstructor");
-            }
-            for (idx_t i = 0; i < length; i++) {
-                idx_t child_idx = offset + i;
-                auto wkb_data = child_data[child_idx];
-                Temporal *temp = nullptr;
-                if (wkb_data.GetSize() > 0) {
-                    temp = (Temporal*)malloc(wkb_data.GetSize());
-                    memcpy(temp, wkb_data.GetDataUnsafe(), wkb_data.GetSize());
-                }
-                if (!temp) {
-                    free(instants);
-                    throw InternalException("Failure in TsequenceConstructor: unable to convert WKB to temporal");
-                }
-                instants[i] = (TInstant*)temp;
-            }
-
-            TSequence *seq = tsequence_make((const TInstant **)instants, length,
-                lower_inc, upper_inc, interp, true);
-            if (!seq) {
-                for (idx_t j = 0; j < length; j++) {
-                    free(instants[j]);
-                }
-                free(instants);
-                throw InternalException("Failure in TsequenceConstructor: unable to create sequence");
-            }
-
-            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seq) + VARHDRSZ;
-            size_t temp_size = temporal_mem_size((Temporal*)seq);
-            char *temp_data = (char*)malloc(temp_size);
-            memcpy(temp_data, (Temporal*)seq, temp_size);
-            string_t result_str(temp_data, temp_size);
-            free(seq);
-            for (idx_t j = 0; j < length; j++) {
-                free(instants[j]);
-            }
-            free(instants);
-            return result_str;
-        }
-    );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
-    interpType interp = INTERP_NONE;
-    if (args.size() > 1) {
-        auto &interp_child = args.data[1];
-        interp_child.Flatten(args.size());
-        auto interp_str = interp_child.GetValue(0).ToString();
-        interp = interptype_from_string(interp_str.c_str());
-    }
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) {
-            Temporal *temp = nullptr;
-            if (input.GetSize() > 0) {
-                temp = (Temporal*)malloc(input.GetSize());
-                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!temp) {
-                throw InternalException("Failure in TemporalToTsequence: unable to cast string to temporal");
-                return string_t();
-            }
-            TSequence *ret = temporal_to_tsequence(temp, interp);
-            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
-            size_t temp_size = temporal_mem_size((Temporal*)ret);
-            char *temp_data = (char*)malloc(temp_size);
-            memcpy(temp_data, (Temporal*)ret, temp_size);
-            string_t result_str(temp_data, temp_size);
-            free(temp);
-            return result_str;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &array_vec = args.data[0];
-    array_vec.Flatten(count);
-    auto *list_entries = ListVector::GetData(array_vec);
-    auto &child_vec = ListVector::GetEntry(array_vec);
-
-    child_vec.Flatten(ListVector::GetListSize(array_vec));
-    auto child_data = FlatVector::GetData<string_t>(child_vec);
-
-    UnaryExecutor::Execute<list_entry_t, string_t>(
-        array_vec, result, count,
-        [&](const list_entry_t &list) {
-            auto offset = list.offset;
-            auto length = list.length;
-
-            TSequence **sequences = (TSequence **)malloc(length * sizeof(TSequence *));
-            if (!sequences) {
-                throw InternalException("Memory allocation failed in TsequencesetConstructor");
-            }
-            for (idx_t i = 0; i < length; i++) {
-                idx_t child_idx = offset + i;
-                auto wkb_data = child_data[child_idx];
-                Temporal *temp = nullptr;
-                if (wkb_data.GetSize() > 0) {
-                    temp = (Temporal*)malloc(wkb_data.GetSize());
-                    memcpy(temp, wkb_data.GetDataUnsafe(), wkb_data.GetSize());
-                }
-                if (!temp) {
-                    free(sequences);
-                    throw InternalException("Failure in TsequencesetConstructor: unable to convert WKB to temporal");
-                }
-                sequences[i] = (TSequence*)temp;
-            }
-
-            TSequenceSet *seqset = tsequenceset_make((const TSequence **)sequences, length, true);
-            if (!seqset) {
-                for (idx_t j = 0; j < length; j++) {
-                    free(sequences[j]);
-                }
-                free(sequences);
-                throw InternalException("Failure in TsequencesetConstructor: unable to create sequence set");
-            }
-
-            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)seqset) + VARHDRSZ;
-            size_t temp_size = temporal_mem_size((Temporal*)seqset);
-            char *temp_data = (char*)malloc(temp_size);
-            memcpy(temp_data, (Temporal*)seqset, temp_size);
-            string_t result_str(temp_data, temp_size);
-            free(seqset);
-            for (idx_t j = 0; j < length; j++) {
-                free(sequences[j]);
-            }
-            free(sequences);
-            return result_str;
-        }
-    );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
-    interpType interp = INTERP_NONE;
-    if (args.size() > 1) {
-        auto &interp_child = args.data[1];
-        interp_child.Flatten(args.size());
-        auto interp_str = interp_child.GetValue(0).ToString();
-        interp = interptype_from_string(interp_str.c_str());
-    }
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) {
-            Temporal *temp = nullptr;
-            if (input.GetSize() > 0) {
-                temp = (Temporal*)malloc(input.GetSize());
-                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!temp) {
-                throw InternalException("Failure in TemporalToTsequenceset: unable to cast string to temporal");
-                return string_t();
-            }
-            TSequenceSet *ret = temporal_to_tsequenceset(temp, interp);
-            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
-            size_t temp_size = temporal_mem_size((Temporal*)ret);
-            char *temp_data = (char*)malloc(temp_size);
-            memcpy(temp_data, (Temporal*)ret, temp_size);
-            string_t result_str(temp_data, temp_size);
-            free(temp);
-            return result_str;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) {
-            Temporal *temp = nullptr;
-            if (input.GetSize() > 0) {
-                temp = (Temporal*)malloc(input.GetSize());
-                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!temp) {
-                throw InternalException("Failure in TemporalToTstzspan: unable to cast string to temporal");
-                return string_t();
-            }
-            Span *ret = (Span*)malloc(sizeof(Span));
-            temporal_set_tstzspan(temp, ret);
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
-            free(ret);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) {
-            Temporal *temp = nullptr;
-            if (input.GetSize() > 0) {
-                temp = (Temporal*)malloc(input.GetSize());
-                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!temp) {
-                throw InternalException("Failure in TnumberToSpan: unable to cast string to temporal");
-                return string_t();
-            }
-            Span *ret = tnumber_to_span(temp);
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
-            free(ret);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) {
-            Temporal *temp = nullptr;
-            if (input.GetSize() > 0) {
-                temp = (Temporal*)malloc(input.GetSize());
-                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!temp) {
-                throw InternalException("Failure in TemporalValueset: unable to cast string to temporal");
-                return string_t();
-            }
-            int32_t count;
-            Datum *values = temporal_values_p(temp, &count);
-            meosType basetype = temptype_basetype((meosType)temp->temptype);
-            if (temp->temptype == T_TBOOL) {
-                // TODO: handle tbool
-            }
-            Set *ret = set_make_free(values, count, basetype, false);
-            size_t total_size = set_mem_size(ret);
-            string_t blob = StringVector::AddStringOrBlob(result, (const char*)ret, total_size);        
-            free(ret);
-            return blob;
         }
     );
     if (args.size() == 1) {
@@ -780,6 +739,82 @@ void TemporalFunctions::Temporal_sequences(DataChunk &args, ExpressionState &sta
         }
     );
     ListVector::SetListSize(result, total_count);
+}
+
+/* ***************************************************
+ * Transformation functions
+ ****************************************************/
+
+void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
+    interpType interp = INTERP_NONE;
+    if (args.size() > 1) {
+        auto &interp_child = args.data[1];
+        interp_child.Flatten(args.size());
+        auto interp_str = interp_child.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalToTsequence: unable to cast string to temporal");
+                return string_t();
+            }
+            TSequence *ret = temporal_to_tsequence(temp, interp);
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
+            char *temp_data = (char*)malloc(temp_size);
+            memcpy(temp_data, (Temporal*)ret, temp_size);
+            string_t result_str(temp_data, temp_size);
+            free(temp);
+            return result_str;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
+    interpType interp = INTERP_NONE;
+    if (args.size() > 1) {
+        auto &interp_child = args.data[1];
+        interp_child.Flatten(args.size());
+        auto interp_str = interp_child.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetDataUnsafe(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalToTsequenceset: unable to cast string to temporal");
+                return string_t();
+            }
+            TSequenceSet *ret = temporal_to_tsequenceset(temp, interp);
+            // size_t temp_size = VARSIZE_ANY_EXHDR((Temporal*)ret) + VARHDRSZ;
+            size_t temp_size = temporal_mem_size((Temporal*)ret);
+            char *temp_data = (char*)malloc(temp_size);
+            memcpy(temp_data, (Temporal*)ret, temp_size);
+            string_t result_str(temp_data, temp_size);
+            free(temp);
+            return result_str;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
 }
 
 void TemporalFunctions::Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
