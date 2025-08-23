@@ -61,6 +61,7 @@ struct TemporalFunctions {
     static void Temporal_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_start_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Transformation functions
@@ -75,6 +76,8 @@ struct TemporalFunctions {
      * Restriction functions
      ****************************************************/
     static void Temporal_at_value_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -6,13 +6,11 @@
 #include "span.hpp"
 #include "set.hpp"
 
+#include "tydef.hpp"
+
 namespace duckdb {
 
 class ExtensionLoader;
-
-#define OUT_DEFAULT_DECIMAL_DIGITS 15
-#define Float8GetDatum(X) ((Datum) *(uint64_t *) &(X))
-#define Int32GetDatum(X) ((Datum) (X))
 
 struct StboxFunctions {
     /* ***************************************************

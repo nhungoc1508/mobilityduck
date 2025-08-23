@@ -359,6 +359,36 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             )
         );
 
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "startTimestamp",
+                {type},
+                LogicalType::TIMESTAMP_TZ,
+                TemporalFunctions::Temporal_start_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atTime",
+                {type, SpanTypes::TSTZSPAN()},
+                type,
+                TemporalFunctions::Temporal_at_tstzspan
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atTime",
+                {type, SpansetTypes::tstzspanset()},
+                type,
+                TemporalFunctions::Temporal_at_tstzspanset
+            )
+        );
+
         if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
             ExtensionUtil::RegisterFunction(
                 instance,

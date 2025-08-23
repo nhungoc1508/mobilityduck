@@ -9,9 +9,10 @@
 #include "temporal/temporal.hpp"
 #include "temporal/tbox.hpp"
 #include "geo/stbox.hpp"
+#include "geo/tgeompoint.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
-#include "tgeompoint.hpp"
+// #include "tgeompoint.hpp"
 #include "span.hpp"
 #include "spanset.hpp"
 #include "duckdb/common/exception.hpp"
@@ -84,9 +85,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
 
-	TGeomPointTypes::RegisterScalarFunctions(instance);
-	TGeomPointTypes::RegisterTypes(instance);
-	TGeomPointTypes::RegisterCastFunctions(instance);
+	TgeompointType::RegisterType(instance);
+	TgeompointType::RegisterCastFunctions(instance);
+	TgeompointType::RegisterScalarFunctions(instance);
 
 	TGeometryTypes::RegisterScalarFunctions(instance);
 	TGeometryTypes::RegisterTypes(instance);

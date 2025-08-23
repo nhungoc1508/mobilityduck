@@ -73,3 +73,7 @@ typedef union
 
 #define VARHDRSZ		((int32) sizeof(int32))
 }
+
+#define OUT_DEFAULT_DECIMAL_DIGITS 15
+// #define Float8GetDatum(X) ((Datum) *(uint64_t *) &(X))
+#define Int32GetDatum(X) ((Datum) (X))
