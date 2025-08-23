@@ -152,6 +152,11 @@ void SpanTypes::RegisterScalarFunctions(DatabaseInstance &db) {
 
         ExtensionUtil::RegisterFunction(
             db,
+            ScalarFunction("span", {base_type, base_type}, span_type, SpanFunctions::Span_binary_constructor)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
             ScalarFunction("span", {base_type}, span_type, SpanFunctions::Value_to_span)                 
         );
 
@@ -334,6 +339,64 @@ void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Ve
             
             return stored_data;
         });
+}
+
+
+
+// --- Span binary constructor ---
+static void Span_binary_constructor_tstz(Vector &args0, Vector &args1, Vector &result, idx_t count) {
+    auto &result_type = result.GetType();
+    std::string type_alias = result_type.GetAlias();
+    meosType spantype = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    if (spantype == T_UNKNOWN) {
+        throw InvalidInputException("Unknown span type: " + type_alias);
+    }
+
+    BinaryExecutor::Execute<timestamp_tz_t, timestamp_tz_t, string_t>(
+        args0, args1, result, count,
+        [&](timestamp_tz_t lower_duckdb, timestamp_tz_t upper_duckdb) {
+            TimestampTz lower = (TimestampTz)DuckDBToMeosTimestamp(lower_duckdb);
+            TimestampTz upper = (TimestampTz)DuckDBToMeosTimestamp(upper_duckdb);
+            Datum lower_dat = (Datum)lower;
+            Datum upper_dat = (Datum)upper;
+            
+            // Default values for now
+            bool lower_inc = true;
+            bool upper_inc = false;
+
+            meosType basetype = spantype_basetype(spantype);
+            Span *span = span_make(lower, upper, lower_inc, upper_inc, basetype);
+            if (span == NULL) {
+                throw InvalidInputException("Failed to create span from timestamps");
+            }
+            size_t span_size = sizeof(Span);
+            char *span_data = (char*)malloc(span_size);
+            memcpy(span_data, span, span_size);
+            free(span);
+            return string_t(span_data, span_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
+
+void SpanFunctions::Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &args0 = args.data[0];
+    auto &args1 = args.data[1];
+
+    auto out_type = result.GetType();
+    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+
+    switch (span_type) {
+        case T_TSTZSPAN:
+            Span_binary_constructor_tstz(args0, args1, result, args.size());
+            break;
+        default:
+            throw NotImplementedException("span(<type>, <type>) not yet implemented for type: " + out_type.GetAlias());
+    }
 }
 
 

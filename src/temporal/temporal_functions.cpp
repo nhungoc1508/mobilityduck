@@ -901,4 +901,40 @@ void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionSta
     }
 }
 
+/* ***************************************************
+ * Restriction functions
+ ****************************************************/
+
+void TemporalFunctions::Temporal_at_value_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, bool, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input, bool value) {
+            Temporal *temp = nullptr;
+            if (input.GetSize() > 0) {
+                temp = (Temporal*)malloc(input.GetSize());
+                memcpy(temp, input.GetData(), input.GetSize());
+            }
+            if (!temp) {
+                throw InternalException("Failure in TemporalAtValue: unable to cast string to temporal");
+                return string_t();
+            }
+            Temporal *ret = temporal_restrict_value(temp, (Datum)value, true);
+            if (!ret) {
+                throw InternalException("Failure in TemporalAtValue: unable to cast string to temporal");
+                return string_t();
+            }
+            size_t temp_size = temporal_mem_size(ret);
+            char *temp_data = (char*)malloc(temp_size);
+            memcpy(temp_data, ret, temp_size);
+            string_t ret_str(temp_data, temp_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb

@@ -8,6 +8,7 @@
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/tbox.hpp"
+#include "geo/stbox.hpp"
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
 #include "tgeompoint.hpp"
@@ -74,6 +75,10 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TboxType::RegisterType(instance);
 	TboxType::RegisterCastFunctions(instance);
 	TboxType::RegisterScalarFunctions(instance);
+
+	StboxType::RegisterType(instance);
+	StboxType::RegisterCastFunctions(instance);
+	StboxType::RegisterScalarFunctions(instance);
   
   	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);

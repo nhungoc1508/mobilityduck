@@ -391,6 +391,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             );
         }
     }
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TBOOL(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TemporalFunctions::Temporal_at_value_tbool
+        )
+    );
 }
 
 } // namespace duckdb

@@ -84,6 +84,8 @@ set(EXTENSION_SOURCES
     src/temporal/temporal_functions.cpp
     src/temporal/tbox.cpp
     src/temporal/tbox_functions.cpp
+    src/geo/stbox.cpp
+    src/geo/stbox_functions.cpp
     src/set.cpp    
     src/span.cpp
     src/geoset.cpp
