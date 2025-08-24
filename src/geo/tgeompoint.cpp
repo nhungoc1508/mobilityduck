@@ -6,6 +6,7 @@
 #include "temporal/temporal_functions.hpp"
 #include "geo/stbox.hpp"
 #include "spanset.hpp"
+#include "temporal/temporal.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -179,6 +180,16 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "atTime",
+            {TGEOMPOINT(), SpansetTypes::tstzspanset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_at_tstzspanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "valueAtTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
             WKB_BLOB(),
@@ -221,6 +232,64 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT(), TGEOMPOINT()},
             LogicalType::BOOLEAN,
             TgeompointFunctions::Adisjoint_tgeo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eDwithin",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Edwithin_tgeo_tgeo
+        )
+    );
+
+    /* ***************************************************
+     * Temporal-spatial relationships
+     ****************************************************/
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_tgeo_tgeo
+        )
+    );
+
+    /* ***************************************************
+     * Operators (workaround as functions)
+     ****************************************************/
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&&", // overlaps
+            {TGEOMPOINT(), StboxType::STBOX()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&&", // overlaps
+            {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "@>", // contains
+            {TGEOMPOINT(), StboxType::STBOX()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Temporal_contains_tgeompoint_stbox
         )
     );
 }

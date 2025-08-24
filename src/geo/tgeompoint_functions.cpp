@@ -475,4 +475,199 @@ void TgeompointFunctions::Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
     }
 }
 
+void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t tgeom1_blob, string_t tgeom2_blob, double dist, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *tgeom1_data = reinterpret_cast<const uint8_t*>(tgeom1_blob.GetData());
+            size_t tgeom1_data_size = tgeom1_blob.GetSize();
+            uint8_t *tgeom1_data_copy = (uint8_t*)malloc(tgeom1_data_size);
+            memcpy(tgeom1_data_copy, tgeom1_data, tgeom1_data_size);
+            Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
+            if (!tgeom1) {
+                free(tgeom1_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
+            size_t tgeom2_data_size = tgeom2_blob.GetSize();
+            uint8_t *tgeom2_data_copy = (uint8_t*)malloc(tgeom2_data_size);
+            memcpy(tgeom2_data_copy, tgeom2_data, tgeom2_data_size);
+            Temporal *tgeom2 = reinterpret_cast<Temporal*>(tgeom2_data_copy);
+            if (!tgeom2) {
+                free(tgeom2_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int ret = edwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
+            free(tgeom1);
+            free(tgeom2);
+            if (ret < 0) {
+                mask.SetInvalid(idx);
+                return false;
+            }
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Temporal-spatial relationships
+ ****************************************************/
+
+void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t tgeom1_blob, string_t tgeom2_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *tgeom1_data = reinterpret_cast<const uint8_t*>(tgeom1_blob.GetData());
+            size_t tgeom1_data_size = tgeom1_blob.GetSize();
+            uint8_t *tgeom1_data_copy = (uint8_t*)malloc(tgeom1_data_size);
+            memcpy(tgeom1_data_copy, tgeom1_data, tgeom1_data_size);
+            Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
+            if (!tgeom1) {
+                free(tgeom1_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
+            size_t tgeom2_data_size = tgeom2_blob.GetSize();
+            uint8_t *tgeom2_data_copy = (uint8_t*)malloc(tgeom2_data_size);
+            memcpy(tgeom2_data_copy, tgeom2_data, tgeom2_data_size);
+            Temporal *tgeom2 = reinterpret_cast<Temporal*>(tgeom2_data_copy);
+            if (!tgeom2) {
+                free(tgeom2_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            // extern Temporal *tdwithin_tgeo_tgeo(const Temporal *temp1, const Temporal *temp2, double dist, bool restr, bool atvalue);
+            Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist, false, false);
+            if (!ret) {
+                free(tgeom1);
+                free(tgeom2);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Operators (workaround as functions)
+ ****************************************************/
+
+void TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t stbox_blob) -> bool {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
+            if (!tgeom) {
+                free(tgeom_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(stbox_blob.GetData());
+            size_t stbox_data_size = stbox_blob.GetSize();
+            uint8_t *stbox_data_copy = (uint8_t*)malloc(stbox_data_size);
+            memcpy(stbox_data_copy, stbox_data, stbox_data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(stbox_data_copy);
+            if (!stbox) {
+                free(stbox_data_copy);
+                throw InvalidInputException("Invalid STBOX data: null pointer");
+            }
+            bool ret = overlaps_tspatial_stbox(tgeom, stbox);
+            free(tgeom);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t span_blob) -> bool {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
+            if (!tgeom) {
+                free(tgeom_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            
+            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
+            size_t span_data_size = span_blob.GetSize();
+            uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
+            memcpy(span_data_copy, span_data, span_data_size);
+            Span *span = reinterpret_cast<Span*>(span_data_copy);
+            if (!span) {
+                free(span_data_copy);
+                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+            }
+            bool ret = overlaps_tstzspan_temporal(span, tgeom);
+            free(tgeom);
+            free(span);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t stbox_blob) -> bool {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
+            if (!tgeom) {
+                free(tgeom_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(stbox_blob.GetData());
+            size_t stbox_data_size = stbox_blob.GetSize();
+            uint8_t *stbox_data_copy = (uint8_t*)malloc(stbox_data_size);
+            memcpy(stbox_data_copy, stbox_data, stbox_data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(stbox_data_copy);
+            if (!stbox) {
+                free(stbox_data_copy);
+                throw InvalidInputException("Invalid STBOX data: null pointer");
+            }
+            bool ret = contains_tspatial_stbox(tgeom, stbox);
+            free(tgeom);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb
