@@ -144,7 +144,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "overlaps",
+            "&&",
             {STBOX(), STBOX()},
             LogicalType::BOOLEAN,
             StboxFunctions::Overlaps_stbox_stbox

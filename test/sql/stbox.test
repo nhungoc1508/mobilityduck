@@ -75,18 +75,18 @@ SELECT ST_Point(1, 1)::WKB_BLOB::STBOX;
 ----
 STBOX X((1,1),(1,1))
 
-# query I
-# SELECT temporalOverlaps(tgeompoint 'Point(1 1)@2000-01-01', stbox 'STBOX X((1.0,2.0),(1.0,2.0))');
-# ----
-# false
-
-# query I
-# SELECT temporalOverlaps(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', stbox 'STBOX X((1.0,2.0),(1.0,2.0))');
-# ----
-# true
+query I
+SELECT tgeompoint 'Point(1 1)@2000-01-01' && stbox 'STBOX X((1.0,2.0),(1.0,2.0))';
+----
+false
 
 query I
-SELECT overlaps(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])');
+SELECT tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}' && stbox 'STBOX X((1.0,2.0),(1.0,2.0))';
+----
+true
+
+query I
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' && stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
 ----
 true
 

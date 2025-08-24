@@ -1,0 +1,70 @@
+{
+    "query_1.sql": {
+        "elapsed": 149.8866081237793,
+        "row_count": 72
+    },
+    "query_2.sql": {
+        "elapsed": 144.73557472229004,
+        "row_count": 1
+    },
+    "query_3.sql": {
+        "elapsed": 175.72426795959473,
+        "row_count": 9
+    },
+    "query_4.sql": {
+        "elapsed": 37002.57325172424,
+        "row_count": 0
+    },
+    "query_5.sql": {
+        "elapsed": 389300.4789352417,
+        "row_count": 49
+    },
+    "query_6.sql": {
+        "elapsed": 386.4562511444092,
+        "row_count": 66
+    },
+    "query_7.sql": {
+        "elapsed": 469.254732131958,
+        "row_count": 0
+    },
+    "query_8.sql": {
+        "elapsed": 363.3394241333008,
+        "row_count": 78
+    },
+    "query_9.sql": {
+        "elapsed": 8280.515909194946,
+        "row_count": 94
+    },
+    "query_10.sql": {
+        "elapsed": 1393.784761428833,
+        "row_count": 46
+    },
+    "query_11.sql": {
+        "elapsed": 1537.8696918487549,
+        "row_count": 0
+    },
+    "query_12.sql": {
+        "elapsed": 271305.57775497437,
+        "row_count": 0
+    },
+    "query_13.sql": {
+        "elapsed": 19400.912284851074,
+        "row_count": 764
+    },
+    "query_14.sql": {
+        "elapsed": 1659.3289375305176,
+        "row_count": 1
+    },
+    "query_15.sql": {
+        "elapsed": 9516.89624786377,
+        "row_count": 0
+    },
+    "query_16.sql": {
+        "elapsed": 10701.744079589844,
+        "row_count": 20
+    },
+    "query_17.sql": {
+        "elapsed": 2188.631057739258,
+        "row_count": 0
+    }
+}

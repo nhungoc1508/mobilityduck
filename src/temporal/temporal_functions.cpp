@@ -1066,9 +1066,9 @@ void TemporalFunctions::Temporal_at_value_tbool(DataChunk &args, ExpressionState
 }
 
 void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t temp_str, string_t span_str) {
+        [&](string_t temp_str, string_t span_str, ValidityMask &mask, idx_t idx) -> string_t {
             const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
             size_t data_size = temp_str.GetSize();
             if (data_size < sizeof(void*)) {
@@ -1093,7 +1093,9 @@ void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &s
 
             Temporal *ret = temporal_restrict_tstzspan(temp, span, true);
             if (!ret) {
-                throw InternalException("Failure in TemporalAtTstzspan: unable to cast string to temporal");
+                free(temp);
+                free(span);
+                mask.SetInvalid(idx);
                 return string_t();
             }
             size_t temp_size = temporal_mem_size(ret);
