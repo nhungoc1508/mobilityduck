@@ -1,70 +1,70 @@
 {
     "query_1.sql": {
-        "elapsed": 149.8866081237793,
+        "elapsed": 154.8001766204834,
         "row_count": 72
     },
     "query_2.sql": {
-        "elapsed": 144.73557472229004,
+        "elapsed": 151.32689476013184,
         "row_count": 1
     },
     "query_3.sql": {
-        "elapsed": 175.72426795959473,
+        "elapsed": 176.8021583557129,
         "row_count": 9
     },
     "query_4.sql": {
-        "elapsed": 37002.57325172424,
+        "elapsed": 18396.27742767334,
         "row_count": 0
     },
     "query_5.sql": {
-        "elapsed": 389300.4789352417,
+        "elapsed": 389449.4891166687,
         "row_count": 49
     },
     "query_6.sql": {
-        "elapsed": 386.4562511444092,
+        "elapsed": 267.3907279968262,
         "row_count": 66
     },
     "query_7.sql": {
-        "elapsed": 469.254732131958,
+        "elapsed": 414.9975776672363,
         "row_count": 0
     },
     "query_8.sql": {
-        "elapsed": 363.3394241333008,
+        "elapsed": 251.9693374633789,
         "row_count": 78
     },
     "query_9.sql": {
-        "elapsed": 8280.515909194946,
+        "elapsed": 8372.371196746826,
         "row_count": 94
     },
     "query_10.sql": {
-        "elapsed": 1393.784761428833,
+        "elapsed": 1428.8763999938965,
         "row_count": 46
     },
     "query_11.sql": {
-        "elapsed": 1537.8696918487549,
+        "elapsed": 1542.2508716583252,
         "row_count": 0
     },
     "query_12.sql": {
-        "elapsed": 271305.57775497437,
+        "elapsed": 266167.7854061127,
         "row_count": 0
     },
     "query_13.sql": {
-        "elapsed": 19400.912284851074,
+        "elapsed": 17199.47385787964,
         "row_count": 764
     },
     "query_14.sql": {
-        "elapsed": 1659.3289375305176,
+        "elapsed": 1458.845615386963,
         "row_count": 1
     },
     "query_15.sql": {
-        "elapsed": 9516.89624786377,
+        "elapsed": 7799.422740936279,
         "row_count": 0
     },
     "query_16.sql": {
-        "elapsed": 10701.744079589844,
+        "elapsed": 10793.176174163818,
         "row_count": 20
     },
     "query_17.sql": {
-        "elapsed": 2188.631057739258,
+        "elapsed": 2017.8172588348389,
         "row_count": 0
     }
 }

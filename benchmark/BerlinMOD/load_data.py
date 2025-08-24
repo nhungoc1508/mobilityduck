@@ -8,6 +8,7 @@ import time
 import json
 import sys
 import os
+import argparse
 from typing import Dict
 
 QUERIES = [
@@ -33,8 +34,10 @@ VALIDATION_QUERIES = {
 
 class DataLoader:
     def __init__(self, duckdb_path: str = "../../build/release/duckdb",
+                       benchmark: str = "default",
                        queries_path: str = "./sql/load"):
         self.duckdb_path = duckdb_path
+        self.benchmark = benchmark
         self.queries_path = queries_path
         self.queries = QUERIES
         self.validation_queries = VALIDATION_QUERIES
@@ -45,6 +48,9 @@ class DataLoader:
         sql_path = os.path.join(self.queries_path, filename)
         with open(sql_path, "r") as f:
             sql = f.read()
+
+        sql = sql.replace("./data/", f"./data/{self.benchmark}/")
+
         result = subprocess.run(
             [self.duckdb_path, "./databases/berlinmod.db"],
             input=sql,
@@ -96,19 +102,26 @@ class DataLoader:
         return results
 
 def main():
+    parser = argparse.ArgumentParser(description="Data loader for BerlinMOD benchmark")
+    parser.add_argument("--benchmark", type=str, required=True, help="Name of the benchmark run")
+    benchmark = parser.parse_args().benchmark
+
     duckdb_path = "../../build/release/duckdb"
     if not os.path.exists(duckdb_path):
         print(f"Error: DuckDB executable not found at {duckdb_path}")
         print("Please make sure you're running this from the benchmark directory and DuckDB is built.")
         sys.exit(1)
     
-    loader = DataLoader(duckdb_path)
+    loader = DataLoader(duckdb_path, benchmark)
     results = loader.run_loader()
     
-    with open("./results/stats/load_data.json", "w") as f:
+    if not os.path.exists(f"./results/stats/{benchmark}"):
+        os.makedirs(f"./results/stats/{benchmark}")
+    
+    with open(f"./results/stats/{benchmark}/load_data.json", "w") as f:
         json.dump(results, f, indent=4)
 
-    print(f"\nResults saved to ./results/stats/load_data.json")
+    print(f"\nResults saved to ./results/stats/{benchmark}/load_data.json")
 
 if __name__ == "__main__":
     main()

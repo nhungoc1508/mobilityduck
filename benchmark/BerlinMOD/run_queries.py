@@ -8,15 +8,18 @@ import time
 import json
 import sys
 import os
+import argparse
 from typing import Dict, Tuple
 
 QUERIES_NUM = 17
 
 class QueryRunner:
     def __init__(self, duckdb_path: str = "../../build/release/duckdb",
+                       benchmark: str = "default",
                        queries_path: str = "./sql/queries",
                        output_path: str = "./results/output"):
         self.duckdb_path = duckdb_path
+        self.benchmark = benchmark
         self.queries_path = queries_path
         self.output_path = output_path
         self.queries_num = QUERIES_NUM
@@ -32,6 +35,8 @@ class QueryRunner:
         
         with open(sql_path, "r") as f:
             sql = f.read()
+
+        sql = sql.replace(".output results/output/query", f".output results/output/{self.benchmark}/query")
 
         while not success:
             result = subprocess.run(
@@ -84,19 +89,29 @@ class QueryRunner:
         return results
 
 def main():
+    parser = argparse.ArgumentParser(description="Data loader for BerlinMOD benchmark")
+    parser.add_argument("--benchmark", type=str, required=True, help="Name of the benchmark run")
+    benchmark = parser.parse_args().benchmark
+
+    if not os.path.exists(f"./results/output/{benchmark}"):
+        os.makedirs(f"./results/output/{benchmark}")
+
     duckdb_path = "../../build/release/duckdb"
     if not os.path.exists(duckdb_path):
         print(f"Error: DuckDB executable not found at {duckdb_path}")
         print("Please make sure you're running this from the benchmark directory and DuckDB is built.")
         sys.exit(1)
     
-    runner = QueryRunner(duckdb_path)
+    runner = QueryRunner(duckdb_path, benchmark)
     results = runner.run_queries()
     
-    with open("./results/stats/run_queries.json", "w") as f:
+    if not os.path.exists(f"./results/stats/{benchmark}"):
+        os.makedirs(f"./results/stats/{benchmark}")
+    
+    with open(f"./results/stats/{benchmark}/run_queries.json", "w") as f:
         json.dump(results, f, indent=4)
     
-    print(f"\nResults saved to ./results/stats/run_queries.json")
+    print(f"\nResults saved to ./results/stats/{benchmark}/run_queries.json")
 
 if __name__ == "__main__":
     main()
