@@ -17,7 +17,7 @@ bool StboxFunctions::Stbox_in(Vector &source, Vector &result, idx_t count, CastP
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
         [&](string_t input_string, ValidityMask &mask, idx_t idx) -> string_t {
-            std::string input_str(input_string.GetData(), input_string.GetSize());
+            std::string input_str = input_string.GetString();
             STBox *stbox = stbox_in(input_str.c_str());
             if (!stbox) {
                 throw InternalException("Failure in Stbox_in: unable to cast string to stbox");
@@ -50,19 +50,26 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t input_blob) -> string_t {
-            STBox *stbox = nullptr;
-            if (input_blob.GetSize() > 0) {
-                stbox = (STBox*)malloc(input_blob.GetSize());
-                memcpy(stbox, input_blob.GetData(), input_blob.GetSize());
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
+                free(data_copy);
                 throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");
-                success = false;
-                return string_t();
             }
-            char *str = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS);
-            std::string ret_str(str);
+            char *ret = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS);
+            if (!ret) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");
+            }
+            std::string ret_str(ret);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+
             free(stbox);
             return stored_data;
         }
@@ -143,14 +150,17 @@ void StboxFunctions::Stbox_as_text(DataChunk &args, ExpressionState &state, Vect
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input_stbox) -> string_t {
-            STBox *stbox = nullptr;
-            if (input_stbox.GetSize() > 0) {
-                stbox = (STBox*)malloc(input_stbox.GetSize());
-                memcpy(stbox, input_stbox.GetData(), input_stbox.GetSize());
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
+                free(data_copy);
                 throw InternalException("Failure in Stbox_as_text: unable to cast binary to stbox");
-                return string_t();
             }
             int dbl_dig_for_wkt = OUT_DEFAULT_DECIMAL_DIGITS;
             char *str = stbox_out(stbox, dbl_dig_for_wkt);
@@ -170,14 +180,17 @@ void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vecto
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input_stbox) -> string_t {
-            STBox *stbox = nullptr;
-            if (input_stbox.GetSize() > 0) {
-                stbox = (STBox*)malloc(input_stbox.GetSize());
-                memcpy(stbox, input_stbox.GetData(), input_stbox.GetSize());
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
-                throw InternalException("Failure in Stbox_as_text: unable to cast binary to stbox");
-                return string_t();
+                free(data_copy);
+                throw InternalException("Failure in Stbox_as_wkb: unable to cast binary to stbox");
             }
             size_t wkb_size = sizeof(STBox);
             uint8_t *wkb = stbox_as_wkb(stbox, WKB_EXTENDED, &wkb_size);
@@ -201,14 +214,17 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input_stbox) -> string_t {
-            STBox *stbox = nullptr;
-            if (input_stbox.GetSize() > 0) {
-                stbox = (STBox*)malloc(input_stbox.GetSize());
-                memcpy(stbox, input_stbox.GetData(), input_stbox.GetSize());
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
-                throw InternalException("Failure in Stbox_as_text: unable to cast binary to stbox");
-                return string_t();
+                free(data_copy);
+                throw InternalException("Failure in Stbox_as_hexwkb: unable to cast binary to stbox");
             }
             size_t wkb_size = sizeof(STBox);
             char *wkb = stbox_as_hexwkb(stbox, WKB_EXTENDED, &wkb_size);
@@ -273,7 +289,6 @@ void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &
 }
 
 void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
-    // extern STBox *geo_tstzspan_to_stbox(const GSERIALIZED *gs, const Span *s);
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t wkb_blob, string_t span_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -377,15 +392,19 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input_stbox, double d, ValidityMask &mask, idx_t idx) -> string_t {
-            STBox *stbox = nullptr;
-            if (input_stbox.GetSize() > 0) {
-                stbox = (STBox*)malloc(input_stbox.GetSize());
-                memcpy(stbox, input_stbox.GetData(), input_stbox.GetSize());
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
+                free(data_copy);
                 throw InternalException("Failure in Stbox_expand_space: unable to cast binary to stbox");
-                return string_t();
             }
+
             STBox *ret = stbox_expand_space(stbox, d);
             if (!ret) {
                 free(stbox);
@@ -414,24 +433,32 @@ void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &stat
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t input_stbox1, string_t input_stbox2) -> bool {
-            STBox *stbox1 = nullptr;
-            if (input_stbox1.GetSize() > 0) {
-                stbox1 = (STBox*)malloc(input_stbox1.GetSize());
-                memcpy(stbox1, input_stbox1.GetData(), input_stbox1.GetSize());
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
             if (!stbox1) {
+                free(data_copy1);
                 throw InternalException("Failure in Overlaps_stbox_stbox: unable to cast binary to stbox");
-                return false;
             }
-            STBox *stbox2 = nullptr;
-            if (input_stbox2.GetSize() > 0) {
-                stbox2 = (STBox*)malloc(input_stbox2.GetSize());
-                memcpy(stbox2, input_stbox2.GetData(), input_stbox2.GetSize());
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
             }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
             if (!stbox2) {
+                free(data_copy2);
                 throw InternalException("Failure in Overlaps_stbox_stbox: unable to cast binary to stbox");
-                return false;
             }
+
             bool ret = overlaps_stbox_stbox(stbox1, stbox2);
             free(stbox1);
             free(stbox2);
