@@ -24,7 +24,7 @@ bool TgeompointFunctions::Tpoint_in(Vector &source, Vector &result, idx_t count,
             }
 
             size_t data_size = temporal_mem_size(temp);
-            uint8_t *data_buffer = (uint8_t *)malloc(temporal_mem_size(temp));
+            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
                 throw InvalidInputException("Failed to allocate memory for TGEOMPOINT");

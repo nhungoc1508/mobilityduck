@@ -6,6 +6,8 @@
 #include "span.hpp"
 #include "set.hpp"
 
+#include "tydef.hpp"
+
 namespace duckdb {
 
 class ExtensionLoader;
@@ -14,9 +16,6 @@ typedef struct {
     char *alias;
     meosType temptype;
 } alias_type_struct;
-
-#define TIMESTAMP_ADAPT_GAP_MS (30LL * 365LL + 7LL) * 24LL * 60LL * 60LL * 1000000LL
-#define OUT_DEFAULT_DECIMAL_DIGITS 15
 
 struct TemporalHelpers {
     static meosType GetTemptypeFromAlias(const char *alias);
