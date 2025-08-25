@@ -1,8 +1,7 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
-// #include "intset.hpp"
-#include "set.hpp"
+#include "temporal/set.hpp"
 #include "geoset.hpp"
 
 #include "temporal/temporal_functions.hpp"
@@ -13,8 +12,8 @@
 #include "duckdb.hpp"
 #include "tgeometry.hpp"
 // #include "tgeompoint.hpp"
-#include "span.hpp"
-#include "spanset.hpp"
+#include "temporal/span.hpp"
+#include "temporal/spanset.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"

@@ -5,8 +5,8 @@
 
 #include "meos_wrapper_simple.hpp"
 
-#include "span.hpp"
-#include "set.hpp"
+#include "temporal/span.hpp"
+#include "temporal/set.hpp"
 
 namespace duckdb {
 

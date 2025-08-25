@@ -88,10 +88,10 @@ set(EXTENSION_SOURCES
     src/geo/stbox_functions.cpp
     src/geo/tgeompoint.cpp
     src/geo/tgeompoint_functions.cpp
-    src/set.cpp    
-    src/span.cpp
+    src/temporal/set.cpp    
+    src/temporal/span.cpp
     src/geoset.cpp
-    src/spanset.cpp
+    src/temporal/spanset.cpp
     src/tgeo/tgeometry.cpp
     src/tgeo/tgeometry_in_out.cpp
     # src/tgeo/tgeompoint.cpp

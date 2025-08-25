@@ -1,4 +1,4 @@
-#include "set.hpp"
+#include "temporal/set.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -158,6 +158,11 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
 
         ExtensionUtil::RegisterFunction(
             db,
+            ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor)                 
+        );        
+
+        ExtensionUtil::RegisterFunction(
+            db,
             ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set)                 
         );
 
@@ -207,16 +212,134 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
         );
 
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
+            db, 
+            ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
         );
 
-        if (set_type == SetTypes::intset() || set_type == SetTypes::bigintset() 
-            ||set_type == SetTypes::floatset() || set_type == SetTypes::dateset()){
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift)
+        );
 
-            ExtensionUtil::RegisterFunction(
-                db, ScalarFunction("shift", {set_type, LogicalType::INTEGER}, set_type, SetFunctions::Numset_shift)
-            ); 
-        }
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shift", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shift", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift)
+        );        
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("scale", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("scale", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_scale)
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("scale", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_scale)
+        ); 
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("scale", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shiftScale", {SetTypes::intset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shiftScale", {SetTypes::bigintset(), LogicalType::BIGINT, LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shiftScale", {SetTypes::floatset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift_scale)
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("shiftScale", {SetTypes::dateset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("shiftScale", {SetTypes::tstzset(), LogicalType::INTERVAL, LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift_scale)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_floor)                 
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_ceil)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("round", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_round)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), SetFunctions::Floatset_round)                 
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_radians)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_lower)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("upper", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_upper)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_initcap)
+        );
+        
     }
 }
 
@@ -297,8 +420,7 @@ bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, Cast
             std::string input_str(input.GetDataUnsafe(), input.GetSize());
             Set *s = nullptr;
 
-            if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {
-                // Treat as a single text element for TEXTSET
+            if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {                
                 text *txt = (text *)malloc(VARHDRSZ + input_str.size());
                 SET_VARSIZE(txt, VARHDRSZ + input_str.size());
                 memcpy(VARDATA(txt), input_str.c_str(), input_str.size());
@@ -379,7 +501,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                     }
                     default:
                         free(values);
-                        throw InvalidInputException("Unsupported type in SetFromList");
+                        throw InvalidInputException("Unsupported type in Set Constructor");
                 }
             }
 
@@ -513,16 +635,8 @@ static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t coun
             UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src_set = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_INTSET(src_set, NULL);
-
-            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
-            for (int j = 0; j < src_set->count; j++) {
-                int32_t v_src = Datum(SET_VAL_N(src_set, j));
-                values[j] = Float8GetDatum((double)v_src);
-            }
-
-            Set *dst_set = set_make_free(values, src_set->count, T_FLOAT8, true);
+            const Set *src_set = (const Set *)blob.GetDataUnsafe();            
+            Set *dst_set = intset_to_floatset(src_set);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
             free(dst_set);
             return out;
@@ -535,15 +649,7 @@ static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t coun
         source, result, count,
         [&](string_t blob) -> string_t {
             const Set *src_set = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_FLOATSET(src_set, NULL);
-
-            Datum *values = (Datum *)malloc(sizeof(Datum) * src_set->count);
-            for (int j = 0; j < src_set->count; j++) {
-                double v_src = DatumGetFloat8(SET_VAL_N(src_set, j));
-                values[j] = Datum((int32_t)v_src);
-            }
-
-            Set *dst_set = set_make_free(values, src_set->count, T_INT4, true);
+            Set *dst_set = floatset_to_intset(src_set);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
             free(dst_set);
             return out;
@@ -577,17 +683,8 @@ static void Dateset_to_tstzset_common(Vector &source, Vector &result, idx_t coun
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_DATESET(src, nullptr);
-
-            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
-            for (int i = 0; i < src->count; i++) {
-                DateADT d = (DateADT)(SET_VAL_N(src, i));
-                TimestampTz ts = date_to_timestamptz(d);
-                vals[i] = int64(ts);
-            }
-            // All distinct dates -> distinct timestamptz
-            Set *dst = set_make_free(vals, src->count, T_TIMESTAMPTZ, false);
+            const Set *src = (const Set *)blob.GetDataUnsafe();            
+            Set *dst = dateset_to_tstzset(src);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
             free(dst);
             return out;
@@ -600,16 +697,8 @@ static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t coun
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();
-            VALIDATE_TSTZSET(src, nullptr);
-
-            Datum *vals = (Datum *)malloc(sizeof(Datum) * src->count);
-            for (int i = 0; i < src->count; i++) {
-                TimestampTz ts = (TimestampTz)(SET_VAL_N(src, i));
-                DateADT d = timestamptz_to_date(ts);
-                vals[i] = int32(d);
-            }            
-            Set *dst = set_make_free(vals, src->count, T_DATE, true);
+            const Set *src = (const Set *)blob.GetDataUnsafe();                        
+            Set *dst = tstzset_to_dateset(src);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
             free(dst);
             return out;
@@ -1039,23 +1128,6 @@ void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &r
 }
 
 // --- shift ---
-static inline string_t Numset_shift_common( const string_t &blob, Datum shift_datum,
-                                        meosType validate_set_type,Vector &result) {
-    const Set *s = (const Set *)blob.GetDataUnsafe();
-    switch(validate_set_type){
-        case T_INTSET: VALIDATE_INTSET(s, NULL); break;
-        case T_FLOATSET: VALIDATE_FLOATSET(s, NULL); break;
-        case T_BIGINTSET: VALIDATE_BIGINTSET(s, NULL); break;
-        case T_DATESET: VALIDATE_DATESET(s,NULL); break; 
-        default: break; 
-
-    }    
-    Set *r = numset_shift_scale(s, shift_datum, 0, /*do_shift=*/true, /*do_scale=*/false);
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
-    free(r);
-    return out;
-}
-
 void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &set_vec  = args.data[0];
     auto out_type  = result.GetType();    
@@ -1066,37 +1138,401 @@ void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector 
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
                 set_vec, args.data[1], result, args.size(),
                 [&](string_t blob, int32_t shift) -> string_t {
-                    return Numset_shift_common(blob, Datum(shift), set_type, result);
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;                    
                 });
             break;
         }
-        case T_BIGINTSET: { // shift(bigintset, integer) -> bigintset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        case T_BIGINTSET: { // shift(bigintset, bigint) -> bigintset
+            BinaryExecutor::Execute<string_t, int64_t, string_t>(
                 set_vec, args.data[1], result, args.size(),
                 [&](string_t blob, int64_t shift) -> string_t {
-                    return Numset_shift_common(blob, Datum(shift), set_type, result);
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
                 });
             break;
         }
-        case T_FLOATSET: { // shift(floatset, integer) -> floatset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        case T_FLOATSET: { // shift(floatset, float) -> floatset
+            BinaryExecutor::Execute<string_t, double_t, string_t>(
                 set_vec, args.data[1], result, args.size(),
                 [&](string_t blob, double shift) -> string_t {                    
-                    return Numset_shift_common(blob, Float8GetDatum(shift), set_type, result);
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Float8GetDatum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
                 });
             break;
         }
         case T_DATESET: { // shift(dateset, integer) -> dateset
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
                 set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift_days) -> string_t {
-                    return Numset_shift_common(blob, Datum(shift_days), set_type, result);
+                [&](string_t blob, int32_t shift) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
                 });
             break;
         }
         default:
             throw NotImplementedException("shift(<set>): unsupported base type");
     }
+}
+
+// --- tstzset shift ---
+void SetFunctions::Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &set_vec = args.data[0];
+    auto &iv_vec  = args.data[1];
+
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        set_vec, iv_vec, result, args.size(),
+        [&](string_t blob, const interval_t &iv) -> string_t {
+            const Set *s = (const Set *)blob.GetDataUnsafe();            
+            MeosInterval meos_iv = IntervaltToInterval(iv);
+            Set *r = tstzset_shift_scale(s, &meos_iv, NULL);
+            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+        }
+    );
+}
+// --- Scale ---
+void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector &result){
+    auto &set_vec  = args.data[0];
+    auto out_type  = result.GetType();    
+    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+
+    switch (set_type) {
+        case T_INTSET: { // scale(intset, integer) -> intset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;                    
+                });
+            break;
+        }
+        case T_BIGINTSET: { // scale(bigintset, integer) -> bigintset
+            BinaryExecutor::Execute<string_t, int64_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int64_t width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+        case T_FLOATSET: { // scale(floatset, integer) -> floatset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, double width) -> string_t {                    
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, 0, Float8GetDatum(width), false, true);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+        case T_DATESET: { // scale(dateset, integer) -> dateset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                set_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+        default:
+            throw NotImplementedException("scale(<set>): unsupported base type");
+    }
+}
+
+// --- tstzset scale ---
+void SetFunctions::Tstzset_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &set_vec = args.data[0];
+    auto &iv_vec  = args.data[1];
+
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        set_vec, iv_vec, result, args.size(),
+        [&](string_t blob, const interval_t &iv) -> string_t {
+            const Set *s = (const Set *)blob.GetDataUnsafe();            
+            MeosInterval meos_iv = IntervaltToInterval(iv);
+            Set *r = tstzset_shift_scale(s, NULL, &meos_iv);
+            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+        }
+    );
+}
+// --- Shift Scale ---
+void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &set_vec = args.data[0];
+    auto &sh_vec  = args.data[1];
+    auto &wd_vec  = args.data[2];
+
+    auto out_type  = result.GetType();
+    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+
+    switch (set_type) {
+        case T_INTSET: { // shift_scale(intset, integer, integer) -> intset
+            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
+                set_vec, sh_vec, wd_vec, result, args.size(),
+                [&](string_t blob, int32_t shift, int32_t width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Datum(shift), Datum(width), true, true);
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+
+        case T_BIGINTSET: { // shift_scale(bigintset, bigint, bigint) -> bigintset
+            TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(
+                set_vec, sh_vec, wd_vec, result, args.size(),
+                [&](string_t blob, int64_t shift, int64_t width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Datum(shift),Datum(width), true, true);
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+
+        case T_FLOATSET: { // shift_scale(floatset, double, double) -> floatset
+            TernaryExecutor::Execute<string_t, double, double, string_t>(
+                set_vec, sh_vec, wd_vec, result, args.size(),
+                [&](string_t blob, double shift, double width) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s, Float8GetDatum(shift), Float8GetDatum(width), true, true);
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+
+        case T_DATESET: { // shift_scale(dateset, integer(days), integer(days)) -> dateset
+            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
+                set_vec, sh_vec, wd_vec, result, args.size(),
+                [&](string_t blob, int32_t shift_days, int32_t width_days) -> string_t {
+                    const Set *s = (const Set *)blob.GetDataUnsafe();
+                    Set *r = numset_shift_scale(s,Datum(shift_days), Datum(width_days), true, true);
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    free(r);
+                    return out;
+                });
+            break;
+        }
+
+        default:
+            throw NotImplementedException("shift_scale(<numset>): unsupported base type");
+    }
+}
+void SetFunctions::Tstzset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &set_vec = args.data[0];
+    auto &shift_vec = args.data[1];
+    auto &duration_vec = args.data[2];
+
+    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
+        set_vec, shift_vec, duration_vec, result, args.size(),
+        [&](string_t blob, const interval_t &shift, const interval_t &duration) -> string_t {
+            const Set *s = (const Set *)blob.GetDataUnsafe();            
+            MeosInterval meos_shift = IntervaltToInterval(shift);
+            MeosInterval meos_duration = IntervaltToInterval(duration);
+            Set *r = tstzset_shift_scale(s, &meos_shift, &meos_duration);
+            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+        }
+    );
+}
+
+// --- Floor (floatset) ---
+void SetFunctions::Floatset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = floatset_floor(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Ceil (floatset) ---
+void SetFunctions::Floatset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = floatset_ceil(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Round (floatset) ---
+void SetFunctions::Floatset_round(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input_vec = args.data[0];
+    input_vec.Flatten(args.size());
+
+    bool has_digits = args.ColumnCount() > 1;
+    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
+    if (has_digits) digits_vec_ptr->Flatten(args.size());
+
+    for (idx_t i = 0; i < args.size(); i++) {
+        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
+        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 0;
+
+        const uint8_t *data = (const uint8_t *)blob.GetData();
+        size_t size = blob.GetSize();
+
+        Set *s = (Set *)malloc(size);
+        memcpy(s, data, size);
+        Set *r = set_round(s, digits);
+        free(s);
+        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+        FlatVector::GetData<string_t>(result)[i] = str;
+        free(r);
+    }
+}
+
+// --- Degrees (floatset) ---
+void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input_vec = args.data[0];
+    input_vec.Flatten(args.size());
+
+    bool has_bools = args.ColumnCount() > 1;
+    Vector *bools_vec_ptr = has_bools ? &args.data[1] : nullptr;
+    if (has_bools) bools_vec_ptr->Flatten(args.size());
+
+    for (idx_t i = 0; i < args.size(); i++) {
+        if (FlatVector::IsNull(input_vec, i) || (has_bools && FlatVector::IsNull(*bools_vec_ptr, i))) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
+        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
+
+        const uint8_t *data = (const uint8_t *)blob.GetData();
+        size_t size = blob.GetSize();
+
+        Set *s = (Set *)malloc(size);
+        memcpy(s, data, size);
+        Set *r = floatset_degrees(s, bools);
+        free(s);
+        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+        FlatVector::GetData<string_t>(result)[i] = str;
+        free(r);
+    }
+}
+
+// --- Radians (floatset) ---
+void SetFunctions::Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input_vec = args.data[0];
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = floatset_radians(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+    }
+
+// --- Textset lower ---
+void SetFunctions::Textset_lower(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_lower(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Textset upper ---
+void SetFunctions::Textset_upper(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_upper(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
+}
+
+// --- Textset initcap ---
+void SetFunctions::Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            Set *s = (Set*)malloc(size);
+            memcpy(s, data, size);
+            Set *r = textset_initcap(s);
+            free(s);
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            free(r);
+            return out;            
+        });
 }
 
 // --- Unnest ---

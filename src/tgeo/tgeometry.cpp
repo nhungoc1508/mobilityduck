@@ -2,7 +2,7 @@
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
 #include <string>
-#include <span.hpp>
+#include <temporal/span.hpp>
 #include<time_util.hpp>
 
 extern "C" {

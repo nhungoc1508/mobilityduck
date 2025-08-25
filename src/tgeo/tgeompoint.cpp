@@ -5,8 +5,8 @@
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
 #include <string>
-#include <span.hpp>
-#include <spanset.hpp>
+#include <temporal/span.hpp>
+#include <temporal/spanset.hpp>
 #include <geo/stbox.hpp>
 
 extern "C" {

@@ -3,8 +3,8 @@
 #include "meos_wrapper_simple.hpp"
 #include "duckdb/common/typedefs.hpp"
 
-#include "span.hpp"
-#include "set.hpp"
+#include "temporal/span.hpp"
+#include "temporal/set.hpp"
 
 #include "tydef.hpp"
 

@@ -3,7 +3,7 @@
 #include "common.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_functions.hpp"
-#include "spanset.hpp"
+#include "temporal/spanset.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"

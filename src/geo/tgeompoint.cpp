@@ -5,7 +5,7 @@
 #include "geo/tgeompoint_functions.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "geo/stbox.hpp"
-#include "spanset.hpp"
+#include "temporal/spanset.hpp"
 #include "temporal/temporal.hpp"
 
 #include "duckdb/common/types/blob.hpp"
