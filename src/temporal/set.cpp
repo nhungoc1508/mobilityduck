@@ -430,7 +430,7 @@ bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, Cast
                 s = set_in(input_str.c_str(), set_type);                              
             }            
 
-            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
             free(s);
             return blob;
         }
@@ -508,7 +508,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
             meosType base_type = settype_basetype(meos_type);            
             Set *s = set_make_free(values, (int)length, base_type, true);
                         
-            size_t size = VARSIZE(s);            
+            size_t size = set_mem_size(s);            
             string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
             
             free(s);            
@@ -520,7 +520,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
 // Conversion function: base type -> set 
 static inline void Write_set(Vector &result, idx_t row, Set *s) {
     auto out = FlatVector::GetData<string_t>(result);
-    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
     free(s);
 }
 
@@ -637,7 +637,7 @@ static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t coun
         [&](string_t blob) -> string_t {
             const Set *src_set = (const Set *)blob.GetDataUnsafe();            
             Set *dst_set = intset_to_floatset(src_set);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, set_mem_size(dst_set));
             free(dst_set);
             return out;
         }
@@ -650,7 +650,7 @@ static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t coun
         [&](string_t blob) -> string_t {
             const Set *src_set = (const Set *)blob.GetDataUnsafe();
             Set *dst_set = floatset_to_intset(src_set);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, VARSIZE(dst_set));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, set_mem_size(dst_set));
             free(dst_set);
             return out;
         }
@@ -685,7 +685,7 @@ static void Dateset_to_tstzset_common(Vector &source, Vector &result, idx_t coun
         [&](string_t blob) -> string_t {
             const Set *src = (const Set *)blob.GetDataUnsafe();            
             Set *dst = dateset_to_tstzset(src);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, set_mem_size(dst));
             free(dst);
             return out;
         }
@@ -699,7 +699,7 @@ static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t coun
         [&](string_t blob) -> string_t {
             const Set *src = (const Set *)blob.GetDataUnsafe();                        
             Set *dst = tstzset_to_dateset(src);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, VARSIZE(dst));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, set_mem_size(dst));
             free(dst);
             return out;
         }
@@ -1140,7 +1140,7 @@ void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int32_t shift) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;                    
                 });
@@ -1152,7 +1152,7 @@ void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int64_t shift) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1164,7 +1164,7 @@ void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, double shift) -> string_t {                    
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Float8GetDatum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1176,7 +1176,7 @@ void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int32_t shift) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1198,7 +1198,7 @@ void SetFunctions::Tstzset_shift(DataChunk &args, ExpressionState &state, Vector
             const Set *s = (const Set *)blob.GetDataUnsafe();            
             MeosInterval meos_iv = IntervaltToInterval(iv);
             Set *r = tstzset_shift_scale(s, &meos_iv, NULL);
-            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
         }
     );
 }
@@ -1215,7 +1215,7 @@ void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int32_t width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;                    
                 });
@@ -1227,7 +1227,7 @@ void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int64_t width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1239,7 +1239,7 @@ void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, double width) -> string_t {                    
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, 0, Float8GetDatum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1251,7 +1251,7 @@ void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector 
                 [&](string_t blob, int32_t width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1273,7 +1273,7 @@ void SetFunctions::Tstzset_scale(DataChunk &args, ExpressionState &state, Vector
             const Set *s = (const Set *)blob.GetDataUnsafe();            
             MeosInterval meos_iv = IntervaltToInterval(iv);
             Set *r = tstzset_shift_scale(s, NULL, &meos_iv);
-            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
         }
     );
 }
@@ -1293,7 +1293,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
                 [&](string_t blob, int32_t shift, int32_t width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Datum(shift), Datum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1306,7 +1306,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
                 [&](string_t blob, int64_t shift, int64_t width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Datum(shift),Datum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1319,7 +1319,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
                 [&](string_t blob, double shift, double width) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s, Float8GetDatum(shift), Float8GetDatum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1332,7 +1332,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
                 [&](string_t blob, int32_t shift_days, int32_t width_days) -> string_t {
                     const Set *s = (const Set *)blob.GetDataUnsafe();
                     Set *r = numset_shift_scale(s,Datum(shift_days), Datum(width_days), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
                     free(r);
                     return out;
                 });
@@ -1355,7 +1355,7 @@ void SetFunctions::Tstzset_shift_scale(DataChunk &args, ExpressionState &state, 
             MeosInterval meos_shift = IntervaltToInterval(shift);
             MeosInterval meos_duration = IntervaltToInterval(duration);
             Set *r = tstzset_shift_scale(s, &meos_shift, &meos_duration);
-            return StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));             
+            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
         }
     );
 }
@@ -1373,7 +1373,7 @@ void SetFunctions::Floatset_floor(DataChunk &args, ExpressionState &state, Vecto
             memcpy(s, data, size);
             Set *r = floatset_floor(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });
@@ -1392,7 +1392,7 @@ void SetFunctions::Floatset_ceil(DataChunk &args, ExpressionState &state, Vector
             memcpy(s, data, size);
             Set *r = floatset_ceil(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });
@@ -1423,7 +1423,7 @@ void SetFunctions::Floatset_round(DataChunk &args, ExpressionState &state, Vecto
         memcpy(s, data, size);
         Set *r = set_round(s, digits);
         free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
         FlatVector::GetData<string_t>(result)[i] = str;
         free(r);
     }
@@ -1454,7 +1454,7 @@ void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vec
         memcpy(s, data, size);
         Set *r = floatset_degrees(s, bools);
         free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
         FlatVector::GetData<string_t>(result)[i] = str;
         free(r);
     }
@@ -1472,7 +1472,7 @@ void SetFunctions::Floatset_radians(DataChunk &args, ExpressionState &state, Vec
             memcpy(s, data, size);
             Set *r = floatset_radians(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });
@@ -1491,7 +1491,7 @@ void SetFunctions::Textset_lower(DataChunk &args, ExpressionState &state, Vector
             memcpy(s, data, size);
             Set *r = textset_lower(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });
@@ -1510,7 +1510,7 @@ void SetFunctions::Textset_upper(DataChunk &args, ExpressionState &state, Vector
             memcpy(s, data, size);
             Set *r = textset_upper(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });
@@ -1529,7 +1529,7 @@ void SetFunctions::Textset_initcap(DataChunk &args, ExpressionState &state, Vect
             memcpy(s, data, size);
             Set *r = textset_initcap(s);
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, VARSIZE(r));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
             free(r);
             return out;            
         });

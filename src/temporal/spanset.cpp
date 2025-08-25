@@ -399,7 +399,7 @@ bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t cou
 
             SpanSet *s = spanset_in(str.c_str(), spanset_type);            
 
-            string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+            string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)s, spanset_mem_size(s));
             free(s);
             return result_blob;
         }
@@ -435,7 +435,7 @@ void SpansetFunctions::Spanset_constructor(DataChunk &args, ExpressionState &sta
             }
 
             SpanSet *sset = spanset_make_free(spans, (int)length, true, false);
-            size_t size = VARSIZE(sset);
+            size_t size = spanset_mem_size(sset);
             string_t blob = StringVector::AddStringOrBlob(result, (const char *)sset, size);
 
             free(sset);
@@ -448,7 +448,7 @@ void SpansetFunctions::Spanset_constructor(DataChunk &args, ExpressionState &sta
 
 static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {
     auto out = FlatVector::GetData<string_t>(result);
-    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, VARSIZE(s));
+    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, spanset_mem_size(s));
     free(s);
 }
 
@@ -549,7 +549,7 @@ static void Set_to_spanset_common(Vector &source, Vector &result, idx_t count) {
             SpanSet *spanset = set_spanset(s);
             free(s);
 
-            size_t result_size = VARSIZE(spanset);
+            size_t result_size = spanset_mem_size(spanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)spanset, result_size);
             free(spanset);
 
@@ -586,7 +586,7 @@ static inline void Span_to_spanset_common (Vector &source, Vector &result, idx_t
             SpanSet *spanset = span_to_spanset(s);
             free(s);
 
-            size_t result_size = VARSIZE(spanset);
+            size_t result_size = spanset_mem_size(spanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)spanset, result_size);
             free(spanset);
 
@@ -623,7 +623,7 @@ static inline void Spanset_to_span_common(Vector &source, Vector &result, idx_t 
             Span *s = spanset_span(spanset);
             free(spanset);
 
-            size_t result_size = VARSIZE(s);
+            size_t result_size = sizeof(Span);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)s, result_size);
             free(s);
 
@@ -659,7 +659,7 @@ static inline void Intspanset_to_floatspanset_common(Vector &source, Vector &res
             SpanSet *floatspanset = intspanset_to_floatspanset(intspanset);
             free(intspanset);
 
-            size_t result_size = VARSIZE(floatspanset);
+            size_t result_size = spanset_mem_size(floatspanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)floatspanset, result_size);
             free(floatspanset);
 
@@ -683,7 +683,7 @@ static inline void Floatspanset_to_intspanset_common(Vector &source, Vector &res
             SpanSet *intspanset = floatspanset_to_intspanset(floatspanset);
             free(floatspanset);
 
-            size_t result_size = VARSIZE(intspanset);
+            size_t result_size = spanset_mem_size(intspanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)intspanset, result_size);
             free(intspanset);
 
@@ -729,7 +729,7 @@ static inline void Datespanset_to_tstzspanset_common(Vector &source, Vector &res
             SpanSet *tstzspanset = datespanset_to_tstzspanset(datespanset);
             free(datespanset);
 
-            size_t result_size = VARSIZE(tstzspanset);
+            size_t result_size = spanset_mem_size(tstzspanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)tstzspanset, result_size);
             free(tstzspanset);
 
@@ -753,7 +753,7 @@ static inline void Tstzspanset_to_datespanset_common(Vector &source, Vector &res
             SpanSet *datespanset = tstzspanset_to_datespanset(tstzspanset);
             free(tstzspanset);
 
-            size_t result_size = VARSIZE(datespanset);
+            size_t result_size = spanset_mem_size(datespanset);
             string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)datespanset, result_size);
             free(datespanset);
 
@@ -1126,7 +1126,7 @@ void SpansetFunctions::Spanset_start_span(DataChunk &args, ExpressionState &stat
             memcpy(s, data, size);            
             Span *start_span = spanset_start_span(s);  
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)start_span, VARSIZE(start_span));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)start_span, sizeof(Span));
             free(start_span);
             return out;
         });
@@ -1144,7 +1144,7 @@ void SpansetFunctions::Spanset_end_span(DataChunk &args, ExpressionState &state,
             memcpy(s, data, size);            
             Span *end_span = spanset_end_span(s);  
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)end_span, VARSIZE(end_span));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)end_span, sizeof(Span));
             free(end_span);
             return out;
         });
@@ -1164,7 +1164,7 @@ void SpansetFunctions::Spanset_span_n(DataChunk &args, ExpressionState &state, V
             int64_t n_value = FlatVector::GetData<int64_t>(n)[0];
             Span *span_n = spanset_span_n(s, n_value);  
             free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)span_n, VARSIZE(span_n));
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)span_n, sizeof(Span));
             free(span_n);
             return out;
         });

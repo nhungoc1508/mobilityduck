@@ -162,7 +162,7 @@ bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t c
         const std::string input_blob = input_data[i].GetString();
         auto set_type = (target_type == SpatialSetType::geomset()) ? T_GEOMSET:T_GEOGSET;
         Set *s = set_in(input_blob.c_str(), set_type);        
-        size_t total_size = VARSIZE(s); 
+        size_t total_size =  set_mem_size(s); 
         result_data[i] = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
         free(s);
     }
@@ -289,7 +289,7 @@ void SpatialSetFunctions::Spatialset_set_srid(DataChunk &args, ExpressionState &
         
         Set *modified = spatialset_set_srid(set, srid_data[i]);
 
-        size_t total_size = VARSIZE(modified); 
+        size_t total_size =  set_mem_size(modified); 
         result_data[i] = StringVector::AddStringOrBlob(result_vec, (const char*)modified, total_size);                
 
         free(set);
@@ -331,7 +331,7 @@ void SpatialSetFunctions::Spatialset_transform(DataChunk &args, ExpressionState 
 			FlatVector::SetNull(result_vec, i, true);
 			continue;
 		}
-        size_t total_size = VARSIZE(result); 
+        size_t total_size =  set_mem_size(result); 
         result_data[i] = StringVector::AddStringOrBlob(result_vec, (const char*)result, total_size);                        
         free(result);		
 	}
