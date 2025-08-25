@@ -3,6 +3,7 @@
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include<time_util.hpp>
 
 extern "C" {
     #include <meos.h>
@@ -83,7 +84,8 @@ inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector
                 throw InvalidInputException("Invalid geometry format: " + value);
             }
 
-            TInstant *inst = tgeoinst_make(gs, static_cast<TimestampTz>(t.value-946684800000000LL));
+            timestamp_tz_t meos_timestamp = DuckDBToMeosTimestamp(t);
+            TInstant *inst = tgeoinst_make(gs, static_cast<TimestampTz>(meos_timestamp.value));
 
             if (inst == NULL) {
                 free(gs);
@@ -141,22 +143,14 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
                 throw InvalidInputException("Invalid geometry format: "+ geom_value);
             }
             
-            const uint8_t *span = reinterpret_cast<const uint8_t*> (span_str.GetData());
-            size_t span_size = span_str.GetSize();
-
-            if (span_size < sizeof(void*)){
-                throw InvalidInputException("Invalid Span data: insufficient size");
-            }
-            uint8_t *span_copy = (uint8_t*) malloc(span_size);
-            memcpy(span_copy,span,span_size);
-            const Span *span_cmp = reinterpret_cast<const Span*>(span_copy);
+            std::string input = span_str.GetString();
+            
+            Span *span_cmp = reinterpret_cast<Span*>(const_cast<char*>(input.c_str()));
 
             // Use default interpolation or provided value
             interpType interp = interptype_from_string(default_interp);
             if (interp_vec) {
-                // Get interpolation value from the third parameter if provided
-                // Note: This is a simplified approach - you may need to adjust based on your executor pattern
-                std::string interp_string = default_interp; // fallback to default
+                std::string interp_string = default_interp; 
                 interp = interptype_from_string(interp_string.c_str());
             }
 
@@ -164,7 +158,6 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
 
             if (seq == NULL) {
                 free(gs);
-                free(span_copy);
                 throw InvalidInputException("Failed to create TSequence");
             }
 
@@ -174,7 +167,6 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
             if (!seq_buffer) {
                 free(seq);
                 free(gs);
-                free(span_copy);
                 throw InvalidInputException("Failed to allocate memory for sequence data");
             }
 
@@ -185,7 +177,6 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
 
             free(seq_buffer);
             free(seq);
-            free(span_copy);
             free(gs);
 
             return stored_data;
@@ -268,11 +259,10 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
     auto count = args.size();
     auto arg_count = args.ColumnCount();
     
-    // First parameter (required): array of TInstant values
+    
     auto &tgeometry_arr_vec = args.data[0];    
     tgeometry_arr_vec.Flatten(count);
     
-    // Optional parameters - only access if they exist
     Vector *interp_vec = nullptr;
     Vector *lower_vec = nullptr;
     Vector *upper_vec = nullptr;
@@ -348,7 +338,7 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
             }
             
             TSequence *sequence_result = tsequence_make((const TInstant **) instants, element_count, 
-                                                        lower_inc, upper_inc, interp, true);
+                                                    lower_inc, upper_inc, interp, true);
             
             if (!sequence_result) {
                 for (int j = 0; j < element_count; j++) {
@@ -412,31 +402,18 @@ inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
 
     UnaryExecutor::Execute<string_t, string_t>(
         input_geom_vec, result, count,
-        [&](string_t input_geom_str) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_geom_str.GetData());
-            size_t data_size = input_geom_str.GetSize();
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
             Span *timespan = temporal_to_tstzspan(temp);
             
             if (!timespan) {
-                free(data_copy);
                 throw InvalidInputException("Failed to extract timespan from TGEOMETRY");
             }
             
@@ -445,7 +422,6 @@ inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
             uint8_t *span_buffer = (uint8_t*)malloc(span_size);
             if (!span_buffer) {
                 free(timespan);
-                free(data_copy);
                 throw InvalidInputException("Failed to allocate memory for timespan data");
             }
             
@@ -456,7 +432,6 @@ inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
             
             free(span_buffer);
             free(timespan);
-            free(data_copy);
             
             return stored_data;
         }
@@ -477,30 +452,17 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
 
     UnaryExecutor::Execute<string_t, string_t>(
         input_geom_vec, result, count,
-        [&](string_t input_geom_str) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_geom_str.GetData());
-            size_t data_size = input_geom_str.GetSize();
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
             TInstant *inst = temporal_to_tinstant(temp);
             if (!inst) {
-                free(data_copy);
                 throw InvalidInputException("Failed to convert TGEOMETRY to TInstant");
             }
             
@@ -509,7 +471,6 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
             uint8_t *inst_buffer = (uint8_t*)malloc(inst_size);
             if (!inst_buffer) {
                 free(inst);
-                free(data_copy);
                 throw InvalidInputException("Failed to allocate memory for TInstant data");
             }
             
@@ -520,7 +481,6 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
             
             free(inst_buffer);
             free(inst);
-            free(data_copy);
             
             return stored_data;
         }
@@ -544,22 +504,10 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
         tgeom_vec, interp_vec, result, count,
         [&](string_t tgeom_str_t, string_t interp_str_t) -> string_t {
           
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
-            size_t data_size = tgeom_str_t.GetSize();
+            std::string input = tgeom_str_t.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
@@ -568,7 +516,6 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
             
             Temporal *result_temp = temporal_set_interp(temp, new_interp);
             if (!result_temp) {
-                free(data_copy);
                 throw InvalidInputException("Failed to set interpolation");
             }
             
@@ -577,7 +524,6 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
             uint8_t *result_buffer = (uint8_t*)malloc(result_size);
             if (!result_buffer) {
                 free(result_temp);
-                free(data_copy);
                 throw InvalidInputException("Failed to allocate memory for result");
             }
             
@@ -587,7 +533,6 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
             
             free(result_buffer);
             free(result_temp);
-            free(data_copy);
             
             return stored_data;
         });
@@ -609,53 +554,22 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
     BinaryExecutor::Execute<string_t, string_t, string_t>(
         tgeom1_vec, tgeom2_vec, result, count,
         [&](string_t tgeom1_str_t, string_t tgeom2_str_t) -> string_t {
-            // Deserialize first TGEOMETRY
-            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(tgeom1_str_t.GetData());
-            size_t data1_size = tgeom1_str_t.GetSize();
+            std::string tgeom1 = tgeom1_str_t.GetString();
 
-            if (data1_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data1_copy = (uint8_t*)malloc(data1_size);
-            if (!data1_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data1_copy, data1, data1_size);
-
-            Temporal *temp1 = reinterpret_cast<Temporal*>(data1_copy);
+            Temporal *temp1 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom1.c_str()));
             if (!temp1) {
-                free(data1_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
-            // Deserialize second TGEOMETRY
-            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(tgeom2_str_t.GetData());
-            size_t data2_size = tgeom2_str_t.GetSize();
+            std::string tgeom2 = tgeom2_str_t.GetString();
 
-            if (data2_size < sizeof(void*)) {
-                free(data1_copy);
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data2_copy = (uint8_t*)malloc(data2_size);
-            if (!data2_copy) {
-                free(data1_copy);
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data2_copy, data2, data2_size);
-
-            Temporal *temp2 = reinterpret_cast<Temporal*>(data2_copy);
+            Temporal *temp2 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom2.c_str()));
             if (!temp2) {
-                free(data1_copy);
-                free(data2_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
             
             Temporal *result_temp = temporal_merge(temp1, temp2);
             if (!result_temp) {
-                free(data1_copy);
-                free(data2_copy);
                 throw InvalidInputException("Failed to merge temporal geometries");
             }
             
@@ -664,8 +578,6 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
             uint8_t *result_buffer = (uint8_t*)malloc(result_size);
             if (!result_buffer) {
                 free(result_temp);
-                free(data1_copy);
-                free(data2_copy);
                 throw InvalidInputException("Failed to allocate memory for result");
             }
             
@@ -675,8 +587,6 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
             
             free(result_buffer);
             free(result_temp);
-            free(data1_copy);
-            free(data2_copy);
             
             return stored_data;
         });
@@ -700,36 +610,20 @@ inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
     UnaryExecutor::Execute<string_t, string_t>(
         tgeom_vec, result, count,
         [&](string_t tgeom_str_t) -> string_t {
-            // Deserialize TGEOMETRY from binary data
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
-            size_t data_size = tgeom_str_t.GetSize();
+            std::string input = tgeom_str_t.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
             
             const char *subtype_str = temporal_subtype(temp);
             if (!subtype_str) {
-                free(data_copy);
                 throw InvalidInputException("Failed to get temporal subtype");
             }
 
             std::string result_str(subtype_str);
             string_t stored_result = StringVector::AddString(result, result_str);
-            
-            free(data_copy);
             
             return stored_result;
         });
@@ -752,35 +646,21 @@ inline void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &res
         tgeom_vec, result, count,
         [&](string_t tgeom_str_t) -> string_t {
 
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
-            size_t data_size = tgeom_str_t.GetSize();
+            std::string input = tgeom_str_t.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
+
             
             const char *interp_str = temporal_interp(temp);
             if (!interp_str) {
-                free(data_copy);
                 throw InvalidInputException("Failed to get temporal interpolation");
             }
 
             std::string result_str(interp_str);
             string_t stored_result = StringVector::AddString(result, result_str);
-            
-            free(data_copy);
             
             return stored_result;
         });
@@ -799,32 +679,52 @@ inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
     UnaryExecutor::Execute<string_t, int32_t>(
         tgeom_vec, result, count,
         [&](string_t tgeom_str_t) -> int32_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_str_t.GetData());
-            size_t data_size = tgeom_str_t.GetSize();
+           std::string input = tgeom_str_t.GetString();
 
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                free(data_copy);
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
             
             size_t mem_size = temporal_mem_size(temp);
             
-            free(data_copy);
             
             return static_cast<int32_t>(mem_size);
         });
 
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+    
+    // Direct geometry to geometry conversion, no string conversion needed
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+
+            TInstant *tinst = reinterpret_cast<TInstant*>(const_cast<char*>(input.c_str()));
+            
+            Datum geo = tinstant_value(tinst);
+            
+            GSERIALIZED *geom = DatumGetGserializedP(geo);
+            
+            size_t ewkb_size;
+            uint8_t *ewkb_data = geo_as_ewkb(geom, NULL, &ewkb_size);
+
+            
+            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
+
+            free(ewkb_data);
+            
+            return stored_result;
+        });
+    
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
@@ -900,6 +800,175 @@ inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &
 }
 
 
+inline void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+
+            Temporal* temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
+
+            bool lower_inc = temporal_lower_inc(temp);
+
+            std::string result_str = lower_inc ? "true" : "false";
+            string_t stored_result = StringVector::AddString(result, result_str);
+            return stored_result;
+        });
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+
+            Temporal* temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
+
+            bool upper_inc = temporal_upper_inc(temp);
+
+            std::string result_str = upper_inc ? "true" : "false";
+            string_t stored_result = StringVector::AddString(result, result_str);
+            return stored_result;
+        });
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
+
+            TInstant *start_inst = temporal_start_instant(temp);
+
+            if (!start_inst) {
+                throw InvalidInputException("Failed to get start_inst from temporal object");
+            }
+
+            size_t result_size = temporal_mem_size((Temporal*)start_inst);
+            if (result_size == 0) {
+                throw InvalidInputException("Invalid result size from temporal object");
+            }
+
+            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
+            if (!result_buffer) {
+                throw InvalidInputException("Failed to allocate memory for result");
+            }
+            
+            memcpy(result_buffer, start_inst, result_size);
+            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
+            
+            free(result_buffer);
+            return stored_result;
+        });
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &input_vec = args.data[0];
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        input_vec, result, count,
+        [&](string_t input_str) -> string_t {
+            std::string input = input_str.GetString();
+
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
+
+            TInstant *end_inst = temporal_end_instant(temp);
+
+            if (!end_inst) {
+                throw InvalidInputException("Failed to get end_inst from temporal object");
+            }
+
+            size_t result_size = temporal_mem_size((Temporal*)end_inst);
+            if (result_size == 0) {
+                throw InvalidInputException("Invalid result size from temporal object");
+            }
+
+            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
+            if (!result_buffer) {
+                throw InvalidInputException("Failed to allocate memory for result");
+            }
+            
+            memcpy(result_buffer, end_inst, result_size);
+            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
+            
+            free(result_buffer);
+            return stored_result;
+        });
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
+
+
+inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &tgeom_vec = args.data[0];
+    auto &n_vec = args.data[1];
+    
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        tgeom_vec, n_vec, result, count,
+        [&](string_t tgeom_str, int32_t n) -> string_t {
+            std::string tgeom = tgeom_str.GetString();
+            
+            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom.c_str()));
+            
+            TInstant *inst_n = temporal_instant_n(temp, n);
+            if (!inst_n) {
+                throw InvalidInputException("Failed to get instant n from temporal object");
+            }
+            
+            size_t result_size = temporal_mem_size((Temporal*)inst_n);
+            if (result_size == 0) {
+                throw InvalidInputException("Invalid result size from temporal object");
+            }
+            
+            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
+            if (!result_buffer) {
+                throw InvalidInputException("Failed to allocate memory for result");
+            }
+            
+            memcpy(result_buffer, inst_n, result_size);
+            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
+            
+            free(result_buffer);
+            return stored_result;
+        });
+    
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 
 inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
@@ -930,7 +999,8 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 
             TimestampTz meos_t = temp->t;
             
-            timestamp_tz_t duckdb_t = static_cast<timestamp_tz_t>(meos_t + 946684800000000LL);
+            timestamp_tz_t meos_timestamp{meos_t};
+            timestamp_tz_t duckdb_t = MeosToDuckDBTimestamp(meos_timestamp);
             
             free(data_copy);
             
@@ -1021,9 +1091,7 @@ inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector 
 
 
 void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
-    /*
-    * Constructors
-    */
+
     auto tgeometry_function = ScalarFunction(
         "TGEOMETRY", 
         {LogicalType::VARCHAR}, 
@@ -1054,22 +1122,6 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         Tsequence_from_base_tstzspan
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_default);
-
-    // auto tgeometryseq_function_1param = ScalarFunction(
-    //     "tgeometrySeq", 
-    //     {TGeometryTypes::TGEOMETRY()},
-    //     TGeometryTypes::TGEOMETRY(),
-    //     ExecuteTGeometrySeq
-    // );
-    // ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_1param);
-
-    // auto tgeometryseq_function_2params = ScalarFunction(
-    //     "tgeometrySeq", 
-    //     {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
-    //     TGeometryTypes::TGEOMETRY(),
-    //     ExecuteTGeometrySeq
-    // );
-    // ExtensionUtil::RegisterFunction(instance, tgeometryseq_function_2params);
 
      auto tgeometryseqarr_1param= ScalarFunction(
         "tgeometrySeq", 
@@ -1159,14 +1211,14 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     );
     ExtensionUtil::RegisterFunction(instance, memSize_function);
 
-
-    auto tgeometry_gettimestamptz_function = ScalarFunction(
-        "getTimestamp",
+    auto getValue_function = ScalarFunction(
+        "getValue",
         {TGeometryTypes::TGEOMETRY()},
-        LogicalType::TIMESTAMP_TZ,  
-        Tinstant_timestamptz);
-    ExtensionUtil::RegisterFunction(instance, tgeometry_gettimestamptz_function);
-
+        TGeometryTypes::MEOS_WKB_BLOB(),
+        Tinstant_value
+    );
+    ExtensionUtil::RegisterFunction(instance, getValue_function);
+    
 
     auto tgeometry_start_value_function = ScalarFunction(
         "startValue", 
@@ -1183,6 +1235,38 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         Temporal_end_value
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_end_value_function);
+
+    auto startInstant_function = ScalarFunction(
+        "startInstant",
+        {TGeometryTypes::TGEOMETRY()},
+        TGeometryTypes::TGEOMETRY(), 
+        Temporal_start_instant
+    );
+    ExtensionUtil::RegisterFunction(instance, startInstant_function);
+
+    auto endInstant_function = ScalarFunction(
+        "endInstant",
+        {TGeometryTypes::TGEOMETRY()},
+        TGeometryTypes::TGEOMETRY(), 
+        Temporal_end_instant
+    );
+    ExtensionUtil::RegisterFunction(instance, endInstant_function);
+
+    auto instantN_function = ScalarFunction(
+        "instantN",
+        {TGeometryTypes::TGEOMETRY(), LogicalType::INTEGER},
+        TGeometryTypes::TGEOMETRY(),  
+        Temporal_instant_n
+    );
+    ExtensionUtil::RegisterFunction(instance, instantN_function);
+
+
+    auto tgeometry_gettimestamptz_function = ScalarFunction(
+        "getTimestamp",
+        {TGeometryTypes::TGEOMETRY()},
+        LogicalType::TIMESTAMP_TZ,  
+        Tinstant_timestamptz);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_gettimestamptz_function);
     
 
 }

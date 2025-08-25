@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_functions.hpp"
+#include "temporal/spanset.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -199,6 +200,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExtensionUtil::RegisterFunction(
             instance,
             ScalarFunction(
+                "getTime",
+                {type},
+                SpansetTypes::tstzspanset(),
+                TemporalFunctions::Temporal_time
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
                 "duration",
                 {type, LogicalType::BOOLEAN},
                 LogicalType::INTERVAL,
@@ -348,6 +359,36 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             )
         );
 
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "startTimestamp",
+                {type},
+                LogicalType::TIMESTAMP_TZ,
+                TemporalFunctions::Temporal_start_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atTime",
+                {type, SpanTypes::TSTZSPAN()},
+                type,
+                TemporalFunctions::Temporal_at_tstzspan
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atTime",
+                {type, SpansetTypes::tstzspanset()},
+                type,
+                TemporalFunctions::Temporal_at_tstzspanset
+            )
+        );
+
         if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
             ExtensionUtil::RegisterFunction(
                 instance,
@@ -380,6 +421,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             );
         }
     }
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TBOOL(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TemporalFunctions::Temporal_at_value_tbool
+        )
+    );
 }
 
 } // namespace duckdb

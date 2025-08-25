@@ -1,0 +1,168 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE SELECT DISTINCT r.RegionId, p.PeriodId, p.Period, v.Licence FROM Trips t, Vehicles v, Regions1 r, Periods1 p WHERE     t.VehicleId = v.VehicleId     AND t.trip && stbox(r.Geom::WKB_BLOB, p.Period)     AND ST_Intersects(trajectory(atTime(t.Trip, p.Period))::GEOMETRY, r.Geom) ORDER BY r.RegionId, p.PeriodId, v.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││              Total Time: 24.61s              ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│__internal_decompress_strin│
+│           g(#3)           │
+│                           │
+│          176 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       r.RegionId ASC      │
+│       p.PeriodId ASC      │
+│       v.Licence ASC       │
+│                           │
+│          176 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│__internal_compress_string_│
+│        ubigint(#3)        │
+│                           │
+│          176 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│__internal_decompress_strin│
+│           g(#3)           │
+│                           │
+│          176 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│             #3            │
+│                           │
+│          176 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          RegionId         │
+│          PeriodId         │
+│           Period          │
+│          Licence          │
+│                           │
+│          277 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│__internal_compress_string_│
+│        ubigint(#3)        │
+│                           │
+│          277 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          RegionId         │
+│          PeriodId         │
+│           Period          │
+│          Licence          │
+│                           │
+│          277 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│     BLOCKWISE_NL_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│         Condition:        │
+│ ((Trip && stbox(CAST(Geom │
+│   AS WKB_BLOB), Period))  │
+│   AND ST_Intersects(CAST  ├────────────────────────────────────────────────────────────────────────┐
+│  (trajectory(atTime(Trip, │                                                                        │
+│   Period)) AS GEOMETRY),  │                                                                        │
+│           Geom))          │                                                                        │
+│                           │                                                                        │
+│          277 Rows         │                                                                        │
+│          (24.48s)         │                                                                        │
+└─────────────┬─────────────┘                                                                        │
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│       CROSS_PRODUCT       │                                                          │      STREAMING_LIMIT      │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│         5490 Rows         ├───────────────────────────────────────────┐              │          10 Rows          │
+│          (0.00s)          │                                           │              │          (0.00s)          │
+└─────────────┬─────────────┘                                           │              └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │      STREAMING_LIMIT      ││         TABLE_SCAN        │
+│    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
+│      Join Type: INNER     │                             │                           ││       Table: Periods      │
+│                           │                             │                           ││   Type: Sequential Scan   │
+│        Conditions:        │                             │                           ││                           │
+│   VehicleId = VehicleId   ├──────────────┐              │                           ││        Projections:       │
+│                           │              │              │                           ││          PeriodId         │
+│                           │              │              │                           ││           Period          │
+│                           │              │              │                           ││                           │
+│          549 Rows         │              │              │          10 Rows          ││          100 Rows         │
+│          (0.00s)          │              │              │          (0.00s)          ││          (0.00s)          │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘└───────────────────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││       Table: Regions      │
+│   Type: Sequential Scan   ││   Type: Sequential Scan   ││   Type: Sequential Scan   │
+│                           ││                           ││                           │
+│        Projections:       ││        Projections:       ││        Projections:       │
+│         VehicleId         ││         VehicleId         ││          RegionId         │
+│            Trip           ││          Licence          ││            Geom           │
+│                           ││                           ││                           │
+│          549 Rows         ││          63 Rows          ││          100 Rows         │
+│          (0.12s)          ││          (0.00s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘
