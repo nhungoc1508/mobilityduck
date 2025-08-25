@@ -216,7 +216,8 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "trajectory",
             {TGEOMPOINT()},
-            WKB_BLOB(),
+            // WKB_BLOB(),
+            LogicalType::VARCHAR,
             TgeompointFunctions::Tpoint_trajectory
         )
     );

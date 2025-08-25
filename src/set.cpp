@@ -7,7 +7,7 @@
 #include "time_util.hpp"
 
 
-extern "C" {     
+extern "C" {
     #include "meos.h"    
     #include "meos_internal.h"   
     #include "meos_geo.h"
@@ -248,8 +248,8 @@ void SetFunctions::Set_as_text(DataChunk &args, ExpressionState &state, Vector &
         auto str = StringVector::AddString(result, cstr);
         FlatVector::GetData<string_t>(result)[i] = str;
 
-        free(s);
-        free(cstr);
+            free(s);
+            free(cstr);
     }
 }
 
@@ -331,7 +331,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
             idx_t offset = list_entry.offset;
             idx_t length = list_entry.length;
 
-            Datum *values = (Datum *)malloc(sizeof(Datum) * length);            
+            Datum *values = (Datum *)malloc(sizeof(Datum) * length);
 
             for (idx_t i = 0; i < length; ++i) {
                 idx_t idx = offset + i;
@@ -383,7 +383,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                 }
             }
 
-            meosType base_type = settype_basetype(meos_type);
+            meosType base_type = settype_basetype(meos_type);            
             Set *s = set_make_free(values, (int)length, base_type, true);
                         
             size_t size = VARSIZE(s);            
@@ -510,7 +510,7 @@ void SetFunctions::Value_to_set(DataChunk &args, ExpressionState &state, Vector 
 
 // --- Conversion: intset <-> floatset ---
 static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
+            UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t blob) -> string_t {
             const Set *src_set = (const Set *)blob.GetDataUnsafe();
@@ -732,7 +732,7 @@ void SetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vect
                     Set *s = (Set*)malloc(size);
                     memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
-                    free(s);                                        
+                    free(s);                    
                     text *txt = (text *)DatumGetPointer(d);
                     int len = VARSIZE(txt) - VARHDRSZ;
                     string str(VARDATA(txt), len);
@@ -831,12 +831,12 @@ void SetFunctions::Set_end_value(DataChunk &args, ExpressionState &state, Vector
                     size_t size = input_blob.GetSize();
                     Set *s = (Set*)malloc(size);
                     memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);                                        
+                    Datum d = set_end_value(s);                    
+                    free(s);
                     text *txt = (text *)DatumGetPointer(d);
                     int len = VARSIZE(txt) - VARHDRSZ;
                     string str(VARDATA(txt), len);
-                    return StringVector::AddString(result, str); 
+                    return StringVector::AddString(result, str);
                 });
             break;
 
@@ -1168,7 +1168,7 @@ static unique_ptr<GlobalTableFunctionState> SetUnnestInit(ClientContext &context
             case T_FLOAT8:
                 state->values.emplace_back(Value::DOUBLE(DatumGetFloat8(d)));
                 break;
-            case T_TEXT: {
+            case T_TEXT: {     
                 text *txt = (text *)DatumGetPointer(d);
                 int len = VARSIZE(txt) - VARHDRSZ;
                 std::string str(VARDATA(txt), len);

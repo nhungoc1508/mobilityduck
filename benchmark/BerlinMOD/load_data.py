@@ -52,7 +52,7 @@ class DataLoader:
         sql = sql.replace("./data/", f"./data/{self.benchmark}/")
 
         result = subprocess.run(
-            [self.duckdb_path, "./databases/berlinmod.db"],
+            [self.duckdb_path, f"./databases/{self.benchmark}.db"],
             input=sql,
             capture_output=True,
             text=True,
@@ -71,7 +71,7 @@ class DataLoader:
         if filename in self.validation_queries:
             validation_query = self.validation_queries[filename]
             validation_result = subprocess.run(
-                [self.duckdb_path, "./databases/berlinmod.db"],
+                [self.duckdb_path, f"./databases/{self.benchmark}.db"],
                 input=validation_query,
                 capture_output=True,
                 text=True,

@@ -86,7 +86,7 @@ inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector
 
             timestamp_tz_t meos_timestamp = DuckDBToMeosTimestamp(t);
             TInstant *inst = tgeoinst_make(gs, static_cast<TimestampTz>(meos_timestamp.value));
-            
+
             if (inst == NULL) {
                 free(gs);
                 throw InvalidInputException("Failed to create TInstant");
@@ -142,7 +142,7 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
             if(gs == NULL){
                 throw InvalidInputException("Invalid geometry format: "+ geom_value);
             }
-
+            
             std::string input = span_str.GetString();
             
             Span *span_cmp = reinterpret_cast<Span*>(const_cast<char*>(input.c_str()));
@@ -338,7 +338,7 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
             }
             
             TSequence *sequence_result = tsequence_make((const TInstant **) instants, element_count, 
-                                                        lower_inc, upper_inc, interp, true);
+                                                    lower_inc, upper_inc, interp, true);
             
             if (!sequence_result) {
                 for (int j = 0; j < element_count; j++) {
@@ -616,7 +616,7 @@ inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
             if (!temp) {
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
-
+            
             const char *subtype_str = temporal_subtype(temp);
             if (!subtype_str) {
                 throw InvalidInputException("Failed to get temporal subtype");
@@ -685,7 +685,7 @@ inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
             if (!temp) {
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
-
+            
             size_t mem_size = temporal_mem_size(temp);
             
             
@@ -1001,7 +1001,7 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
             
             timestamp_tz_t meos_timestamp{meos_t};
             timestamp_tz_t duckdb_t = MeosToDuckDBTimestamp(meos_timestamp);
-
+            
             free(data_copy);
             
             return duckdb_t;

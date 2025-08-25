@@ -497,10 +497,10 @@ void TemporalFunctions::Temporal_start_value(DataChunk &args, ExpressionState &s
                 free(data_copy);
                 throw InternalException("Failure in Temporal_start_value: unable to cast string to temporal");
             }
-            Datum ret = temporal_start_value(temp);
+        Datum ret = temporal_start_value(temp);
             free(temp);
             return (int64_t)ret;
-        }
+    }
     );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -523,10 +523,10 @@ void TemporalFunctions::Temporal_end_value(DataChunk &args, ExpressionState &sta
                 free(data_copy);
                 throw InternalException("Failure in Temporal_end_value: unable to cast string to temporal");
             }
-            Datum ret = temporal_end_value(temp);
+        Datum ret = temporal_end_value(temp);
             free(temp);
             return (int64_t)ret;
-        }
+    }
     );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -549,10 +549,10 @@ void TemporalFunctions::Temporal_min_value(DataChunk &args, ExpressionState &sta
                 free(data_copy);
                 throw InternalException("Failure in Temporal_min_value: unable to cast string to temporal");
             }
-            Datum ret = temporal_min_value(temp);
+        Datum ret = temporal_min_value(temp);
             free(temp);
             return (int64_t)ret;
-        }
+    }
     );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -575,10 +575,10 @@ void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &sta
                 free(data_copy);
                 throw InternalException("Failure in Temporal_max_value: unable to cast string to temporal");
             }
-            Datum ret = temporal_max_value(temp);
+        Datum ret = temporal_max_value(temp);
             free(temp);
             return (int64_t)ret;
-        }
+    }
     );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -601,9 +601,9 @@ void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state
                 free(data_copy);
                 throw InternalException("Failure in Temporal_value_n: unable to cast string to temporal");
             }
-            Datum ret;
-            bool found = temporal_value_n(temp, n, &ret);
-            if (!found) {
+        Datum ret;
+        bool found = temporal_value_n(temp, n, &ret);
+        if (!found) {
                 free(temp);
                 mask.SetInvalid(idx);
                 return int64_t();
@@ -887,9 +887,9 @@ void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &
 }
 
 void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
-    interpType interp = INTERP_NONE;
-    if (args.size() > 1) {
-        auto &interp_child = args.data[1];
+        interpType interp = INTERP_NONE;
+        if (args.size() > 1) {
+            auto &interp_child = args.data[1];
         interp_child.Flatten(args.size());
         auto interp_str = interp_child.GetValue(0).ToString();
         interp = interptype_from_string(interp_str.c_str());
@@ -1104,7 +1104,10 @@ void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &s
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
             
+            free(temp_data);
             free(ret);
+            free(span);
+            free(temp);
             return stored_data;
         }
     );

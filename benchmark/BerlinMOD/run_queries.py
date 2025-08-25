@@ -40,7 +40,7 @@ class QueryRunner:
 
         while not success:
             result = subprocess.run(
-                [self.duckdb_path, "./databases/berlinmod.db"],
+                [self.duckdb_path, f"./databases/{self.benchmark}.db"],
                 input=sql,
                 capture_output=True,
                 text=True
@@ -64,7 +64,7 @@ class QueryRunner:
         return elapsed, line_count
 
     def run_validation(self, filename: str) -> int:
-        output_file = f"{self.output_path}/{filename.replace('.sql', '.csv')}"
+        output_file = f"{self.output_path}/{self.benchmark}/{filename.replace('.sql', '.csv')}"
         if not os.path.exists(output_file):
             print(f"\tError: Output file not found: {output_file}")
             return -1

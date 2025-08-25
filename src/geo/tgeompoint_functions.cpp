@@ -410,17 +410,20 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
             }
 
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
-            if (!ewkb_data) {
+            // NOTE: using geo_as_ewkb() results in unpredictable segmentation faults
+            // Using geo_as_ewkt() as a workaround
+            char *ewkt_data = geo_as_ewkt(gs, 10);
+            size_t ewkt_size = strlen(ewkt_data);
+            if (!ewkt_data) {
+                free(gs);
                 free(temp);
                 throw InvalidInputException("Failed to convert trajectory to EWKB");
             }
 
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
+            string_t ewkb_string(ewkt_data, ewkt_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ewkb_string);
 
-            free(ewkb_data);
+            free(ewkt_data);
             free(gs);
             free(temp);
             return stored_data;
