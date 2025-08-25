@@ -40,6 +40,7 @@ struct SpanFunctions {
     // scalar functions
     static void Span_as_text(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Span_constructor(DataChunk &args, ExpressionState &state, Vector &result);   
+    static void Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Value_to_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intspan_to_floatspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatspan_to_intspan(DataChunk &args, ExpressionState &state, Vector &result);

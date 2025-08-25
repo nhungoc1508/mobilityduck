@@ -1,0 +1,217 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, i.InstantId, i.Instant,     v1.Licence AS Licence1, v2.Licence AS Licence2 FROM Trips t1, Vehicles v1, Trips t2, Vehicles v2, Points1 p, Instants1 i WHERE     t1.VehicleId = v1.VehicleId     AND t2.VehicleId = v2.VehicleId     AND t1.VehicleId < t2.VehicleId     AND t1.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)     AND t2.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)     AND valueAtTimestamp(t1.Trip, i.Instant) = p.Geom     AND valueAtTimestamp(t2.Trip, i.Instant) = p.Geom ORDER BY p.PointId, i.InstantId, v1.Licence, v2.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││              Total Time: 106.55s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│             #1            │
+│__internal_decompress_integ│
+│     ral_integer(#2, 1)    │
+│             #3            │
+│__internal_decompress_strin│
+│           g(#4)           │
+│__internal_decompress_strin│
+│           g(#5)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       p.PointId ASC       │
+│      i.InstantId ASC      │
+│       v1.Licence ASC      │
+│       v2.Licence ASC      │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│             #1            │
+│__internal_compress_integra│
+│     l_utinyint(#2, 1)     │
+│             #3            │
+│__internal_compress_string_│
+│        ubigint(#4)        │
+│__internal_compress_string_│
+│        ubigint(#5)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│             #1            │
+│__internal_decompress_integ│
+│     ral_integer(#2, 1)    │
+│             #3            │
+│__internal_decompress_strin│
+│           g(#4)           │
+│__internal_decompress_strin│
+│           g(#5)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│             #3            │
+│             #4            │
+│             #5            │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          PointId          │
+│            Geom           │
+│         InstantId         │
+│          Instant          │
+│          Licence1         │
+│          Licence2         │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│             #1            │
+│__internal_compress_integra│
+│     l_utinyint(#2, 1)     │
+│             #3            │
+│__internal_compress_string_│
+│        ubigint(#4)        │
+│__internal_compress_string_│
+│        ubigint(#5)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          PointId          │
+│            Geom           │
+│         InstantId         │
+│          Instant          │
+│          Licence1         │
+│          Licence2         │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│     BLOCKWISE_NL_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│         Condition:        │
+│  ((valueAtTimestamp(Trip, │
+│   Instant) = CAST(Geom AS │
+│      WKB_BLOB)) AND (     │
+│  (valueAtTimestamp(Trip,  │
+│   Instant) = CAST(Geom AS │
+│      WKB_BLOB)) AND (     │
+│  (valueAtTimestamp(Trip,  │
+│         Instant) =        │
+│   valueAtTimestamp(Trip,  ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│       Instant)) AND (     │                                                                                                                                  │
+│  (valueAtTimestamp(Trip,  │                                                                                                                                  │
+│   Instant) = CAST(Geom AS │                                                                                                                                  │
+│  WKB_BLOB)) AND ((Trip @> │                                                                                                                                  │
+│     stbox(CAST(Geom AS    │                                                                                                                                  │
+│  WKB_BLOB), Instant)) AND │                                                                                                                                  │
+│  (Trip @> stbox(CAST(Geom │                                                                                                                                  │
+│  AS WKB_BLOB), Instant))))│                                                                                                                                  │
+│            )))            │                                                                                                                                  │
+│                           │                                                                                                                                  │
+│           0 Rows          │                                                                                                                                  │
+│         (105.92s)         │                                                                                                                                  │
+└─────────────┬─────────────┘                                                                                                                                  │
+┌─────────────┴─────────────┐                                                                                                                    ┌─────────────┴─────────────┐
+│    PIECEWISE_MERGE_JOIN   │                                                                                                                    │      STREAMING_LIMIT      │
+│    ────────────────────   │                                                                                                                    │    ────────────────────   │
+│      Join Type: INNER     │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│        Conditions:        ├────────────────────────────────────────────────────────────────────────┐                                           │                           │
+│   VehicleId > VehicleId   │                                                                        │                                           │                           │
+│                           │                                                                        │                                           │                           │
+│        1481700 Rows       │                                                                        │                                           │          10 Rows          │
+│          (0.47s)          │                                                                        │                                           │          (0.00s)          │
+└─────────────┬─────────────┘                                                                        │                                           └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│       CROSS_PRODUCT       │                                                          │         HASH_JOIN         │                             │         TABLE_SCAN        │
+│    ────────────────────   │                                                          │    ────────────────────   │                             │    ────────────────────   │
+│                           │                                                          │      Join Type: INNER     │                             │      Table: Instants      │
+│                           │                                                          │                           │                             │   Type: Sequential Scan   │
+│                           │                                                          │        Conditions:        │                             │                           │
+│                           ├───────────────────────────────────────────┐              │   VehicleId = VehicleId   ├──────────────┐              │        Projections:       │
+│                           │                                           │              │                           │              │              │         InstantId         │
+│                           │                                           │              │                           │              │              │          Instant          │
+│                           │                                           │              │                           │              │              │                           │
+│         5490 Rows         │                                           │              │          549 Rows         │              │              │          100 Rows         │
+│          (0.00s)          │                                           │              │          (0.00s)          │              │              │          (0.00s)          │
+└─────────────┬─────────────┘                                           │              └─────────────┬─────────────┘              │              └───────────────────────────┘
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │      STREAMING_LIMIT      ││         TABLE_SCAN        ││         TABLE_SCAN        │
+│    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│      Join Type: INNER     │                             │                           ││        Table: Trips       ││      Table: Vehicles      │
+│                           │                             │                           ││   Type: Sequential Scan   ││   Type: Sequential Scan   │
+│        Conditions:        │                             │                           ││                           ││                           │
+│   VehicleId = VehicleId   ├──────────────┐              │                           ││        Projections:       ││        Projections:       │
+│                           │              │              │                           ││         VehicleId         ││         VehicleId         │
+│                           │              │              │                           ││            Trip           ││          Licence          │
+│                           │              │              │                           ││                           ││                           │
+│          549 Rows         │              │              │          10 Rows          ││          549 Rows         ││          63 Rows          │
+│          (0.00s)          │              │              │          (0.00s)          ││          (0.12s)          ││          (0.00s)          │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘└───────────────────────────┘└───────────────────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││       Table: Points       │
+│   Type: Sequential Scan   ││   Type: Sequential Scan   ││   Type: Sequential Scan   │
+│                           ││                           ││                           │
+│        Projections:       ││        Projections:       ││        Projections:       │
+│         VehicleId         ││         VehicleId         ││          PointId          │
+│            Trip           ││          Licence          ││            Geom           │
+│                           ││                           ││                           │
+│          549 Rows         ││          63 Rows          ││          100 Rows         │
+│          (0.01s)          ││          (0.00s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘

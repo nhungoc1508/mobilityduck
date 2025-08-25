@@ -19,7 +19,9 @@ struct TGeomPointTypes {
 
 struct TgeomPointFunctions {
     static bool StringToTgeomPoint(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool StringToTgeomPointNew(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TgeomPointToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool TgeomPointToStringNew(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 

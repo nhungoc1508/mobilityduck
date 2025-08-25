@@ -1,0 +1,166 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE SELECT DISTINCT l.Licence, i.InstantId, i.Instant AS Instant,     valueAtTimestamp(t.Trip, i.Instant)::GEOMETRY AS Pos FROM Trips t, Licences1 l, Instants1 i WHERE t.VehicleId = l.VehicleId AND valueAtTimestamp(t.Trip, i.Instant) IS NOT NULL ORDER BY l.Licence, i.InstantId;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││              Total Time: 0.0429s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_strin│
+│           g(#0)           │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│             #3            │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       l.Licence ASC       │
+│      i.InstantId ASC      │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_string_│
+│        ubigint(#0)        │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│             #3            │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_strin│
+│           g(#0)           │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│             #3            │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│             #3            │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence          │
+│         InstantId         │
+│          Instant          │
+│            Pos            │
+│                           │
+│          23 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_string_│
+│        ubigint(#0)        │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│             #3            │
+│                           │
+│          23 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence          │
+│         InstantId         │
+│          Instant          │
+│            Pos            │
+│                           │
+│          23 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│     BLOCKWISE_NL_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│         Condition:        │
+│  (valueAtTimestamp(Trip,  ├───────────────────────────────────────────┐
+│    Instant) IS NOT NULL)  │                                           │
+│                           │                                           │
+│          23 Rows          │                                           │
+│          (0.02s)          │                                           │
+└─────────────┬─────────────┘                                           │
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │      STREAMING_LIMIT      │
+│    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │                           │
+│                           │                             │                           │
+│        Conditions:        ├──────────────┐              │                           │
+│   VehicleId = VehicleId   │              │              │                           │
+│                           │              │              │                           │
+│          84 Rows          │              │              │          10 Rows          │
+│          (0.00s)          │              │              │          (0.00s)          │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││      STREAMING_LIMIT      ││         TABLE_SCAN        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││                           ││      Table: Instants      │
+│      Type: Index Scan     ││                           ││   Type: Sequential Scan   │
+│                           ││                           ││                           │
+│        Projections:       ││                           ││        Projections:       │
+│         VehicleId         ││                           ││         InstantId         │
+│            Trip           ││                           ││          Instant          │
+│                           ││                           ││                           │
+│   Filters: VehicleId>=3   ││                           ││                           │
+│                           ││                           ││                           │
+│          70 Rows          ││          10 Rows          ││          100 Rows         │
+│          (0.02s)          ││          (0.00s)          ││          (0.00s)          │
+└───────────────────────────┘└─────────────┬─────────────┘└───────────────────────────┘
+                             ┌─────────────┴─────────────┐
+                             │         TABLE_SCAN        │
+                             │    ────────────────────   │
+                             │      Table: Licences      │
+                             │   Type: Sequential Scan   │
+                             │                           │
+                             │        Projections:       │
+                             │          Licence          │
+                             │         VehicleId         │
+                             │                           │
+                             │          100 Rows         │
+                             │          (0.00s)          │
+                             └───────────────────────────┘
