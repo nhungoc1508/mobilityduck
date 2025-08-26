@@ -14,4 +14,5 @@ SET Period = span(Tstart, Tend);
 CREATE OR REPLACE VIEW Periods1(PeriodId, Tstart, Tend, Period) AS
 SELECT PeriodId, Tstart, Tend, Period
 FROM Periods
+ORDER BY PeriodId
 LIMIT 10;

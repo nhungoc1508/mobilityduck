@@ -6,7 +6,7 @@
 EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehicles v, Points p WHERE     t.VehicleId = v.VehicleId     AND t.Trip && stbox(p.Geom::WKB_BLOB)     AND ST_Intersects(trajectory(t.Trip)::GEOMETRY, p.Geom) ORDER BY p.PointId, v.Licence;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 54.16s              ││
+││              Total Time: 53.76s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -119,7 +119,7 @@ EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehic
 │      GEOMETRY), Geom))    │                                           │
 │                           │                                           │
 │           0 Rows          │                                           │
-│          (54.04s)         │                                           │
+│          (53.63s)         │                                           │
 └─────────────┬─────────────┘                                           │
 ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
 │         HASH_JOIN         │                             │         TABLE_SCAN        │

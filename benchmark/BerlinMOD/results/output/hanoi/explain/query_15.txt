@@ -6,7 +6,7 @@
 EXPLAIN ANALYZE SELECT DISTINCT pt.PointId, pt.Geom, pr.PeriodId, pr.Period, v.Licence FROM Trips t, Vehicles v, Points1 pt, Periods1 pr WHERE     t.VehicleId = v.VehicleId     AND t.Trip && stbox(pt.Geom::WKB_BLOB, pr.Period)     AND ST_Intersects(trajectory(atTime(t.Trip, pr.Period))::GEOMETRY, pt.Geom) ORDER BY pt.PointId, pr.PeriodId, v.Licence;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 12.10s              ││
+││              Total Time: 12.30s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -133,43 +133,97 @@ EXPLAIN ANALYZE SELECT DISTINCT pt.PointId, pt.Geom, pr.PeriodId, pr.Period, v.L
 │         Condition:        │
 │ ((Trip && stbox(CAST(Geom │
 │   AS WKB_BLOB), Period))  │
-│   AND ST_Intersects(CAST  ├────────────────────────────────────────────────────────────────────────┐
-│  (trajectory(atTime(Trip, │                                                                        │
-│   Period)) AS GEOMETRY),  │                                                                        │
-│           Geom))          │                                                                        │
-│                           │                                                                        │
-│           0 Rows          │                                                                        │
-│          (11.97s)         │                                                                        │
-└─────────────┬─────────────┘                                                                        │
-┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
-│       CROSS_PRODUCT       │                                                          │      STREAMING_LIMIT      │
-│    ────────────────────   │                                                          │    ────────────────────   │
-│         5490 Rows         ├───────────────────────────────────────────┐              │          10 Rows          │
-│          (0.00s)          │                                           │              │          (0.00s)          │
-└─────────────┬─────────────┘                                           │              └─────────────┬─────────────┘
-┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
-│         HASH_JOIN         │                             │      STREAMING_LIMIT      ││         TABLE_SCAN        │
-│    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
-│      Join Type: INNER     │                             │                           ││       Table: Periods      │
-│                           │                             │                           ││   Type: Sequential Scan   │
-│        Conditions:        │                             │                           ││                           │
-│   VehicleId = VehicleId   ├──────────────┐              │                           ││        Projections:       │
-│                           │              │              │                           ││          PeriodId         │
-│                           │              │              │                           ││           Period          │
-│                           │              │              │                           ││                           │
-│          549 Rows         │              │              │          10 Rows          ││          100 Rows         │
-│          (0.00s)          │              │              │          (0.00s)          ││          (0.00s)          │
-└─────────────┬─────────────┘              │              └─────────────┬─────────────┘└───────────────────────────┘
-┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
-│         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        │
-│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
-│        Table: Trips       ││      Table: Vehicles      ││       Table: Points       │
-│   Type: Sequential Scan   ││   Type: Sequential Scan   ││   Type: Sequential Scan   │
-│                           ││                           ││                           │
-│        Projections:       ││        Projections:       ││        Projections:       │
-│         VehicleId         ││         VehicleId         ││          PointId          │
-│            Trip           ││          Licence          ││            Geom           │
-│                           ││                           ││                           │
-│          549 Rows         ││          63 Rows          ││          100 Rows         │
-│          (0.12s)          ││          (0.00s)          ││          (0.00s)          │
-└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘
+│   AND ST_Intersects(CAST  ├─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  (trajectory(atTime(Trip, │                                                                                                     │
+│   Period)) AS GEOMETRY),  │                                                                                                     │
+│           Geom))          │                                                                                                     │
+│                           │                                                                                                     │
+│           0 Rows          │                                                                                                     │
+│          (12.18s)         │                                                                                                     │
+└─────────────┬─────────────┘                                                                                                     │
+┌─────────────┴─────────────┐                                                                                       ┌─────────────┴─────────────┐
+│       CROSS_PRODUCT       │                                                                                       │         PROJECTION        │
+│    ────────────────────   │                                                                                       │    ────────────────────   │
+│                           │                                                                                       │__internal_decompress_integ│
+│                           │                                                                                       │     ral_integer(#0, 1)    │
+│                           ├───────────────────────────────────────────┐                                           │             #1            │
+│                           │                                           │                                           │                           │
+│         5490 Rows         │                                           │                                           │          10 Rows          │
+│          (0.00s)          │                                           │                                           │          (0.00s)          │
+└─────────────┬─────────────┘                                           │                                           └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │         PROJECTION        │                             │          ORDER_BY         │
+│    ────────────────────   │                             │    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │__internal_decompress_integ│                             │     hanoi.main.Periods    │
+│                           │                             │     ral_integer(#0, 1)    │                             │       .PeriodId ASC       │
+│        Conditions:        ├──────────────┐              │             #1            │                             │                           │
+│   VehicleId = VehicleId   │              │              │                           │                             │                           │
+│                           │              │              │                           │                             │                           │
+│          549 Rows         │              │              │          10 Rows          │                             │          10 Rows          │
+│          (0.00s)          │              │              │          (0.00s)          │                             │          (0.00s)          │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘                             └─────────────┬─────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││          ORDER_BY         │                             │         PROJECTION        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││ hanoi.main.Points.PointId │                             │__internal_compress_integra│
+│   Type: Sequential Scan   ││   Type: Sequential Scan   ││             ASC           │                             │     l_utinyint(#0, 1)     │
+│                           ││                           ││                           │                             │             #1            │
+│        Projections:       ││        Projections:       ││                           │                             │                           │
+│         VehicleId         ││         VehicleId         ││                           │                             │                           │
+│            Trip           ││          Licence          ││                           │                             │                           │
+│                           ││                           ││                           │                             │                           │
+│          549 Rows         ││          63 Rows          ││          10 Rows          │                             │          10 Rows          │
+│          (0.12s)          ││          (0.00s)          ││          (0.00s)          │                             │          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└─────────────┬─────────────┘                             └─────────────┬─────────────┘
+                                                          ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+                                                          │         PROJECTION        │                             │         HASH_JOIN         │
+                                                          │    ────────────────────   │                             │    ────────────────────   │
+                                                          │__internal_compress_integra│                             │      Join Type: SEMI      │
+                                                          │     l_utinyint(#0, 1)     │                             │                           │
+                                                          │             #1            │                             │        Conditions:        ├──────────────┐
+                                                          │                           │                             │       rowid = rowid       │              │
+                                                          │                           │                             │                           │              │
+                                                          │          10 Rows          │                             │          10 Rows          │              │
+                                                          │          (0.00s)          │                             │          (0.00s)          │              │
+                                                          └─────────────┬─────────────┘                             └─────────────┬─────────────┘              │
+                                                          ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+                                                          │         HASH_JOIN         │                             │         TABLE_SCAN        ││           TOP_N           │
+                                                          │    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
+                                                          │      Join Type: SEMI      │                             │       Table: Periods      ││          Top: 10          │
+                                                          │                           │                             │   Type: Sequential Scan   ││                           │
+                                                          │        Conditions:        │                             │                           ││         Order By:         │
+                                                          │       rowid = rowid       ├──────────────┐              │        Projections:       ││     hanoi.main.Periods    │
+                                                          │                           │              │              │          PeriodId         ││       .PeriodId ASC       │
+                                                          │                           │              │              │           Period          ││                           │
+                                                          │                           │              │              │                           ││                           │
+                                                          │          10 Rows          │              │              │          10 Rows          ││          10 Rows          │
+                                                          │          (0.00s)          │              │              │          (0.00s)          ││          (0.00s)          │
+                                                          └─────────────┬─────────────┘              │              └───────────────────────────┘└─────────────┬─────────────┘
+                                                          ┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+                                                          │         TABLE_SCAN        ││           TOP_N           │                             │         TABLE_SCAN        │
+                                                          │    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   │
+                                                          │       Table: Points       ││          Top: 10          │                             │       Table: Periods      │
+                                                          │   Type: Sequential Scan   ││                           │                             │   Type: Sequential Scan   │
+                                                          │                           ││         Order By:         │                             │   Projections: PeriodId   │
+                                                          │        Projections:       ││ hanoi.main.Points.PointId │                             │                           │
+                                                          │          PointId          ││             ASC           │                             │          Filters:         │
+                                                          │            Geom           ││                           │                             │ optional: Dynamic Filter  │
+                                                          │                           ││                           │                             │         (PeriodId)        │
+                                                          │                           ││                           │                             │                           │
+                                                          │          10 Rows          ││          10 Rows          │                             │          100 Rows         │
+                                                          │          (0.00s)          ││          (0.00s)          │                             │          (0.00s)          │
+                                                          └───────────────────────────┘└─────────────┬─────────────┘                             └───────────────────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │         TABLE_SCAN        │
+                                                                                       │    ────────────────────   │
+                                                                                       │       Table: Points       │
+                                                                                       │   Type: Sequential Scan   │
+                                                                                       │    Projections: PointId   │
+                                                                                       │                           │
+                                                                                       │          Filters:         │
+                                                                                       │ optional: Dynamic Filter  │
+                                                                                       │         (PointId)         │
+                                                                                       │                           │
+                                                                                       │          100 Rows         │
+                                                                                       │          (0.00s)          │
+                                                                                       └───────────────────────────┘

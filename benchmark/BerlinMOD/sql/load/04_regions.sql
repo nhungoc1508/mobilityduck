@@ -31,4 +31,5 @@ SELECT RegionId, ST_MakePolygon(
 CREATE OR REPLACE VIEW Regions1(RegionId, Geom) AS
     SELECT RegionId, Geom
     FROM Regions
+    ORDER BY RegionId
     LIMIT 10;

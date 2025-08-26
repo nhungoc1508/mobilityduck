@@ -39,4 +39,6 @@ INSERT INTO Trips(TripId, VehicleId, Trip)
 SELECT TripId, VehicleId, tgeompointSeq(Tgeom) FROM TripsTmp;
 
 CREATE OR REPLACE VIEW Trips1 AS
-    SELECT * FROM Trips LIMIT 100;
+    SELECT * FROM Trips
+    ORDER BY VehicleId, TripId
+    LIMIT 100;

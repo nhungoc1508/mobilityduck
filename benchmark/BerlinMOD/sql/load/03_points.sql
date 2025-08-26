@@ -16,4 +16,5 @@ SET Geom = ST_Transform(ST_Point(PosX, PosY), 'EPSG:3857', 'EPSG:5676');
 CREATE OR REPLACE VIEW Points1(PointId, PosX, PosY, Geom) AS
     SELECT PointId, PosX, PosY, Geom
     FROM Points
+    ORDER BY PointId
     LIMIT 10;
