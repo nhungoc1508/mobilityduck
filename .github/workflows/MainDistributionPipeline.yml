@@ -2,12 +2,12 @@ name: Build & Package DuckDB Extension (linux_amd64_musl)
 
 on:
   push:
-  pull_request:
-  workflow_dispatch:
-  # Publish to a GitHub Release if you push a tag like v0.1.0
-  push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   linux_amd64_musl:
