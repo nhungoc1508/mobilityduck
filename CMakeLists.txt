@@ -77,24 +77,15 @@ include_directories(src/include)
 
 set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp
-    # src/temporal/tint.cpp
-    # src/temporal/tbool.cpp
-    # src/temporal/temporal_types.cpp
-    src/temporal/temporal.cpp
-    src/temporal/temporal_functions.cpp
-    src/temporal/tbox.cpp
-    src/temporal/tbox_functions.cpp
     src/geo/stbox.cpp
     src/geo/stbox_functions.cpp
-    src/geo/tgeompoint.cpp
-    src/geo/tgeompoint_functions.cpp
-    src/temporal/set.cpp    
+    src/mobilityduck_extension.cpp
     src/temporal/span.cpp
-    src/geoset.cpp
-    src/temporal/spanset.cpp
-    src/tgeo/tgeometry.cpp
-    src/tgeo/tgeometry_in_out.cpp
-    # src/tgeo/tgeompoint.cpp
+    src/index/rtree_module.cpp
+    src/index/rtree_pragmas.cpp
+    src/index/rtree_index_create_physical.cpp
+    src/index/rtree_index_scan.cpp
+    src/index/rtree_optimize_scan.cpp
     )
 
 # Build extension targets
