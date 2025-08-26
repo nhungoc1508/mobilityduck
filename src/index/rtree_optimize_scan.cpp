@@ -89,124 +89,44 @@ private:
                 if (constant.value.type().GetAlias() == "stbox" || 
                     constant.value.type().id() == LogicalTypeId::BLOB) {
                     fprintf(stderr, "RTreeOptimizer::Processing stbox constant\n");
-                    
-                    // Get the raw data
-                    auto blob_data = constant.value.GetValue<string>();
-                    const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.data());
-                    size_t stbox_size = blob_data.size();
-                    
-                    fprintf(stderr, "RTreeOptimizer Processing stbox blob, size: %zu bytes\n", stbox_size);
+
+                    // Get the raw data as string_t (no copy)
+                    auto blob_data = constant.value.GetValueUnsafe<duckdb::string_t>();
+
+                    // Print safely for debug (truncated if contains null bytes)
+                    fprintf(stderr, "blob_data (as string) %.*s\n", (int)blob_data.GetSize(), blob_data.GetDataUnsafe());
+
+                    // Get raw bytes
+                    const uint8_t *stbox_data = reinterpret_cast<const uint8_t *>(blob_data.GetDataUnsafe());
+                    size_t stbox_size = blob_data.GetSize();
+
+                    fprintf(stderr, "stbox_data size: %zu bytes\n", stbox_size);
 
                     fprintf(stderr, "RTreeOptimizer::STBox data preview: ");
-                    for (size_t i = 0; i < std::min(stbox_size, 32UL); i++) {
+                    for (size_t i = 0; i < std::min(stbox_size, 320UL); i++) {
                         fprintf(stderr, "%02x ", stbox_data[i]);
                     }
                     fprintf(stderr, "\n");
 
                     STBox *box = nullptr;
-
-                    // The data is a DuckDB BLOB containing STBox data
-                    // Try different approaches to extract the actual STBox
                     
-                    if (stbox_size > 80) {
-                        fprintf(stderr, "RTreeOptimizer::Large BLOB detected, looking for STBox data within\n");
-                        
-                        // First, let's see if this might be text data that we can parse
-                        // Check if the data looks like escaped text
-                        bool might_be_text = true;
-                        for (size_t i = 0; i < std::min(stbox_size, 64UL) && might_be_text; i++) {
-                            uint8_t byte = stbox_data[i];
-                            // Look for patterns that suggest this is escaped text or binary STBox data
-                            if (byte > 127) { // Non-ASCII
-                                might_be_text = false;
-                            }
-                        }
-                        
-                        if (might_be_text) {
-                            fprintf(stderr, "RTreeOptimizer::Attempting to parse as text representation\n");
-                            
-                            // Convert to string and try to extract the STBOX part
-                            std::string blob_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
-                            
-                            // Look for "STBOX" in the string
-                            size_t stbox_pos = blob_str.find("STBOX");
-                            if (stbox_pos != std::string::npos) {
-                                std::string stbox_part = blob_str.substr(stbox_pos);
-                                
-                                // Remove any null characters
-                                stbox_part.erase(std::remove(stbox_part.begin(), stbox_part.end(), '\0'), stbox_part.end());
-                                
-                                // Find the end of the STBOX string (look for closing parenthesis)
-                                size_t end_pos = stbox_part.find('))');
-                                if (end_pos != std::string::npos) {
-                                    stbox_part = stbox_part.substr(0, end_pos + 2);
-                                }
-                                
-                                fprintf(stderr, "RTreeOptimizer::Extracted STBOX string: '%s'\n", stbox_part.c_str());
-                                
-                                // Try to parse this as an STBOX
-                                box = stbox_in(stbox_part.c_str());
-                                if (box) {
-                                    fprintf(stderr, "RTreeOptimizer::Successfully parsed STBOX from text\n");
-                                }
-                            }
-                        }
-                        
-                        // If text parsing failed, let's examine the data more carefully
-                        if (!box) {
-                            fprintf(stderr, "RTreeOptimizer::Text parsing failed\n");
-                            
-                            // Let's decode what this hex pattern actually means
-                            fprintf(stderr, "RTreeOptimizer::Full hex dump: ");
-                            for (size_t i = 0; i < std::min(stbox_size, 100UL); i++) {
-                                fprintf(stderr, "%02x", stbox_data[i]);
-                                if (i % 16 == 15) fprintf(stderr, "\n");
-                                else if (i % 4 == 3) fprintf(stderr, " ");
-                            }
-                            fprintf(stderr, "\n");
-                            
-                            // The pattern 5c 78 30 30 = \x00 suggests this might be an encoding issue
-                            // Let's try to create a simple STBox manually from the coordinates we know
-                            fprintf(stderr, "RTreeOptimizer::Creating STBox manually for query coordinates (1,2,3,4)\n");
-                            
-                            // Create STBox using MEOS function with known coordinates
-                            // Since we know this should be "STBOX X((1.0,2.0),(3.0,4.0))", let's create it directly
-                            box = stbox_in("STBOX X((1.0,2.0),(3.0,4.0))");
-                            
-                            if (box) {
-                                fprintf(stderr, "RTreeOptimizer::Successfully created STBox manually\n");
-                                char *verify_str = stbox_out(box, 15);
-                                if (verify_str) {
-                                    fprintf(stderr, "RTreeOptimizer::Manual STBox: %s\n", verify_str);
-                                    free(verify_str);
-                                }
-                            } else {
-                                fprintf(stderr, "RTreeOptimizer::Failed to create STBox manually\n");
-                            }
-                        }
-                    }
-                    else if (stbox_size == 80) { // This looks like actual binary STBox data
-                        fprintf(stderr, "RTreeOptimizer::Detected binary STBox data\n");
-                        
-                        // Allocate memory for the stbox
-                        box = (STBox*)malloc(stbox_size);
-                        
-                        // Copy the blob data to create our own stbox instance
-                        memcpy(box, stbox_data, stbox_size);
-                    }
-                    else {
-                        fprintf(stderr, "RTreeOptimizer::Unknown STBox format, size: %zu\n", stbox_size);
-                    }
+                    fprintf(stderr, "RTreeOptimizer::Detected binary STBox data\n");
+                    
+                    // Allocate memory for the stbox
+                    box = (STBox*)malloc(stbox_size);
+                    
+                    // Copy the blob data to create our own stbox instance
+                    memcpy(box, stbox_data, stbox_size);
+                
 
-                    if (box) {
-                        fprintf(stderr, "RTreeOptimizer::Box pointer: %p\n", (void*)box);
-                        
-                        char *stbox_str = stbox_out(box, 15);
-                        fprintf(stderr, "RTreeOptimizer::Parsed STBOX %s\n", stbox_str);
-                        if (stbox_str) free(stbox_str);
-                        
-                        query_stbox = unique_ptr<STBox>(box);
-                    }
+                    fprintf(stderr, "RTreeOptimizer::Box pointer: %p\n", (void*)box);
+                    
+                    char *stbox_str = stbox_out(box, 15);
+                    fprintf(stderr, "RTreeOptimizer::Parsed STBOX %s\n", stbox_str);
+                    if (stbox_str) free(stbox_str);
+                    
+                    query_stbox = unique_ptr<STBox>(box);
+                    
                 }
 
                 if (!query_stbox) {

@@ -21,14 +21,11 @@ PhysicalCreateRTreeIndex::PhysicalCreateRTreeIndex(const vector<LogicalType> &ty
                                                  const vector<column_t> &column_ids, unique_ptr<CreateIndexInfo> info,
                                                  vector<unique_ptr<Expression>> unbound_expressions,
                                                  idx_t estimated_cardinality)
-    // Declare this operators as a EXTENSION operator
+
     : PhysicalOperator(PhysicalOperatorType::EXTENSION, types_p, estimated_cardinality),
       table(table_p.Cast<DuckTableEntry>()), info(std::move(info)), unbound_expressions(std::move(unbound_expressions)),
       sorted(false) {
-	
-	fprintf(stderr, "PhysicalCreateRTreeIndex\n");
 
-	// convert virtual column ids to storage column ids
 	for (auto &column_id : column_ids) {
 		storage_ids.push_back(table.GetColumns().LogicalToPhysical(LogicalIndex(column_id)).index);
 	}

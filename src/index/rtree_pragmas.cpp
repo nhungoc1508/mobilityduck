@@ -12,7 +12,6 @@
 #include "duckdb/catalog/catalog_entry/duck_index_entry.hpp"
 #include "duckdb/storage/data_table.hpp"
 
-#include "index/rtree.hpp"
 #include "index/rtree_module.hpp"
 
 namespace duckdb {
@@ -55,15 +54,11 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexInfoInitGlobal(ClientConte
                                                                      TableFunctionInitInput &input) {
 	auto result = make_uniq<RTreeIndexInfoGlobalState>();
 
-	// Scan all schemas for RTree indexes and collect them
 	auto schemas = Catalog::GetAllSchemas(context);
 	for (auto &schema : schemas) {
 		schema.get().Scan(context, CatalogType::INDEX_ENTRY, [&](CatalogEntry &entry) {
 			auto &index_entry = entry.Cast<IndexCatalogEntry>();
-			// Temporary debug: uncomment the next line to see what index types are found
-			// printf("Found index: %s, type: '%s'\n", index_entry.name.c_str(), index_entry.index_type.c_str());
-			
-			// Check both exact match and case variations
+
 			if (index_entry.index_type == RTreeIndex::TYPE_NAME || 
 			    index_entry.index_type == "TRTREE") {
 				result->entries.push_back(index_entry);
@@ -71,8 +66,6 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexInfoInitGlobal(ClientConte
 		});
 	}
 	
-	// Debug: Print how many entries we found
-	// printf("Found %zu RTree index entries\n", result->entries.size());
 	
 	return std::move(result);
 }
@@ -92,14 +85,13 @@ static void RTreeIndexInfoExecute(ClientContext &context, TableFunctionInput &da
 		auto &table_entry = index_entry.schema.catalog.GetEntry<TableCatalogEntry>(context, index_entry.GetSchemaName(),
 		                                                                           index_entry.GetTableName());
 
-		// Simplified version - just show catalog info without trying to access the actual index
 		idx_t col = 0;
 		output.data[col++].SetValue(row, Value(index_entry.catalog.GetName()));
 		output.data[col++].SetValue(row, Value(index_entry.schema.name));
 		output.data[col++].SetValue(row, Value(index_entry.name));
 		output.data[col++].SetValue(row, Value(table_entry.name));
 		output.data[col++].SetValue(row, Value("TRTREE (Stbox)"));
-		output.data[col++].SetValue(row, Value::BIGINT(8192)); // Estimated memory usage
+		output.data[col++].SetValue(row, Value::BIGINT(8192)); 
 
 		row++;
 	}
@@ -112,7 +104,6 @@ static void RTreeIndexInfoExecute(ClientContext &context, TableFunctionInput &da
 static optional_ptr<RTreeIndex> TryGetRTreeIndex(ClientContext &context, const string &index_name) {
 	auto qname = QualifiedName::Parse(index_name);
 
-	// Look up the index name in the catalog
 	Binder::BindSchemaOrCatalog(context, qname.catalog, qname.schema);
 	auto &index_entry = Catalog::GetEntry(context, CatalogType::INDEX_ENTRY, qname.catalog, qname.schema, qname.name)
 	                        .Cast<IndexCatalogEntry>();
@@ -136,7 +127,7 @@ static optional_ptr<RTreeIndex> TryGetRTreeIndex(ClientContext &context, const s
 }
 
 //-------------------------------------------------------------------------
-// Vacuum PRAGMA - Rebuild the RTree index for optimization
+// Vacuum PRAGMA 
 //-------------------------------------------------------------------------
 static void VacuumRTreeIndexPragma(ClientContext &context, const FunctionParameters &parameters) {
 	if (parameters.values.size() != 1) {
@@ -152,12 +143,7 @@ static void VacuumRTreeIndexPragma(ClientContext &context, const FunctionParamet
 	if (!rtree_index) {
 		throw BinderException("RTree Index %s not found", index_name);
 	}
-
-	// Since MEOS RTree is opaque, we can't directly vacuum it
-	// This pragma could be used to trigger a rebuild if needed
-	// For now, just validate the index exists (which we already did above)
 }
-
 
 static unique_ptr<FunctionData> DebugAllIndexesBind(ClientContext &context, TableFunctionBindInput &input,
                                                     vector<LogicalType> &return_types, vector<string> &names) {
@@ -188,12 +174,10 @@ static unique_ptr<GlobalTableFunctionState> DebugAllIndexesInitGlobal(ClientCont
                                                                       TableFunctionInitInput &input) {
 	auto result = make_uniq<DebugAllIndexesGlobalState>();
 
-	// Scan ALL indexes regardless of type
 	auto schemas = Catalog::GetAllSchemas(context);
 	for (auto &schema : schemas) {
 		schema.get().Scan(context, CatalogType::INDEX_ENTRY, [&](CatalogEntry &entry) {
 			auto &index_entry = entry.Cast<IndexCatalogEntry>();
-			// Collect ALL indexes
 			result->entries.push_back(index_entry);
 		});
 	}
@@ -218,7 +202,7 @@ static void DebugAllIndexesExecute(ClientContext &context, TableFunctionInput &d
 		output.data[col++].SetValue(row, Value(index_entry.schema.name));
 		output.data[col++].SetValue(row, Value(index_entry.name));
 		output.data[col++].SetValue(row, Value(table_entry.name));
-		output.data[col++].SetValue(row, Value(index_entry.index_type)); // Show the actual type!
+		output.data[col++].SetValue(row, Value(index_entry.index_type));
 
 		row++;
 	}
@@ -229,19 +213,17 @@ static void DebugAllIndexesExecute(ClientContext &context, TableFunctionInput &d
 //-------------------------------------------------------------------------
 // Register all pragma functions
 //-------------------------------------------------------------------------
-void RTreeModule::RegisterIndexPragmas(DatabaseInstance &db) {
-	// Register vacuum pragma
-	ExtensionUtil::RegisterFunction(
-	    db, PragmaFunction::PragmaCall("rtree_vacuum_index", VacuumRTreeIndexPragma, {LogicalType::VARCHAR}));
+// void RTreeModule::RegisterIndexPragmas(DatabaseInstance &db) {
+// 	ExtensionUtil::RegisterFunction(
+// 	    db, PragmaFunction::PragmaCall("rtree_vacuum_index", VacuumRTreeIndexPragma, {LogicalType::VARCHAR}));
 
-	// Register info table function
-	TableFunction info_function("pragma_rtree_index_info", {}, RTreeIndexInfoExecute, RTreeIndexInfoBind,
-	                            RTreeIndexInfoInitGlobal);
-	ExtensionUtil::RegisterFunction(db, info_function);
+// 	TableFunction info_function("pragma_rtree_index_info", {}, RTreeIndexInfoExecute, RTreeIndexInfoBind,
+// 	                            RTreeIndexInfoInitGlobal);
+// 	ExtensionUtil::RegisterFunction(db, info_function);
 
-    TableFunction debug_function("debug_all_indexes", {}, DebugAllIndexesExecute, DebugAllIndexesBind,
-	                            DebugAllIndexesInitGlobal);
-	ExtensionUtil::RegisterFunction(db, debug_function);
-}
+//     TableFunction debug_function("debug_all_indexes", {}, DebugAllIndexesExecute, DebugAllIndexesBind,
+// 	                            DebugAllIndexesInitGlobal);
+// 	ExtensionUtil::RegisterFunction(db, debug_function);
+// }
 
-} // namespace duckdb
+} 

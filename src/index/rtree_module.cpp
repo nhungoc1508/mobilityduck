@@ -25,14 +25,10 @@
 #include "duckdb/execution/operator/filter/physical_filter.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
-#include "index/rtree.hpp"
 #include "index/rtree_module.hpp"
 #include "geo/stbox.hpp"
 #include "index/rtree_index_create_physical.hpp"
 
-// extern "C" {
-    // #include <meos.h>
-// }
 
 namespace duckdb {
 
@@ -126,6 +122,8 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) 
     // Get the stbox column data
     auto &stbox_vector = data.data[1];  // Single column for stbox data
     auto row_data = FlatVector::GetData<row_t>(row_ids);
+
+
     
     // Ensure the vector is flattened for direct access
     if (stbox_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
@@ -150,6 +148,9 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) 
                    vector_type.GetAlias() == "stbox" || 
                    vector_type.GetAlias() == "STBOX") {
             auto blob_data = FlatVector::GetData<string_t>(stbox_vector)[i];
+
+            std::string s = blob_data.GetString();
+            fprintf(stderr, "Insert blob data %s\n", s.c_str());
             const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
             size_t stbox_size = blob_data.GetSize();
             
