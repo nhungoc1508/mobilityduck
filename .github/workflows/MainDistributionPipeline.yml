@@ -1,6 +1,4 @@
-#
-# This workflow calls the main distribution pipeline from DuckDB to build, test and (optionally) release the extension
-#
+# .github/workflows/main.yml
 name: Main Extension Distribution Pipeline
 on:
   push:
@@ -20,6 +18,7 @@ jobs:
       duckdb_version: main
       ci_tools_version: main
       extension_name: mobilityduck
+      skip_platforms: wasm_mvp;wasm_eh;wasm_threads   # <— NEW
 
   duckdb-stable-build:
     name: Build extension binaries
@@ -28,6 +27,7 @@ jobs:
       duckdb_version: v1.3.2
       ci_tools_version: v1.3.2
       extension_name: mobilityduck
+      skip_platforms: wasm_mvp;wasm_eh;wasm_threads   # <— NEW
 
   code-quality-check:
     name: Code Quality Check
