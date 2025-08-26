@@ -2,7 +2,7 @@
 
 #include "mobilityduck_extension.hpp"
 #include "temporal/set.hpp"
-#include "geoset.hpp"
+#include "geo/geoset.hpp"
 
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"

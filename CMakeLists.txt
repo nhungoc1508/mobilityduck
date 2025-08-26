@@ -90,7 +90,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeompoint_functions.cpp
     src/temporal/set.cpp    
     src/temporal/span.cpp
-    src/geoset.cpp
+    src/geo/geoset.cpp
     src/temporal/spanset.cpp
     src/tgeo/tgeometry.cpp
     src/tgeo/tgeometry_in_out.cpp
