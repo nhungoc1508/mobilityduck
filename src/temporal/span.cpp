@@ -34,11 +34,11 @@ DEFINE_SPAN_TYPE(TSTZSPAN)
 #undef DEFINE_SPAN_TYPE
 
 void SpanTypes::RegisterTypes(DatabaseInstance &db) {
-    ExtensionUtil::RegisterType(db, "INTSPAN", INTSPAN());
-    ExtensionUtil::RegisterType(db, "BIGINTSPAN", BIGINTSPAN());
-    ExtensionUtil::RegisterType(db, "FLOATSPAN", FLOATSPAN());
-    ExtensionUtil::RegisterType(db, "DATESPAN", DATESPAN());
-    ExtensionUtil::RegisterType(db, "TSTZSPAN", TSTZSPAN());    
+    ExtensionLoader::RegisterType(db, "INTSPAN", INTSPAN());
+    ExtensionLoader::RegisterType(db, "BIGINTSPAN", BIGINTSPAN());
+    ExtensionLoader::RegisterType(db, "FLOATSPAN", FLOATSPAN());
+    ExtensionLoader::RegisterType(db, "DATESPAN", DATESPAN());
+    ExtensionLoader::RegisterType(db, "TSTZSPAN", TSTZSPAN());    
 }
 
 const std::vector<LogicalType> &SpanTypes::AllTypes() {
@@ -82,41 +82,41 @@ LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
 // Register all cast functions 
 void SpanTypes::RegisterCastFunctions(DatabaseInstance &instance) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             span_type,                      
             LogicalType::VARCHAR,   
             SpanFunctions::Span_to_text   
         ); // Blob to text
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             LogicalType::VARCHAR, 
             span_type,                                    
             SpanFunctions::Text_to_span   
         ); // text to blob
         
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpanTypes::INTSPAN(),
             SpanTypes::FLOATSPAN(),
             SpanFunctions::Intspan_to_floatspan_cast // intspan -> floatspan 
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpanTypes::FLOATSPAN(),
             SpanTypes::INTSPAN(),
             SpanFunctions::Floatspan_to_intspan_cast // floatspan -> intspan
         );
         
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpanTypes::DATESPAN(),
             SpanTypes::TSTZSPAN(),
             SpanFunctions::Datespan_to_tstzspan_cast // datespan -> tstzspan
         );
         
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpanTypes::TSTZSPAN(),
             SpanTypes::DATESPAN(),
@@ -131,73 +131,73 @@ void SpanTypes::RegisterScalarFunctions(DatabaseInstance &db) {
 
         // Register: asText
         if (span_type == SpanTypes::FLOATSPAN()) {            
-            ExtensionUtil::RegisterFunction( // asText(floatspan)
+            ExtensionLoader::RegisterFunction( // asText(floatspan)
                 db, ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
             
-            ExtensionUtil::RegisterFunction( // asText(floatspan, int)
+            ExtensionLoader::RegisterFunction( // asText(floatspan, int)
                 db, ScalarFunction("asText", {span_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
         } else {            
-            ExtensionUtil::RegisterFunction( // All other span types
+            ExtensionLoader::RegisterFunction( // All other span types
                 db, ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
         }
 
         // Register span constructor functions
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction(span_type.ToString(), {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_constructor)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("span", {base_type, base_type}, span_type, SpanFunctions::Span_binary_constructor)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("span", {base_type}, span_type, SpanFunctions::Value_to_span)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("intspan", {SpanTypes::FLOATSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Floatspan_to_intspan)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("floatspan", {SpanTypes::INTSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Intspan_to_floatspan)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("datespan", {SpanTypes::TSTZSPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Tstzspan_to_datespan)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("tstzspan", {SpanTypes::DATESPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Datespan_to_tstzspan)                 
         );
 
         if (span_type == SpanTypes::INTSPAN() ||span_type == SpanTypes::DATESPAN()){
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_shift)
             ); 
         }
         else if( span_type == SpanTypes::BIGINTSPAN() ){
-             ExtensionUtil::RegisterFunction(
+             ExtensionLoader::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift)
             ); 
         }
         else if( span_type == SpanTypes::FLOATSPAN() ){
-             ExtensionUtil::RegisterFunction(
+             ExtensionLoader::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::FLOAT}, span_type, SpanFunctions::Numspan_shift)
             ); 
         }
         else if( span_type == SpanTypes::TSTZSPAN() ){
-             ExtensionUtil::RegisterFunction(
+             ExtensionLoader::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_shift)
             ); 
         }

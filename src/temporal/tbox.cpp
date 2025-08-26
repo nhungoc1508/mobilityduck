@@ -21,102 +21,102 @@ LogicalType TboxType::TBOX() {
 }
 
 void TboxType::RegisterType(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterType(instance, "TBOX", TBOX());
+    ExtensionLoader::RegisterType(instance, "TBOX", TBOX());
 }
 
 void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR,
         TBOX(),
         TboxFunctions::Tbox_in
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         TBOX(),
         LogicalType::VARCHAR,
         TboxFunctions::Tbox_out
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         LogicalType::INTEGER,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         LogicalType::DOUBLE,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         LogicalType::TIMESTAMP_TZ,
         TBOX(),
         TboxFunctions::Timestamptz_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SetTypes::intset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SetTypes::floatset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SetTypes::tstzset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SpanTypes::INTSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SpanTypes::FLOATSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         SpanTypes::TSTZSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         TBOX(),
         SpanTypes::INTSPAN(),
         TboxFunctions::Tbox_to_intspan_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         TBOX(),
         SpanTypes::FLOATSPAN(),
         TboxFunctions::Tbox_to_floatspan_cast
     );
 
-    ExtensionUtil::RegisterCastFunction(
+    ExtensionLoader::RegisterCastFunction(
         instance,
         TBOX(),
         SpanTypes::TSTZSPAN(),
@@ -125,7 +125,7 @@ void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 }
 
 void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -135,7 +135,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -145,7 +145,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -155,7 +155,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -165,7 +165,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -175,7 +175,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -185,7 +185,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -195,7 +195,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -205,7 +205,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -215,7 +215,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -225,7 +225,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -235,7 +235,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -245,7 +245,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -255,7 +255,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -265,7 +265,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -275,7 +275,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -285,7 +285,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "tbox",
@@ -295,7 +295,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "intspan",
@@ -305,7 +305,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "floatspan",
@@ -315,7 +315,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "timeSpan",
@@ -325,7 +325,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "hasX",
@@ -335,7 +335,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "hasT",
@@ -345,7 +345,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "Xmin",
@@ -355,7 +355,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "XminInc",
@@ -365,7 +365,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "Xmax",
@@ -375,7 +375,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "XmaxInc",
@@ -385,7 +385,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "Tmin",
@@ -395,7 +395,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "TminInc",
@@ -405,7 +405,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "Tmax",
@@ -415,7 +415,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "TmaxInc",
@@ -425,7 +425,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftValue",
@@ -435,7 +435,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftValue",
@@ -445,7 +445,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftTime",
@@ -455,7 +455,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "scaleValue",
@@ -465,7 +465,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "scaleValue",
@@ -475,7 +475,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "scaleTime",
@@ -485,7 +485,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftScaleValue",
@@ -495,7 +495,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftScaleValue",
@@ -505,7 +505,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "shiftScaleTime",
@@ -515,7 +515,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "expandValue",
@@ -525,7 +525,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "expandValue",
@@ -535,7 +535,7 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
+    ExtensionLoader::RegisterFunction(
         instance,
         ScalarFunction(
             "expandTime",

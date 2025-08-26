@@ -33,11 +33,11 @@ DEFINE_SPAN_SET_TYPE(tstzspanset)
 #undef DEFINE_SET_TYPE
 
 void SpansetTypes::RegisterTypes(DatabaseInstance &db) {
-    ExtensionUtil::RegisterType(db, "intspanset", intspanset());
-    ExtensionUtil::RegisterType(db, "bigintspanset", bigintspanset());
-    ExtensionUtil::RegisterType(db, "floatspanset", floatspanset());    
-    ExtensionUtil::RegisterType(db, "datespanset", datespanset());
-    ExtensionUtil::RegisterType(db, "tstzspanset", tstzspanset());    
+    ExtensionLoader::RegisterType(db, "intspanset", intspanset());
+    ExtensionLoader::RegisterType(db, "bigintspanset", bigintspanset());
+    ExtensionLoader::RegisterType(db, "floatspanset", floatspanset());    
+    ExtensionLoader::RegisterType(db, "datespanset", datespanset());
+    ExtensionLoader::RegisterType(db, "tstzspanset", tstzspanset());    
 }
 
 const std::vector<LogicalType> &SpansetTypes::AllTypes() {
@@ -101,13 +101,13 @@ LogicalType SpansetTypeMapping::GetBaseType(const LogicalType &type) {
 // --- Register Cast ---
 void SpansetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
     for (const auto &spanset_type : SpansetTypes::AllTypes()) {
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             spanset_type,                      
             LogicalType::VARCHAR,   
             SpansetFunctions::Spanset_to_text   
         ); // Blob to text
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             LogicalType::VARCHAR, 
             spanset_type,                                    
@@ -115,7 +115,7 @@ void SpansetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
         ); // text to blob
         
         auto base_type = SpansetTypeMapping::GetBaseType(spanset_type);
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             base_type,
             spanset_type,
@@ -123,49 +123,49 @@ void SpansetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
         );
 
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);        
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             set_type,
             spanset_type,
             SpansetFunctions::Set_to_spanset_cast
         );
         auto child_type = SpansetTypeMapping::GetChildType(spanset_type); // span
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             child_type,
             spanset_type,
             SpansetFunctions::Span_to_spanset_cast
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             spanset_type,
             child_type,
             SpansetFunctions::Spanset_to_span_cast
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpansetTypes::intspanset(),
             SpansetTypes::floatspanset(),
             SpansetFunctions::Intspanset_to_floatspanset_cast
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpansetTypes::floatspanset(),
             SpansetTypes::intspanset(),
             SpansetFunctions::Floatspanset_to_intspanset_cast
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpansetTypes::datespanset(),
             SpansetTypes::tstzspanset(),
             SpansetFunctions::Datespanset_to_tstzspanset_cast
         );
 
-        ExtensionUtil::RegisterCastFunction(
+        ExtensionLoader::RegisterCastFunction(
             instance,
             SpansetTypes::tstzspanset(),
             SpansetTypes::datespanset(),
@@ -182,138 +182,138 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);       // set
         // Register: asText
         if (spanset_type == SpansetTypes::floatspanset()) {            
-            ExtensionUtil::RegisterFunction( // asText(floatset)
+            ExtensionLoader::RegisterFunction( // asText(floatset)
                 db, ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
             
-            ExtensionUtil::RegisterFunction( // asText(floatset, int)
+            ExtensionLoader::RegisterFunction( // asText(floatset, int)
                 db, ScalarFunction("asText", {spanset_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
         } else {            
-            ExtensionUtil::RegisterFunction( // All other set types
+            ExtensionLoader::RegisterFunction( // All other set types
                 db, ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
         }
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("spanset", {LogicalType::LIST(child_type)}, spanset_type, SpansetFunctions::Spanset_constructor)                 
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("spanset", {base_type}, spanset_type, SpansetFunctions::Value_to_spanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("spanset", {SpansetTypeMapping::GetSetType(spanset_type)}, spanset_type, SpansetFunctions::Set_to_spanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("spanset", {child_type}, spanset_type, SpansetFunctions::Span_to_spanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("span", {spanset_type}, child_type, SpansetFunctions::Spanset_to_span)
         );
         
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("intspanset", {SpansetTypes::floatspanset()}, SpansetTypes::intspanset(), SpansetFunctions::Floatspanset_to_intspanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("floatspanset", {SpansetTypes::intspanset()}, SpansetTypes::floatspanset(), SpansetFunctions::Intspanset_to_floatspanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("datespanset", {SpansetTypes::tstzspanset()}, SpansetTypes::datespanset(), SpansetFunctions::Tstzspanset_to_datespanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("tstzspanset", {SpansetTypes::datespanset()}, SpansetTypes::tstzspanset(), SpansetFunctions::Datespanset_to_tstzspanset)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("memSize", {spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_mem_size)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("lower", {spanset_type}, base_type, SpansetFunctions::Spanset_lower)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("upper", {spanset_type}, base_type, SpansetFunctions::Spanset_upper)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("lowerInc", {spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lower_inc)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("upperInc", {spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_upper_inc)
         );
 
         if (spanset_type == SpansetTypes::intspanset() || spanset_type == SpansetTypes::floatspanset() || spanset_type == SpansetTypes::bigintspanset()) {
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("width", {spanset_type}, base_type, SpansetFunctions::Numspanset_width)
             );
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("width", {spanset_type, LogicalType::BOOLEAN}, base_type, SpansetFunctions::Numspanset_width)
             );
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("duration", {SpansetTypes::datespanset()}, LogicalType::INTERVAL, SpansetFunctions::Datespanset_duration)
             );
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("duration", {SpansetTypes::tstzspanset()}, LogicalType::INTERVAL, SpansetFunctions::Tstzspanset_duration)
             );
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("duration", {SpansetTypes::datespanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, SpansetFunctions::Datespanset_duration)
             );
 
-            ExtensionUtil::RegisterFunction(
+            ExtensionLoader::RegisterFunction(
                 db,
                 ScalarFunction("duration", {SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, SpansetFunctions::Tstzspanset_duration)
             );
 
         }
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("numSpans", {spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_num_spans)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("startSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_start_span)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("endSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_end_span)
         );
 
-        ExtensionUtil::RegisterFunction(
+        ExtensionLoader::RegisterFunction(
             db,
             ScalarFunction("spanN", {spanset_type, LogicalType::INTEGER}, child_type, SpansetFunctions::Spanset_span_n)
         );
