@@ -35,18 +35,18 @@ LogicalType SpatialSetType::geogset() {
 }
 
 void SpatialSetType::RegisterTypes(DatabaseInstance &db){
-    ExtensionLoader::RegisterType(db, "geomset", geomset());
-    ExtensionLoader::RegisterType(db, "geogset", geogset());
+    ExtensionUtil::RegisterType(db, "geomset", geomset());
+    ExtensionUtil::RegisterType(db, "geogset", geogset());
 }
 
 void SpatialSetType::RegisterCastFunctions(DatabaseInstance &instance) {        
-    ExtensionLoader::RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR, 
         SpatialSetType::geomset(),                                    
         SpatialSetFunctions::Text_to_geoset   
     );     
-    ExtensionLoader::RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR, 
         SpatialSetType::geogset(),                                    
@@ -56,89 +56,89 @@ void SpatialSetType::RegisterCastFunctions(DatabaseInstance &instance) {
 }
 
 void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {	    
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-        ExtensionLoader::RegisterFunction(db, ScalarFunction(
+        ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));    
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "memSize", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "memSize", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "SRID", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "SRID", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"transform", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"transform", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"startValue", {SpatialSetType::geomset()},  
 		SpatialSetType::WKB_BLOB(),    // return geometry as WKB --> it will be casted to geometry type in spatial
 		SpatialSetFunctions::Set_start_value
 	));    
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "endValue", 
         {SpatialSetType::geomset()}, SpatialSetType::WKB_BLOB(), SpatialSetFunctions::Set_end_value));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "numValues",
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
     
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "numValues",
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
 
-    ExtensionLoader::RegisterFunction(db, ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},  
         SpatialSetType::WKB_BLOB(),    
         SpatialSetFunctions::Set_value_n

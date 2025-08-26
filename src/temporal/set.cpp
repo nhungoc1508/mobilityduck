@@ -32,12 +32,12 @@ DEFINE_SET_TYPE(tstzset)
 #undef DEFINE_SET_TYPE
 
 void SetTypes::RegisterTypes(DatabaseInstance &db) {
-    ExtensionLoader::RegisterType(db, "intset", intset());
-    ExtensionLoader::RegisterType(db, "bigintset", bigintset());
-    ExtensionLoader::RegisterType(db, "floatset", floatset());
-    ExtensionLoader::RegisterType(db, "textset", textset());
-    ExtensionLoader::RegisterType(db, "dateset", dateset());
-    ExtensionLoader::RegisterType(db, "tstzset", tstzset());    
+    ExtensionUtil::RegisterType(db, "intset", intset());
+    ExtensionUtil::RegisterType(db, "bigintset", bigintset());
+    ExtensionUtil::RegisterType(db, "floatset", floatset());
+    ExtensionUtil::RegisterType(db, "textset", textset());
+    ExtensionUtil::RegisterType(db, "dateset", dateset());
+    ExtensionUtil::RegisterType(db, "tstzset", tstzset());    
 }
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
@@ -85,13 +85,13 @@ LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
 // Register all cast functions 
 void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
     for (const auto &set_type : SetTypes::AllTypes()) {
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             set_type,                      
             LogicalType::VARCHAR,   
             SetFunctions::Set_to_text   
         ); // Blob to text
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             LogicalType::VARCHAR, 
             set_type,                                    
@@ -99,35 +99,35 @@ void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
         ); // text to blob
         
         auto base_type = SetTypeMapping::GetChildType(set_type);
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             base_type,
             set_type,
             SetFunctions::Value_to_set_cast // set from base type
         );
 
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             SetTypes::intset(),
             SetTypes::floatset(),
             SetFunctions::Intset_to_floatset_cast // intset -> floatset 
         );
 
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             SetTypes::floatset(),
             SetTypes::intset(),
             SetFunctions::Floatset_to_intset_cast // floatset --> intset
         );
         
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             SetTypes::dateset(),
             SetTypes::tstzset(),
             SetFunctions::Dateset_to_tstzset_cast // dateset -> tstzset
         );
         
-        ExtensionLoader::RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
             instance,
             SetTypes::tstzset(),
             SetTypes::dateset(),
@@ -143,199 +143,199 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
 
         // Register: asText
         if (set_type == SetTypes::floatset()) {            
-            ExtensionLoader::RegisterFunction( // asText(floatset)
+            ExtensionUtil::RegisterFunction( // asText(floatset)
                 db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
             
-            ExtensionLoader::RegisterFunction( // asText(floatset, int)
+            ExtensionUtil::RegisterFunction( // asText(floatset, int)
                 db, ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         } else {            
-            ExtensionLoader::RegisterFunction( // All other set types
+            ExtensionUtil::RegisterFunction( // All other set types
                 db, ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         }
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor)                 
         );        
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), SetFunctions::Floatset_to_intset)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), SetFunctions::Intset_to_floatset)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("dateset", {SetTypes::tstzset()}, SetTypes::dateset(), SetFunctions::Tstzset_to_dateset)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), SetFunctions::Dateset_to_tstzset)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)
         );
         
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::Set_num_values)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("startValue", {set_type}, base_type, SetFunctions::Set_start_value)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("endValue", {set_type}, base_type, SetFunctions::Set_end_value)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shift", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shift", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift)
         );
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift)
         );        
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("scale", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("scale", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_scale)
         );
         
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("scale", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_scale)
         ); 
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("scale", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shiftScale", {SetTypes::intset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shiftScale", {SetTypes::bigintset(), LogicalType::BIGINT, LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shiftScale", {SetTypes::floatset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift_scale)
         );
         
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("shiftScale", {SetTypes::dateset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db, 
             ScalarFunction("shiftScale", {SetTypes::tstzset(), LogicalType::INTERVAL, LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift_scale)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_floor)                 
         );
         
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_ceil)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("round", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_round)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), SetFunctions::Floatset_round)                 
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
         );
         
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_radians)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_lower)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("upper", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_upper)
         );
 
-        ExtensionLoader::RegisterFunction(
+        ExtensionUtil::RegisterFunction(
             db,
             ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_initcap)
         );
@@ -1645,7 +1645,7 @@ void SetTypes::RegisterSetUnnest(DatabaseInstance &db) {
                          SetUnnestExec,
                          SetUnnestBind,
                          SetUnnestInit);
-        ExtensionLoader::RegisterFunction(db, fn);
+        ExtensionUtil::RegisterFunction(db, fn);
     }
 }
 

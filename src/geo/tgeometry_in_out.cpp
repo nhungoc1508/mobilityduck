@@ -200,7 +200,7 @@ void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
-        ExtensionLoader::RegisterFunction(instance, TgeometryAsText);
+        ExtensionUtil::RegisterFunction(instance, TgeometryAsText);
 
     auto TgeometryAsEWKT = ScalarFunction(
         "asEWKT",
@@ -208,13 +208,13 @@ void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
-    ExtensionLoader::RegisterFunction(instance, TgeometryAsEWKT);
+    ExtensionUtil::RegisterFunction(instance, TgeometryAsEWKT);
 }
 
 
 void TGeometryTypes::RegisterCastFunctions(DatabaseInstance &instance) {
-    ExtensionLoader::RegisterCastFunction(instance, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
-    ExtensionLoader::RegisterCastFunction(instance, TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
+    ExtensionUtil::RegisterCastFunction(instance, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
+    ExtensionUtil::RegisterCastFunction(instance, TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
 }
 
 }

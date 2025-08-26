@@ -24,25 +24,25 @@ LogicalType StboxType::WKB_BLOB() {
 }
 
 void StboxType::RegisterType(DatabaseInstance &instance) {
-    ExtensionLoader::RegisterType(instance, "STBOX", STBOX());
+    ExtensionUtil::RegisterType(instance, "STBOX", STBOX());
 }
 
 void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
-    ExtensionLoader::RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
         instance,
         LogicalType::VARCHAR,
         STBOX(),
         StboxFunctions::Stbox_in_cast
     );
 
-    ExtensionLoader::RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
         instance,
         STBOX(),
         LogicalType::VARCHAR,
         StboxFunctions::Stbox_out
     );
 
-    ExtensionLoader::RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
         instance,
         WKB_BLOB(),
         STBOX(),
@@ -51,7 +51,7 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 }
 
 void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "stbox",
@@ -61,7 +61,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
     
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "stboxFromBinary",
@@ -71,7 +71,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    // ExtensionLoader::RegisterFunction(
+    // ExtensionUtil::RegisterFunction(
     //     instance,
     //     ScalarFunction(
     //         "stboxFromHexWKB",
@@ -81,7 +81,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     //     )
     // );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "asText",
@@ -91,7 +91,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "asBinary",
@@ -101,7 +101,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    // ExtensionLoader::RegisterFunction(
+    // ExtensionUtil::RegisterFunction(
     //     instance,
     //     ScalarFunction(
     //         "asHexWKB",
@@ -111,7 +111,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     //     )
     // );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "stbox",
@@ -121,7 +121,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "stbox",
@@ -131,7 +131,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "stbox",
@@ -141,7 +141,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "expandSpace",
@@ -151,7 +151,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionLoader::RegisterFunction(
+    ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "&&",

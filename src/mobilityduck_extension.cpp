@@ -54,7 +54,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	// Register another scalar function
 	auto mobilityduck_openssl_version_scalar_function = ScalarFunction("mobilityduck_openssl_version", {LogicalType::VARCHAR},
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
-	ExtensionLoader::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
+	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
 	TemporalTypes::RegisterTypes(instance);
 	TemporalTypes::RegisterCastFunctions(instance);

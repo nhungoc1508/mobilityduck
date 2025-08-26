@@ -1098,14 +1098,14 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Tgeo_constructor
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometry_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_function);
         
     auto tgeometry_from_timestamp_function = ScalarFunction(
         "TGEOMETRY",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
         TGeometryTypes::TGEOMETRY(), 
         Tgeoinst_constructor);
-    ExtensionLoader::RegisterFunction(instance, tgeometry_from_timestamp_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_from_timestamp_function);
 
      auto tgeometry_from_tstzspan_function = ScalarFunction(
         "TGEOMETRY", 
@@ -1113,7 +1113,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),  
         Tsequence_from_base_tstzspan
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometry_from_tstzspan_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_function);
 
     auto tgeometry_from_tstzspan_default = ScalarFunction(
         "TGEOMETRY", 
@@ -1121,7 +1121,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),  
         Tsequence_from_base_tstzspan
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometry_from_tstzspan_default);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_from_tstzspan_default);
 
      auto tgeometryseqarr_1param= ScalarFunction(
         "tgeometrySeq", 
@@ -1129,7 +1129,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometryseqarr_1param);
+    ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_1param);
 
     auto tgeometryseqarr_2params = ScalarFunction(
         "tgeometrySeq", 
@@ -1137,7 +1137,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometryseqarr_2params);
+    ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_2params);
 
     auto tgeometryseqarr_3params = ScalarFunction(
         "tgeometrySeq", 
@@ -1145,7 +1145,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometryseqarr_3params);
+    ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_3params);
 
     auto tgeometryseqarr_4params = ScalarFunction(
         "tgeometrySeq", 
@@ -1153,21 +1153,21 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometryseqarr_4params);
+    ExtensionUtil::RegisterFunction(instance, tgeometryseqarr_4params);
 
     auto tgeometry_to_timespan_function = ScalarFunction(
         "timeSpan",
         {TGeometryTypes::TGEOMETRY()},     
         SpanTypes::TSTZSPAN(),               
         Temporal_to_tstzspan);
-    ExtensionLoader::RegisterFunction(instance, tgeometry_to_timespan_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_to_timespan_function);
 
     auto tgeometry_to_tinstant_function = ScalarFunction(
         "tgeometryInst",
         {TGeometryTypes::TGEOMETRY()},
         TGeometryTypes::TGEOMETRY(),  
         Temporal_to_tinstant);
-    ExtensionLoader::RegisterFunction(instance, tgeometry_to_tinstant_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
@@ -1176,7 +1176,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Temporal_set_interp
     );
-    ExtensionLoader::RegisterFunction(instance, setInterp_function);
+    ExtensionUtil::RegisterFunction(instance, setInterp_function);
 
 
     auto merge_function = ScalarFunction(
@@ -1185,7 +1185,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),
         Temporal_merge
     );
-    ExtensionLoader::RegisterFunction(instance, merge_function);
+    ExtensionUtil::RegisterFunction(instance, merge_function);
 
     auto tempSubtype_function = ScalarFunction(
         "tempSubtype",
@@ -1193,7 +1193,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR,
         Temporal_subtype
     );
-    ExtensionLoader::RegisterFunction(instance, tempSubtype_function);
+    ExtensionUtil::RegisterFunction(instance, tempSubtype_function);
 
     auto interp_function = ScalarFunction(
         "interp",
@@ -1201,7 +1201,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::VARCHAR,
         Temporal_interp
     );
-    ExtensionLoader::RegisterFunction(instance, interp_function);
+    ExtensionUtil::RegisterFunction(instance, interp_function);
 
     auto memSize_function = ScalarFunction(
         "memSize",
@@ -1209,7 +1209,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         LogicalType::INTEGER,
         Temporal_mem_size
     );
-    ExtensionLoader::RegisterFunction(instance, memSize_function);
+    ExtensionUtil::RegisterFunction(instance, memSize_function);
 
     auto getValue_function = ScalarFunction(
         "getValue",
@@ -1217,7 +1217,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::MEOS_WKB_BLOB(),
         Tinstant_value
     );
-    ExtensionLoader::RegisterFunction(instance, getValue_function);
+    ExtensionUtil::RegisterFunction(instance, getValue_function);
     
 
     auto tgeometry_start_value_function = ScalarFunction(
@@ -1226,7 +1226,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::MEOS_WKB_BLOB(),
         Temporal_start_value
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometry_start_value_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_start_value_function);
 
     auto tgeometry_end_value_function = ScalarFunction(
         "endValue", 
@@ -1234,7 +1234,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::MEOS_WKB_BLOB(),
         Temporal_end_value
     );
-    ExtensionLoader::RegisterFunction(instance, tgeometry_end_value_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_end_value_function);
 
     auto startInstant_function = ScalarFunction(
         "startInstant",
@@ -1242,7 +1242,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(), 
         Temporal_start_instant
     );
-    ExtensionLoader::RegisterFunction(instance, startInstant_function);
+    ExtensionUtil::RegisterFunction(instance, startInstant_function);
 
     auto endInstant_function = ScalarFunction(
         "endInstant",
@@ -1250,7 +1250,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(), 
         Temporal_end_instant
     );
-    ExtensionLoader::RegisterFunction(instance, endInstant_function);
+    ExtensionUtil::RegisterFunction(instance, endInstant_function);
 
     auto instantN_function = ScalarFunction(
         "instantN",
@@ -1258,7 +1258,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         TGeometryTypes::TGEOMETRY(),  
         Temporal_instant_n
     );
-    ExtensionLoader::RegisterFunction(instance, instantN_function);
+    ExtensionUtil::RegisterFunction(instance, instantN_function);
 
 
     auto tgeometry_gettimestamptz_function = ScalarFunction(
@@ -1266,13 +1266,13 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         {TGeometryTypes::TGEOMETRY()},
         LogicalType::TIMESTAMP_TZ,  
         Tinstant_timestamptz);
-    ExtensionLoader::RegisterFunction(instance, tgeometry_gettimestamptz_function);
+    ExtensionUtil::RegisterFunction(instance, tgeometry_gettimestamptz_function);
     
 
 }
 
 void TGeometryTypes::RegisterTypes(DatabaseInstance &instance) {
-    ExtensionLoader::RegisterType(instance, "TGEOMETRY", TGeometryTypes::TGEOMETRY());
+    ExtensionUtil::RegisterType(instance, "TGEOMETRY", TGeometryTypes::TGEOMETRY());
 }
 
 
