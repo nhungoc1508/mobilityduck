@@ -32,7 +32,7 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
         instance,
         LogicalType::VARCHAR,
         STBOX(),
-        StboxFunctions::Stbox_in
+        StboxFunctions::Stbox_in_cast
     );
 
     ExtensionUtil::RegisterCastFunction(
@@ -51,6 +51,16 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 }
 
 void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox",
+            {LogicalType::VARCHAR},
+            STBOX(),
+            StboxFunctions::Stbox_in
+        )
+    );
+    
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(

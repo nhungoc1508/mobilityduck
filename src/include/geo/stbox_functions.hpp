@@ -16,7 +16,8 @@ struct StboxFunctions {
     /* ***************************************************
      * In/out functions: VARCHAR <-> STBOX
      ****************************************************/
-    static bool Stbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static void Stbox_in(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************

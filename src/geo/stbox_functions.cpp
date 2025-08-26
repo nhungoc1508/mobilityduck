@@ -12,8 +12,7 @@ namespace duckdb {
  * In/out functions: VARCHAR <-> STBOX
  ****************************************************/
 
-bool StboxFunctions::Stbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    bool success = true;
+inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
         [&](string_t input_string, ValidityMask &mask, idx_t idx) -> string_t {
@@ -21,14 +20,12 @@ bool StboxFunctions::Stbox_in(Vector &source, Vector &result, idx_t count, CastP
             STBox *stbox = stbox_in(input_str.c_str());
             if (!stbox) {
                 throw InternalException("Failure in Stbox_in: unable to cast string to stbox");
-                success = false;
                 return string_t();
             }
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
                 throw InternalException("Failure in Stbox_in: unable to allocate memory for stbox");
-                success = false;
                 return string_t();
             }
             memcpy(stbox_data, stbox, stbox_size);
@@ -42,7 +39,15 @@ bool StboxFunctions::Stbox_in(Vector &source, Vector &result, idx_t count, CastP
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-    return success;
+}
+
+bool StboxFunctions::Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Stbox_in_common(source, result, count);
+    return true;
+}
+
+void StboxFunctions::Stbox_in(DataChunk &args, ExpressionState &state, Vector &result) {
+    Stbox_in_common(args.data[0], result, args.size());
 }
 
 bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
