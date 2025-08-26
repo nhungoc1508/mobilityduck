@@ -10,8 +10,7 @@
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
 #include "duckdb.hpp"
-#include "tgeometry.hpp"
-// #include "tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
 #include "temporal/spanset.hpp"
 #include "duckdb/common/exception.hpp"
@@ -30,13 +29,6 @@ extern "C"{
 #include <openssl/opensslv.h>
 
 namespace duckdb {
-
-inline void MobilityduckScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &name_vector = args.data[0];
-	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
-		return StringVector::AddString(result, "Mobilityduck " + name.GetString() + " 🐥");
-	});
-}
 
 inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &name_vector = args.data[0];
@@ -58,10 +50,6 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	con.Query("INSTALL spatial;");
 	con.Query("LOAD spatial;");
-
-	// Register a scalar function
-	auto mobilityduck_scalar_function = ScalarFunction("mobilityduck", {LogicalType::VARCHAR}, LogicalType::VARCHAR, MobilityduckScalarFun);
-	ExtensionUtil::RegisterFunction(instance, mobilityduck_scalar_function);
 
 	// Register another scalar function
 	auto mobilityduck_openssl_version_scalar_function = ScalarFunction("mobilityduck_openssl_version", {LogicalType::VARCHAR},
@@ -98,12 +86,10 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SetTypes::RegisterScalarFunctions(instance);
 	SetTypes::RegisterSetUnnest(instance);
 
-	//Geometry Set
 	SpatialSetType::RegisterTypes(instance);	
 	SpatialSetType::RegisterCastFunctions(instance);	
 	SpatialSetType::RegisterScalarFunctions(instance);	
 
-	//SpanSet
 	SpansetTypes::RegisterTypes(instance);
 	SpansetTypes::RegisterCastFunctions(instance);	
 	SpansetTypes::RegisterScalarFunctions(instance);	

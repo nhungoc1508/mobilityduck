@@ -66,20 +66,8 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 
 include_directories(src/include)
 
-# Spatial/PostGIS compatibility headers (if needed by functions)
-# configure_file(./src/postgis/liblwgeom/liblwgeom.h.in ./src/postgis/liblwgeom/liblwgeom.h)
-# configure_file(./src/postgis/postgis_config.h.in ./src/postgis/postgis_config.h)
-# include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis/liblwgeom")
-# include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis/libpgcommon")
-# include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/src/postgis")
-# include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis/liblwgeom")
-# include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/postgis")
-
 set(EXTENSION_SOURCES
-    src/mobilityduck_extension.cpp
-    # src/temporal/tint.cpp
-    # src/temporal/tbool.cpp
-    # src/temporal/temporal_types.cpp
+    src/mobilityduck_extension.cpp    
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/tbox.cpp
@@ -92,9 +80,8 @@ set(EXTENSION_SOURCES
     src/temporal/span.cpp
     src/geo/geoset.cpp
     src/temporal/spanset.cpp
-    src/tgeo/tgeometry.cpp
-    src/tgeo/tgeometry_in_out.cpp
-    # src/tgeo/tgeompoint.cpp
+    src/geo/tgeometry.cpp
+    src/geo/tgeometry_in_out.cpp    
     )
 
 # Build extension targets
