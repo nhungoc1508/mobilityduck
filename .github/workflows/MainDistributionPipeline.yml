@@ -1,97 +1,44 @@
-name: Build MobilityDuck
-
+#
+# This workflow calls the main distribution pipeline from DuckDB to build, test and (optionally) release the extension
+#
+name: Main Extension Distribution Pipeline
 on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
   push:
     branches:
-      - '**'
-    tags:
-      - 'v*'
-  pull_request:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
+  cancel-in-progress: true
+
+
 jobs:
-  native_build:
-    runs-on: ubuntu-22.04
-    env:
-      EXTENSION_NAME: mobilityduck
+  duckdb-latest-build:
+    name: Build extension binaries
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
+    with:
+      duckdb_version: main
+      extension_name: mobilityduck
+      ci_tools_version: main
+      vcpkg_commit: 6603e6392c5a1474ce2d7d0574eb774ab43a3236
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++ git jq
-
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ccache_dir
-          key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ runner.os }}-${{ github.ref_name }}-
-            ccache-${{ runner.os }}-
-
-      - name: Prepare vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git _vcpkg
-          git -C _vcpkg fetch --all --tags
-          git -C _vcpkg checkout origin/master
-          echo "VCPKG_COMMIT=$(git -C _vcpkg rev-parse HEAD)" >> $GITHUB_ENV
-          # Rewrite builtin-baseline in vcpkg.json if needed
-          if [ -f vcpkg.json ]; then
-            tmpfile=$(mktemp)
-            jq --arg sha "$VCPKG_COMMIT" '.["builtin-baseline"]=$sha' vcpkg.json > "$tmpfile"
-            mv "$tmpfile" vcpkg.json
-          fi
-
-      - name: Configure CMake
-        run: |
-          mkdir -p build/release
-          cmake -G Ninja \
-            -DFORCE_COLORED_OUTPUT=1 \
-            -DEXTENSION_STATIC_BUILD=1 \
-            -DDUCKDB_EXTENSION_CONFIGS="$PWD/extension_config.cmake" \
-            -DVCPKG_BUILD=1 \
-            -DCMAKE_TOOLCHAIN_FILE="$PWD/_vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DVCPKG_TARGET_TRIPLET="x64-linux-release" \
-            -DDUCKDB_EXPLICIT_PLATFORM="linux_amd64" \
-            -DOVERRIDE_GIT_DESCRIBE="" \
-            -DUNITTEST_ROOT_DIRECTORY="$PWD" \
-            -DBENCHMARK_ROOT_DIRECTORY="$PWD" \
-            -DENABLE_UNITTEST_CPP_TESTS=FALSE \
-            -DBUILD_EXTENSION_TEST_DEPS=default \
-            -DVCPKG_MANIFEST_DIR="$PWD" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -S duckdb -B build/release
-
-      - name: Build
-        run: cmake --build build/release --config Release
-
-      - name: Collect artifacts
-        run: |
-          mkdir -p dist
-          find build/release -type f \( -name "*.duckdb_extension" -o -name "*.so" -o -name "*.zip" \) -exec cp {} dist/ \; || true
-          ls -lah dist
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: duckdb-extension-binaries-native
-          path: dist/*
-          if-no-files-found: warn
-
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs-native
-          path: |
-            build/release/CMakeFiles/CMakeOutput.log
-            build/release/CMakeFiles/CMakeError.log
-            build/release/vcpkg-manifest-install.log
-          if-no-files-found: ignore
+  duckdb-latest-deploy:
+    name: Deploy extension binaries
+    needs: duckdb-latest-build
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@main
+    secrets: inherit
+    with:
+      duckdb_version: main
+      ci_tools_version: main
+      extension_name: mobilityduck
+      deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
