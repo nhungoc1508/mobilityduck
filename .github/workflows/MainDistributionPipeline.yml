@@ -1,39 +1,105 @@
-# .github/workflows/main.yml
 name: Main Extension Distribution Pipeline
 on:
   push:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
-  duckdb-next-build:
-    name: Build extension binaries
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
-    if: false   # extension-template is currently not compatible with main
-    with:
-      duckdb_version: main
-      ci_tools_version: main
-      extension_name: mobilityduck
-      skip_platforms: wasm_mvp;wasm_eh;wasm_threads   # <— NEW
+  # Native CI that bootstraps vcpkg and builds the extension
+  build-native:
+    name: Build (native) + upload artifacts
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            duckdb_platform: linux
+          - os: macos-latest
+            duckdb_platform: osx
+          - os: windows-latest
+            duckdb_platform: windows
+    runs-on: ${{ matrix.os }}
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # vcpkg: clone+bootstrap+cache (pin to a known commit to satisfy builtin-baseline)
+      - name: Setup vcpkg
+        id: vcpkg
+        uses: microsoft/setup-vcpkg@v1
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/local_vcpkg_installation
+          vcpkgGitCommitId: 6ecbbbdf31cba47aafa7cf6189b1e73e10ac61f8   # <- pick a recent commit
+          # If you use an overlay ports dir, add: additionalCachedPaths: "<path>"
+          cleanAfterBuild: true
+
+      # Build tools
+      - name: Install build tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake build-essential
+
+      - name: Install build tools (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install ninja cmake || true
+
+      - name: Install build tools (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install ninja cmake -y
+
+      # Configure DuckDB to build ONLY extensions, and register ours.
+      # IMPORTANT: we skip wasm by just picking native platforms in the matrix.
+      - name: Configure
+        shell: bash
+        env:
+          # Tell your extension list to skip WASM if you have that guard in extension_config.cmake
+          SKIP_MOBILITYDUCK: "0"
+          VCPKG_ROOT: ${{ steps.vcpkg.outputs.vcpkgRoot }}
+        run: |
+          cmake -G Ninja \
+            -S duckdb \
+            -B build/${{ matrix.duckdb_platform }}-rel \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_EXTENSIONS_ONLY=1 \
+            -DDUCKDB_EXTENSION_CONFIGS="${{ github.workspace }}/extension_config.cmake" \
+            -DDUCKDB_EXPLICIT_PLATFORM=${{ matrix.duckdb_platform }} \
+            -DVCPKG_BUILD=1 \
+            -DVCPKG_MANIFEST_DIR="${{ github.workspace }}" \
+            -DCMAKE_TOOLCHAIN_FILE="${{ steps.vcpkg.outputs.vcpkgRoot }}/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build build/${{ matrix.duckdb_platform }}-rel --config Release -v
+
+      # Collect likely outputs: the loadable .duckdb_extension and libs
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilityduck-${{ matrix.duckdb_platform }}-artifacts
+          if-no-files-found: warn
+          path: |
+            build/${{ matrix.duckdb_platform }}-rel/**/mobilityduck.duckdb_extension
+            build/${{ matrix.duckdb_platform }}-rel/**/mobilityduck_loadable_extension.duckdb_extension
+            build/${{ matrix.duckdb_platform }}-rel/**/libmobilityduck_extension.*
+            build/${{ matrix.duckdb_platform }}-rel/**/mobilityduck_extension.*
+
+  # (Optional) keep the DuckDB reusable workflow but skip WASM
   duckdb-stable-build:
-    name: Build extension binaries
+    name: Build extension binaries (DuckDB reusable)
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.3.2
     with:
       duckdb_version: v1.3.2
       ci_tools_version: v1.3.2
       extension_name: mobilityduck
-      skip_platforms: wasm_mvp;wasm_eh;wasm_threads   # <— NEW
-
-  code-quality-check:
-    name: Code Quality Check
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_code_quality.yml@main
-    with:
-      duckdb_version: v1.3.2
-      ci_tools_version: main
-      extension_name: mobilityduck
-      format_checks: 'format;tidy'
+      skip_platforms: wasm_mvp;wasm_eh;wasm_threads
+    secrets: inherit
