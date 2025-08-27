@@ -20,7 +20,16 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
 #include <mutex>
-
+#if defined(_WIN32)
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <io.h>
+  #define stat _stat
+#else
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <unistd.h>
+#endif
 extern "C"{	
     #include <meos.h>
 }
@@ -38,7 +47,41 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 	});
 }
 
+#ifndef MDUCK_DEFAULT_SRID_CSV
+  #define MDUCK_DEFAULT_SRID_CSV ""
+#endif
+#ifndef MDUCK_VCPKG_SRID_CSV
+  #define MDUCK_VCPKG_SRID_CSV ""
+#endif
+
+static bool file_exists(const char *p) {
+    struct stat st{};
+    return p && *p && (stat(p, &st) == 0);
+}
+
+static void ConfigureMeosSridCsvOnce() {
+    static std::once_flag once;
+    std::call_once(once, [] {        
+        const char *env_path = std::getenv("SPATIAL_REF_SYS");
+        const char *chosen   = nullptr;
+
+        if (env_path && *env_path && file_exists(env_path)) {
+            chosen = env_path;
+        } else if (file_exists(MDUCK_VCPKG_SRID_CSV)) {
+            chosen = MDUCK_VCPKG_SRID_CSV;
+        } else if (file_exists(MDUCK_DEFAULT_SRID_CSV)) {
+            chosen = MDUCK_DEFAULT_SRID_CSV;
+        }
+
+        if (chosen) {
+            meos_set_spatial_ref_sys_csv(chosen);            
+            fprintf(stderr, "[mobilityduck] Using SRID CSV: %s\n", chosen);
+        }       
+    });
+}
+
 static void LoadInternal(DatabaseInstance &instance) {
+	ConfigureMeosSridCsvOnce();
 	// Initialize MEOS
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
