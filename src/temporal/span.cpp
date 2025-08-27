@@ -355,8 +355,8 @@ static void Span_binary_constructor_tstz(Vector &args0, Vector &args1, Vector &r
     BinaryExecutor::Execute<timestamp_tz_t, timestamp_tz_t, string_t>(
         args0, args1, result, count,
         [&](timestamp_tz_t lower_duckdb, timestamp_tz_t upper_duckdb) {
-            TimestampTz lower = (TimestampTz)DuckDBToMeosTimestamp(lower_duckdb);
-            TimestampTz upper = (TimestampTz)DuckDBToMeosTimestamp(upper_duckdb);
+            TimestampTz lower = ToMeosTimestamp(lower_duckdb);
+            TimestampTz upper = ToMeosTimestamp(upper_duckdb);
             Datum lower_dat = (Datum)lower;
             Datum upper_dat = (Datum)upper;
             
