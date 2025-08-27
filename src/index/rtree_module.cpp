@@ -67,16 +67,13 @@ RTreeIndex::~RTreeIndex() {
         rtree_free(rtree_);
         rtree_ = nullptr;
     }
-    // Note: Don't call meos_finalize here as other instances might be using MEOS
+
 }
 
 PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
     auto &create_index = input.op;
     auto &planner = input.planner;
 
-    // Skip all validation - just create the index
-    
-    // Simple projection
     vector<LogicalType> new_column_types;
     vector<unique_ptr<Expression>> select_list;
     
@@ -93,7 +90,7 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
                                                        create_index.estimated_cardinality);
     projection.children.push_back(input.table_scan);
 
-    // Create the index directly without filtering
+
     auto &physical_create_index = planner.Make<PhysicalCreateRTreeIndex>(
         create_index.types, create_index.table, create_index.info->column_ids, 
         std::move(create_index.info), std::move(create_index.unbound_expressions), 
@@ -106,97 +103,69 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
 //------------------------------------------------------------------------------
 // Core RTree Operations using MEOS
 //------------------------------------------------------------------------------
-#define NO_BBOX 10000
-
 ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) {
-    fprintf(stderr, "Start Insert");
     if (!rtree_) {
         return ErrorData("RTree not initialized");
     }
     
-    // Check if we have data to insert
     if (data.size() == 0 || data.ColumnCount() == 0) {
-        return ErrorData(); // Nothing to insert
+        return ErrorData(); 
     }
+    DataChunk expression_result;
+    expression_result.Initialize(Allocator::DefaultAllocator(), logical_types);
     
-    // Get the stbox column data
-    auto &stbox_vector = data.data[1];  // Single column for stbox data
+    ExecuteExpressions(data, expression_result);
+    
+    auto &stbox_vector = expression_result.data[0]; 
     auto row_data = FlatVector::GetData<row_t>(row_ids);
 
-
-    
-    // Ensure the vector is flattened for direct access
     if (stbox_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
-        stbox_vector.Flatten(data.size());
+        stbox_vector.Flatten(expression_result.size());
     }
     
-    // Check if this is actually an stbox type or needs conversion
     auto vector_type = stbox_vector.GetType();
     
-    // Allocate array of STBox structures
-    boxes = (STBox*)malloc(sizeof(STBox) * data.size());
-    fprintf(stderr, "STBox, boxes");
+    boxes = (STBox*)malloc(sizeof(STBox) * expression_result.size());
     
-    for (idx_t i = 0; i < data.size(); i++) {
+    for (idx_t i = 0; i < expression_result.size(); i++) {
         if (FlatVector::IsNull(stbox_vector, i)) {
-            continue; // Skip NULL values
+            continue; 
         }
         
         STBox *box = nullptr;
         
-        if (vector_type.id() == LogicalTypeId::BLOB || 
-                   vector_type.GetAlias() == "stbox" || 
-                   vector_type.GetAlias() == "STBOX") {
+        if (vector_type.id() == LogicalTypeId::BLOB ) {
             auto blob_data = FlatVector::GetData<string_t>(stbox_vector)[i];
 
             std::string s = blob_data.GetString();
-            fprintf(stderr, "Insert blob data %s\n", s.c_str());
             const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
             size_t stbox_size = blob_data.GetSize();
-            
-            fprintf(stderr, "RTree Insert: Processing stbox blob, size: %zu bytes\n", stbox_size);
-            
-            // Allocate memory for the stbox
+                        
             box = (STBox*)malloc(stbox_size);
             
-            // Copy the blob data to create our own stbox instance
             memcpy(box, stbox_data, stbox_size);
-
-            char *stbox_str = stbox_out(box,15);
-            fprintf(stderr, "Insert STBOX %s\n", stbox_str);
             
-            // CRITICAL FIX: Check and normalize SRID
             int32_t box_srid = stbox_srid(box);
-            fprintf(stderr, "Insert STBox SRID: %d\n", box_srid);
-            
-            // Option 1: Ensure consistent SRID (set to 0 if different)
             if (box_srid != 0) {
-                // Transform to SRID 0 (no specific projection)
                 STBox *normalized_box = stbox_set_srid(box, 0);
                 if (normalized_box) {
                     free(box);
                     box = normalized_box;
-                    fprintf(stderr, "Normalized STBox to SRID 0\n");
                 }
             }
         } 
         else { 
-            fprintf(stderr, "Unknown type: id=%d, alias='%s', toString='%s'\n", 
-                   (int)vector_type.id(), vector_type.GetAlias().c_str(), vector_type.ToString().c_str());
             continue;
         }
         
         if (box == nullptr) {
-            continue; // Skip if we couldn't create the stbox
+            continue;
         }
         
         memcpy(&boxes[i], box, sizeof(STBox));
         
         rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_data[i]));
         
-
-        fprintf(stderr, "RTree Insert successful for row %zu, row_id: %lld\n", 
-               i, static_cast<long long>(row_data[i]));
         free(box);
     }
 
@@ -205,78 +174,124 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) 
     return ErrorData();
 }
 
-ErrorData RTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
-    if (!rtree_) {
-        return ErrorData("RTree not initialized");
-    }
+ErrorData RTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &row_identifiers) {
     
-    for (idx_t i = 0; i < count; i++) {
-        // Use your rtree's bulk insert or construction method
-        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_ids[i]));
-    }
+    DataChunk expression_result;
+    expression_result.Initialize(Allocator::DefaultAllocator(), logical_types);
+
+    ExecuteExpressions(appended_data, expression_result);
+
+    Construct(expression_result, row_identifiers);
     
     return ErrorData();
 }
 
+void RTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers) {
+    if (!rtree_) {
+        throw InternalException("RTree not initialized");
+    }
+    
+    if (expression_result.size() == 0 || expression_result.ColumnCount() == 0) {
+        return; 
+    }
+    
+    auto &stbox_vector = expression_result.data[0];
+    auto row_data = FlatVector::GetData<row_t>(row_identifiers);
+
+    if (stbox_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
+        stbox_vector.Flatten(expression_result.size());
+    }
+    
+    auto vector_type = stbox_vector.GetType();
+    
+    STBox* boxes = (STBox*)malloc(sizeof(STBox) * expression_result.size());
+    
+    for (idx_t i = 0; i < expression_result.size(); i++) {
+        if (FlatVector::IsNull(stbox_vector, i)) {
+            continue; 
+        }
+
+        STBox *box = nullptr;
+        
+        if (vector_type.id() == LogicalTypeId::BLOB ) {
+            auto blob_data = FlatVector::GetData<string_t>(stbox_vector)[i];
+            const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
+            size_t stbox_size = blob_data.GetSize();
+                        
+            box = (STBox*)malloc(stbox_size);
+            memcpy(box, stbox_data, stbox_size);
+
+            int32_t box_srid = stbox_srid(box);
+            if (box_srid != 0) {
+                STBox *normalized_box = stbox_set_srid(box, 0);
+                if (normalized_box) {
+                    free(box);
+                    box = normalized_box;
+                }
+            }
+        } 
+        else { 
+            continue;
+        }
+
+        if (box == nullptr) {
+            continue;
+        }
+        
+        memcpy(&boxes[i], box, sizeof(STBox));
+        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_data[i]));
+        free(box);
+    }
+    
+    free(boxes);
+}
+
+// Use for create physical plan
+// individual insertion for now
+ErrorData RTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
+    if (!rtree_) {
+        return ErrorData("RTree not initialized");
+    }
+
+    for (idx_t i = 0; i < count; i++) {
+        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_ids[i]));
+    }
+
+    return ErrorData();
+}
+
 void RTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
-    // MEOS RTree doesn't have built-in delete operation
-    // For now, mark as not implemented
-    // In practice, you might need to rebuild the tree or implement a deletion strategy
+
     throw NotImplementedException("RTree deletion not implemented - consider rebuilding index");
 }
-
-ErrorData RTreeIndex::Append(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
-    // Delegate to Insert for MEOS RTree
-    return Insert(lock, entries, row_identifiers);
-}
-
 //------------------------------------------------------------------------------
 // RTree Search Operations
 //------------------------------------------------------------------------------
 unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const void* query_blob, size_t blob_size) const {
-    
-    fprintf(stderr, "RTreeIndex::InitializeScan\n");
+
     const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(query_blob);
     STBox *box = (STBox*)malloc(blob_size);
     memcpy(box, stbox_data, blob_size);
-    char *input_stbox_str = stbox_out(box, 15);
-    if (input_stbox_str) {
-        fprintf(stderr, "Input Query STBOX: %s\n", input_stbox_str);
-        free(input_stbox_str);
-    } 
-    else{
-        fprintf(stderr, "ERROR: Input STBox is invalid - cannot convert to string\n");
-    }
 
     auto state = make_uniq<RTreeIndexScanState>();
     
     memcpy(&state->query_stbox, box, sizeof(STBox));
 
-    
-    // Check and normalize query SRID to match indexed data
     int32_t query_srid = stbox_srid(&state->query_stbox);
-    fprintf(stderr, "Query STBox SRID: %d\n", query_srid);
     
     if (query_srid != 0) {
-        // Transform query to SRID 0 to match indexed data
         STBox *normalized_query = stbox_set_srid(&state->query_stbox, 0);
         if (normalized_query) {
             memcpy(&state->query_stbox, normalized_query, sizeof(STBox));
             free(normalized_query);
-            fprintf(stderr, "Normalized query STBox to SRID 0\n");
         }
     }
-    
-    // Perform the search using the normalized query
     if (rtree_) {
         state->search_results = SearchStbox(&state->query_stbox);
         state->initialized = true;
     }
     
     state->current_position = 0;
-    
-    fprintf(stderr, "RTree InitializeScan: Found %zu matching entries\n", 
-            state->search_results.size());
     
     return std::move(state);
 }
@@ -287,14 +302,12 @@ idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     if (!sstate.initialized || sstate.search_results.empty()) {
         return 0;
     }
-    
-    // Get the row_ids data array from result vector
+
     const auto row_ids = FlatVector::GetData<row_t>(result);
     
     idx_t output_idx = 0;
     const idx_t max_output = STANDARD_VECTOR_SIZE;
-    
-    // Copy results from our search_results vector to the output
+
     while (sstate.current_position < sstate.search_results.size() && 
            output_idx < max_output) {
         
@@ -303,32 +316,21 @@ idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
         sstate.current_position++;
     }
     
-    fprintf(stderr, "RTree Scan: Returning %zu row IDs, position: %zu/%zu\n",
-            output_idx, sstate.current_position, sstate.search_results.size());
-    
     return output_idx;
 }
 
 
 vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
-    fprintf(stderr, "SearchStbox\n");
     vector<row_t> results;
     
     if (!rtree_ || !query_stbox) {
         return results;
     }
 
-    char *stbox_str = stbox_out(query_stbox,15);
-
-    // Add SRID checking and normalization
-    fprintf(stderr, "STBOX: %s\n", stbox_str);
-    fprintf(stderr, "Query SRID: %d\n", stbox_srid(query_stbox));
-
     int count = 0;
     int *ids = nullptr;
     
     try {
-        // Note: rtree_search expects const void* for query parameter
         ids = rtree_search(rtree_, (const void*)query_stbox, &count);
         
         if (ids && count > 0) {
@@ -339,12 +341,10 @@ vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
         }
     } catch (...) {
         fprintf(stderr, "Exception during rtree_search - likely SRID mismatch\n");
-        // Handle any exceptions during search
     }
     
-    // Clean up
     if (ids) {
-        free(ids); // Free the array allocated by rtree_search
+        free(ids);
     }
     
     return results;
@@ -414,12 +414,12 @@ unique_ptr<ExpressionMatcher> RTreeIndex::MakeFunctionMatcher() const {
 
     // Left operand: STBOX type
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
-    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX()); // Assuming STBOX is stored as BLOB
+    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX()); 
     matcher->matchers.push_back(std::move(lhs_matcher));
 
     // Right operand: STBOX type  
     auto rhs_matcher = make_uniq<ExpressionMatcher>();
-    rhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX()); // Assuming STBOX is stored as BLOB
+    rhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX());
     matcher->matchers.push_back(std::move(rhs_matcher));
 
     return std::move(matcher);
@@ -436,13 +436,8 @@ void RTreeModule::RegisterRTreeIndex(DatabaseInstance &db) {
     index_type.name = RTreeIndex::TYPE_NAME;
     index_type.create_instance = RTreeIndex::Create;
     index_type.create_plan = RTreeIndex::CreatePlan;
-
-    // Register scan option - fix the parameter type
-    db.config.AddExtensionOption("rtree_search_method",
-                                 "search method for RTree indexes (overlap, contains, etc.)",
-                                 LogicalType::VARCHAR, Value("overlap"));
     
     db.config.GetIndexTypes().RegisterIndexType(index_type);
 }
 
-} // namespace duckdb
+} 
