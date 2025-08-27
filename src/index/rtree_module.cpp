@@ -13,7 +13,6 @@
 #include "duckdb/execution/index/bound_index.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
-#include "duckdb/main/database.hpp"
 #include "duckdb/main/config.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/execution/operator/scan/physical_table_scan.hpp"
@@ -82,9 +81,9 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
         select_list.push_back(std::move(expression));
     }
     
-    new_column_types.emplace_back(LogicalType::ROW_TYPE);
-    select_list.push_back(
-        make_uniq<BoundReferenceExpression>(LogicalType::ROW_TYPE, create_index.info->scan_types.size() - 1));
+    // new_column_types.emplace_back(LogicalType::ROW_TYPE);
+    // select_list.push_back(
+    //     make_uniq<BoundReferenceExpression>(LogicalType::ROW_TYPE, create_index.info->scan_types.size() - 1));
 
     auto &projection = planner.Make<PhysicalProjection>(new_column_types, std::move(select_list), 
                                                        create_index.estimated_cardinality);
@@ -98,6 +97,7 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
     
     physical_create_index.children.push_back(projection);
     return physical_create_index;
+    return input.table_scan;
 }
 
 //------------------------------------------------------------------------------

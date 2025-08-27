@@ -138,7 +138,7 @@ public:
 
     static void Optimize(OptimizerExtensionInput &input, unique_ptr<LogicalOperator> &plan) {
         OptimizeRecursive(input.context, plan);
-        fprintf(stderr, "Done OptimizeRecursive\n");
+        // fprintf(stderr, "Done OptimizeRecursive\n");
     }
 };
 

@@ -90,14 +90,21 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	Connection con(instance);
 
-	// con.Query("INSTALL spatial;");
-	// con.Query("LOAD spatial;");
+	con.Query("INSTALL spatial;");
+	con.Query("LOAD spatial;");
 
 	// Register another scalar function
 	auto mobilityduck_openssl_version_scalar_function = ScalarFunction("mobilityduck_openssl_version", {LogicalType::VARCHAR},
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
+	TemporalTypes::RegisterTypes(instance);
+	TemporalTypes::RegisterCastFunctions(instance);
+	TemporalTypes::RegisterScalarFunctions(instance);
+
+	TboxType::RegisterType(instance);
+	TboxType::RegisterCastFunctions(instance);
+	TboxType::RegisterScalarFunctions(instance);
 
 	StboxType::RegisterType(instance);
 	StboxType::RegisterCastFunctions(instance);
