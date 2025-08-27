@@ -1,6 +1,7 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "mobilityduck_extension.hpp"
+#include "temporal/spanset.hpp"
 #include "temporal/set.hpp"
 #include "geo/geoset.hpp"
 #include "temporal/temporal_functions.hpp"
@@ -102,7 +103,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	StboxType::RegisterCastFunctions(instance);
 	StboxType::RegisterScalarFunctions(instance);
   
-  SpanTypes::RegisterScalarFunctions(instance);
+  	SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
 
@@ -128,7 +129,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SpansetTypes::RegisterCastFunctions(instance);	
 	SpansetTypes::RegisterScalarFunctions(instance);
   
-  RTreeModule::RegisterRTreeIndex(instance);
+  	RTreeModule::RegisterRTreeIndex(instance);
 	RTreeModule::RegisterIndexScan(instance);
 	RTreeModule::RegisterScanOptimizer(instance);
 }
