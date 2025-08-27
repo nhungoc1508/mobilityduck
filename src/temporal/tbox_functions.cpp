@@ -116,7 +116,7 @@ void TboxFunctions::Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState
                 throw InternalException("Failure in Numspan_timestamptz_to_tbox: unable to cast binary to span");
             }
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(t);
-            TBox *tbox = numspan_timestamptz_to_tbox(span, (TimestampTz)meos_ts);
+            TBox *tbox = numspan_timestamptz_to_tbox(span, (TimestampTz)meos_ts.value);
             size_t tbox_size = sizeof(TBox);
             char *tbox_data = (char*)malloc(tbox_size);
             memcpy(tbox_data, tbox, tbox_size);

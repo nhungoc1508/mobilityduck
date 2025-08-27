@@ -853,7 +853,8 @@ void SetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vect
                     memcpy(s, data, size);                    
                     Datum d = set_start_value(s);
                     free(s);
-                    return timestamp_tz_t(int64(FromMeosTimestamp(d)));
+                    int64_t tmp = int64(d);
+                    return timestamp_t(int64(FromMeosTimestamp(tmp)));
                 });
             break;
 
@@ -953,7 +954,8 @@ void SetFunctions::Set_end_value(DataChunk &args, ExpressionState &state, Vector
                     memcpy(s, data, size);                    
                     Datum d = set_end_value(s);
                     free(s);
-                    return timestamp_t(int64(FromMeosTimestamp(d)));
+                    int64_t tmp = int64(d);
+                    return timestamp_t(int64(FromMeosTimestamp(tmp)));
                 });
             break;
 
