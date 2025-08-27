@@ -15,7 +15,8 @@ inline int32_t ToMeosDate(duckdb::date_t d) {
 }
 
 inline int64_t ToMeosTimestamp(duckdb::timestamp_t ts) {
-    return ts.value - EPOCH_OFFSET_MICROS;
+    // return ts.value - EPOCH_OFFSET_MICROS;
+    return Timestamp::GetEpochMicroSeconds(ts) - EPOCH_OFFSET_MICROS;
 }
 
 // MEOS → DuckDB
@@ -23,8 +24,9 @@ inline duckdb::date_t FromMeosDate(int32_t pg_date) {
     return duckdb::date_t(pg_date + EPOCH_OFFSET_DAYS);
 }
 
-inline duckdb::timestamp_t FromMeosTimestamp(int64_t pg_ts) {
-    return duckdb::timestamp_t(pg_ts + EPOCH_OFFSET_MICROS);
+inline duckdb::timestamp_t FromMeosTimestamp(int64_t pg_ts) {    
+    // return duckdb::timestamp_t(pg_ts + EPOCH_OFFSET_MICROS);
+    return Timestamp::FromEpochMicroSeconds(pg_ts + EPOCH_OFFSET_MICROS);
 }
 
 inline interval_t IntervalToIntervalt(MeosInterval *interval) {

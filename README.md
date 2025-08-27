@@ -10,24 +10,13 @@ With MobilityDuck, users can use these data types and functions directly in Duck
 
 ---
 ## 1. Requirements
-You will need the following dependencies installed before buidling MobilityDuck: 
+MobilityDuck needs some dependencies(including MEOS) which can be installed through VCPKG. Run the following to enable it: 
 
 ```sh
-apt install build-essential cmake libgeos-dev libproj-dev libjson-c-dev libgsl-dev
-```
-MobilityDuck links against MEOS. Build & install it first.
-
-```sh
-# 1) Clone MobilityDB 
-git clone https://github.com/MobilityDB/MobilityDB.git
-
-# 2) Configure a Release build
-mkdir build && cd build
-cmake -DMEOS=ON ..
-
-# 3) Build and install MEOS to /usr/local
-make
-sudo make install
+cd <your-working-dir-not-the-plugin-repo>
+git clone https://github.com/Microsoft/vcpkg.git
+sh ./vcpkg/scripts/bootstrap.sh -disableMetrics
+export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```
 
 ---

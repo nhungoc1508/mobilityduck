@@ -1,0 +1,6 @@
+duckdb==1.3.2
+numpy
+pandas
+shapely
+geopandas
+matplotlib

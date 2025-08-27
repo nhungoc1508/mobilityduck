@@ -404,7 +404,7 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            GSERIALIZED *gs = tpoint_trajectory(temp);
+            GSERIALIZED *gs = tpoint_trajectory(temp, true);
             if (!gs) {
                 free(temp);
                 throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
