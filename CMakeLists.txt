@@ -75,6 +75,30 @@ set(EXTENSION_SOURCES
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 
+# ----- SRID CSV defaults (works with/without vcpkg) -----
+# Prefer the vcpkg-installed CSV if we are building with the vcpkg toolchain.
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+  target_compile_definitions(${EXTENSION_NAME} PRIVATE
+    MDUCK_DEFAULT_SRID_CSV="${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/spatial_ref_sys.csv"
+    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
+  )
+  target_compile_definitions(${LOADABLE_EXTENSION_NAME} PRIVATE
+    MDUCK_DEFAULT_SRID_CSV="${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/spatial_ref_sys.csv"
+    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
+  )
+else()
+  # Fallback to a vendored copy in the repo (add the file there if you want this path to work)
+  target_compile_definitions(${EXTENSION_NAME} PRIVATE
+    MDUCK_DEFAULT_SRID_CSV="${CMAKE_SOURCE_DIR}/extension/mobilityduck/data/spatial_ref_sys.csv"
+    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
+  )
+  target_compile_definitions(${LOADABLE_EXTENSION_NAME} PRIVATE
+    MDUCK_DEFAULT_SRID_CSV="${CMAKE_SOURCE_DIR}/extension/mobilityduck/data/spatial_ref_sys.csv"
+    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
+  )
+endif()
+
+
 # -----------------------------
 # json-c target / include handling
 # -----------------------------
