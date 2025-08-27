@@ -41,6 +41,9 @@ public:
 
     ErrorData Append(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) override;
 
+    void Construct(DataChunk &expression_result, Vector &row_identifiers);
+
+    //! Commit a drop operation
     void CommitDrop(IndexLock &index_lock) override;
 
     bool MergeIndexes(IndexLock &state, BoundIndex &other_index) override;
@@ -77,12 +80,13 @@ private:
     STBox *boxes;
     size_t current_size_ = 0;
     size_t current_capacity_ = 0;
+    StorageLock rwlock;
+    atomic<idx_t> index_size = {0};
 
 };
 
 struct RTreeModule {
 	static void RegisterRTreeIndex(DatabaseInstance &instance);
-    static void RegisterIndexPragmas(DatabaseInstance &instance);
     static void RegisterIndexScan(DatabaseInstance &instance);
     static void RegisterScanOptimizer(DatabaseInstance &instance);
 };

@@ -69,8 +69,12 @@ set(EXTENSION_SOURCES
     src/temporal/spanset.cpp
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
+    src/index/rtree_module.cpp
+    src/index/rtree_pragmas.cpp
+    src/index/rtree_index_create_physical.cpp
+    src/index/rtree_index_scan.cpp
+    src/index/rtree_optimize_scan.cpp
 )
-
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})

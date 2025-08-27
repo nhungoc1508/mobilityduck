@@ -3,7 +3,6 @@
 #include "mobilityduck_extension.hpp"
 #include "temporal/set.hpp"
 #include "geo/geoset.hpp"
-
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/tbox.hpp"
@@ -12,13 +11,12 @@
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
-#include "temporal/spanset.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-
+#include "index/rtree_module.hpp"
 #include <mutex>
 #if defined(_WIN32)
   #include <sys/types.h>
@@ -91,27 +89,20 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	Connection con(instance);
 
-	con.Query("INSTALL spatial;");
-	con.Query("LOAD spatial;");
+	// con.Query("INSTALL spatial;");
+	// con.Query("LOAD spatial;");
 
 	// Register another scalar function
 	auto mobilityduck_openssl_version_scalar_function = ScalarFunction("mobilityduck_openssl_version", {LogicalType::VARCHAR},
 	                                                            LogicalType::VARCHAR, MobilityduckOpenSSLVersionScalarFun);
 	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
 
-	TemporalTypes::RegisterTypes(instance);
-	TemporalTypes::RegisterCastFunctions(instance);
-	TemporalTypes::RegisterScalarFunctions(instance);
-
-	TboxType::RegisterType(instance);
-	TboxType::RegisterCastFunctions(instance);
-	TboxType::RegisterScalarFunctions(instance);
 
 	StboxType::RegisterType(instance);
 	StboxType::RegisterCastFunctions(instance);
 	StboxType::RegisterScalarFunctions(instance);
   
-  	SpanTypes::RegisterScalarFunctions(instance);
+  SpanTypes::RegisterScalarFunctions(instance);
 	SpanTypes::RegisterTypes(instance);
 	SpanTypes::RegisterCastFunctions(instance);
 
@@ -135,7 +126,11 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	SpansetTypes::RegisterTypes(instance);
 	SpansetTypes::RegisterCastFunctions(instance);	
-	SpansetTypes::RegisterScalarFunctions(instance);	
+	SpansetTypes::RegisterScalarFunctions(instance);
+  
+  RTreeModule::RegisterRTreeIndex(instance);
+	RTreeModule::RegisterIndexScan(instance);
+	RTreeModule::RegisterScanOptimizer(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
