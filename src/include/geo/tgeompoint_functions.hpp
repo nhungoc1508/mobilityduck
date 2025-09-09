@@ -34,6 +34,12 @@ struct TgeompointFunctions {
     // startTimestamp: Temporal_start_timestamptz
 
     /* ***************************************************
+     * Conversion functions
+     ****************************************************/
+    static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Temporal_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+
+    /* ***************************************************
      * Restriction functions
      ****************************************************/
     static void Tgeompoint_at_value(DataChunk &args, ExpressionState &state, Vector &result);

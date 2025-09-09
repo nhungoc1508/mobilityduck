@@ -52,6 +52,13 @@ void TgeompointType::RegisterCastFunctions(DatabaseInstance &instance) {
         StboxType::STBOX(),
         TgeompointFunctions::Tspatial_to_stbox_cast
     );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TGEOMPOINT(),
+        SpanTypes::TSTZSPAN(),
+        TgeompointFunctions::Temporal_to_tstzspan_cast
+    );
 }
 
 void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -150,6 +157,19 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT()},
             LogicalType::TIMESTAMP_TZ,
             TemporalFunctions::Temporal_start_timestamptz
+        )
+    );
+
+    /* ***************************************************
+     * Conversion functions
+     ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "timeSpan",
+            {TGEOMPOINT()},
+            SpanTypes::TSTZSPAN(),
+            TgeompointFunctions::Temporal_to_tstzspan
         )
     );
 

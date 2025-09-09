@@ -202,6 +202,12 @@ void SpanTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             ); 
         }
 
+        if (span_type == SpanTypes::TSTZSPAN()) {
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("@>", {span_type, LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Contains_tstzspan_timestamptz)
+            );
+        }
+
 
     }
 }
@@ -716,6 +722,30 @@ void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vecto
     }
 }
 
+// --- OPERATOR: tstzspan @> timestamptz ---
+void SpanFunctions::Contains_tstzspan_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, timestamp_tz_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t span_blob, timestamp_tz_t ts_duckdb) -> bool {
+            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
+            size_t span_data_size = span_blob.GetSize();
+            uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
+            memcpy(span_data_copy, span_data, span_data_size);
+            Span *span = reinterpret_cast<Span*>(span_data_copy);
+            if (!span) {
+                free(span_data_copy);
+                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+            }
+            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+            bool ret = contains_span_value(span, Datum(ts_meos.value));
+            free(span_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 } // namespace duckdb
 

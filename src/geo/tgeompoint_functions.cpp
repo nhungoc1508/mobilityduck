@@ -260,6 +260,53 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
 }
 
 /* ***************************************************
+ * Conversion functions
+ ****************************************************/
+
+inline void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input_blob) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_to_tstzspan: unable to cast string to temporal");
+            }
+
+            Span *ret = (Span*)malloc(sizeof(Span));
+            temporal_set_tstzspan(temp, ret);
+            size_t span_size = sizeof(*ret);
+            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+            memcpy(span_buffer, ret, span_size);
+            string_t span_string_t((char *) span_buffer, span_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
+            free(span_buffer);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    Temporal_to_tstzspan_common(args.data[0], result, args.size());
+}
+
+bool TgeompointFunctions::Temporal_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Temporal_to_tstzspan_common(source, result, count);
+    return true;
+}
+
+/* ***************************************************
  * Restriction functions
  ****************************************************/
 

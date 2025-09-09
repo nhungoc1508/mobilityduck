@@ -100,6 +100,36 @@ SELECT startTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02
 2000-01-01 00:00:00+00
 
 query I
+SELECT timeSpan(tgeompoint 'Point(1 1)@2000-01-01');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT tgeompoint 'Point(1 1)@2000-01-01'::tstzspan;
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT timeSpan(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
+----
+[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00]
+
+query I
+SELECT tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'::tstzspan;
+----
+[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00]
+
+query I
+SELECT timeSpan(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00]
+
+query I
+SELECT tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'::tstzspan;
+----
+[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00]
+
+query I
 SELECT asEWKT(atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1)::WKB_BLOB));
 ----
 POINT(1 1)@2000-01-01 00:00:00+00

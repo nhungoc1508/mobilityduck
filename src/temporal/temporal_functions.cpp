@@ -297,7 +297,7 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
  * Conversion functions: [TYPE] -> Temporal
  ****************************************************/
 
- void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input_blob) {

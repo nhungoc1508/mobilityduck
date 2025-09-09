@@ -53,6 +53,7 @@ struct SpanFunctions {
     static void Span_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
     static void Span_values(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tstzspan_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 struct SpanTypeMapping {
