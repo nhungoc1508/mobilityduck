@@ -52,6 +52,7 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Spatial relationships

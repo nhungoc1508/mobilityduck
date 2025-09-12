@@ -242,6 +242,16 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atGeometry",
+            {TGEOMPOINT(), WKB_BLOB()},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_at_geom
+        )
+    );
+
     /* ***************************************************
      * Spatial relationships
      ****************************************************/

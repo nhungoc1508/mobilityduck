@@ -481,6 +481,53 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
     }
 }
 
+void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t wkb_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
+            if (!tgeom) {
+                free(tgeom_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
+            size_t wkb_size = wkb_blob.GetSize();
+            int32 srid = 0;
+            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+            }
+
+            Temporal *ret = tgeo_at_geom(tgeom, gs);
+            if (!ret) {
+                free(tgeom);
+                free(gs);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            free(gs);
+            free(tgeom);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 /* ***************************************************
  * Spatial relationships
  ****************************************************/
