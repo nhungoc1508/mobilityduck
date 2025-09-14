@@ -4,3 +4,7 @@ pandas
 shapely
 geopandas
 matplotlib
+seaborn
+plotly
+nbformat
+wget
