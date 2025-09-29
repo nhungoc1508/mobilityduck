@@ -2,7 +2,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
     REF master            
-    SHA512 d196d8a2b2660da5cc39ef8a17e724d8b36e3a60c403cf956337c062eefad2133c238f18fec3357180736403c0e640da28e8ecc8f93840066d25cebc114d7aa0
+    SHA512 4794d8c3321581b423436d6a007a77ee4dd9ba078f73df2ff73e1911d89f092487447c268eee1da0258719c4ba42ad281c2e2b8fd95c148b99551040bd8afc8b
 )
 
 vcpkg_cmake_configure(
