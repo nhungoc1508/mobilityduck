@@ -32,6 +32,7 @@ jobs:
           sudo apt-get install -y libicu-dev tzdata
 
   duckdb-latest-build:
+    needs: setup-deps
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.3.2
     with:
       duckdb_version: v1.3.2
