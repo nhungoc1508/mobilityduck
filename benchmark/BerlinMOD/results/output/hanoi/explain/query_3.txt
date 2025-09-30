@@ -3,10 +3,10 @@
 ││    Query Profiling Information    ││
 │└───────────────────────────────────┘│
 └─────────────────────────────────────┘
-EXPLAIN ANALYZE SELECT DISTINCT l.Licence, i.InstantId, i.Instant AS Instant,     valueAtTimestamp(t.Trip, i.Instant)::GEOMETRY AS Pos FROM Trips t, Licences1 l, Instants1 i WHERE t.VehicleId = l.VehicleId AND valueAtTimestamp(t.Trip, i.Instant) IS NOT NULL ORDER BY l.Licence, i.InstantId;
+EXPLAIN ANALYZE SELECT DISTINCT l.Licence, i.InstantId, i.Instant AS Instant,     valueAtTimestamp(t.Trip, i.Instant)::GEOMETRY AS Pos FROM Trips t, Licences1 l, Instants1 i WHERE t.VehicleId = l.VehicleId AND t.Trip::tstzspan @> i.Instant ORDER BY l.Licence, i.InstantId;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 0.0449s             ││
+││              Total Time: 0.107s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -119,11 +119,11 @@ EXPLAIN ANALYZE SELECT DISTINCT l.Licence, i.InstantId, i.Instant AS Instant,   
 │      Join Type: INNER     │
 │                           │
 │         Condition:        │
-│  (valueAtTimestamp(Trip,  ├────────────────────────────────────────────────────────────────────────┐
-│    Instant) IS NOT NULL)  │                                                                        │
+│ (CAST(Trip AS TSTZSPAN) @>├────────────────────────────────────────────────────────────────────────┐
+│          Instant)         │                                                                        │
 │                           │                                                                        │
 │          23 Rows          │                                                                        │
-│          (0.02s)          │                                                                        │
+│          (0.08s)          │                                                                        │
 └─────────────┬─────────────┘                                                                        │
 ┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
 │         HASH_JOIN         │                                                          │         PROJECTION        │

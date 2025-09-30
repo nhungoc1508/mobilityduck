@@ -6,7 +6,7 @@
 EXPLAIN ANALYZE WITH Distances AS (     SELECT p.PeriodId, p.Period, t.VehicleId,         SUM(length(atTime(t.Trip, p.Period))) AS Dist     FROM Trips t, Periods p     WHERE t.Trip && p.Period     GROUP BY p.PeriodId, p.Period, t.VehicleId ) SELECT PeriodId, Period, MAX(Dist) AS MaxDist FROM Distances GROUP BY PeriodId, Period ORDER BY PeriodId;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││               Total Time: 8.75s              ││
+││               Total Time: 8.58s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -126,7 +126,7 @@ EXPLAIN ANALYZE WITH Distances AS (     SELECT p.PeriodId, p.Period, t.VehicleId
 │    Aggregates: sum(#3)    │
 │                           │
 │         5458 Rows         │
-│          (0.03s)          │
+│          (0.01s)          │
 └─────────────┬─────────────┘
 ┌─────────────┴─────────────┐
 │         PROJECTION        │
@@ -138,7 +138,7 @@ EXPLAIN ANALYZE WITH Distances AS (     SELECT p.PeriodId, p.Period, t.VehicleId
 │             ))            │
 │                           │
 │         14133 Rows        │
-│          (7.53s)          │
+│          (7.39s)          │
 └─────────────┬─────────────┘
 ┌─────────────┴─────────────┐
 │         PROJECTION        │
@@ -162,7 +162,7 @@ EXPLAIN ANALYZE WITH Distances AS (     SELECT p.PeriodId, p.Period, t.VehicleId
 │      (Trip && Period)     │              │
 │                           │              │
 │         14133 Rows        │              │
-│          (1.08s)          │              │
+│          (1.05s)          │              │
 └─────────────┬─────────────┘              │
 ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
 │         TABLE_SCAN        ││         TABLE_SCAN        │
@@ -175,5 +175,5 @@ EXPLAIN ANALYZE WITH Distances AS (     SELECT p.PeriodId, p.Period, t.VehicleId
 │         VehicleId         ││          PeriodId         │
 │                           ││                           │
 │          549 Rows         ││          100 Rows         │
-│          (0.12s)          ││          (0.00s)          │
+│          (0.11s)          ││          (0.00s)          │
 └───────────────────────────┘└───────────────────────────┘

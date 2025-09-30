@@ -13,9 +13,11 @@ CREATE OR REPLACE TABLE TripsTmp (
     VehicleId integer NOT NULL REFERENCES Vehicles(VehicleId),
     Tgeom tgeompoint[] NOT NULL);
 CREATE OR REPLACE TABLE Trips (
-    TripId integer PRIMARY KEY,
+    TripId integer,
     VehicleId integer NOT NULL REFERENCES Vehicles(VehicleId),
-    Trip tgeompoint NOT NULL );
+    Trip tgeompoint NOT NULL,
+    Traj geometry,
+    PRIMARY KEY (VehicleId, TripId));
 
 COPY TripsInput(TripId, VehicleId, PosX, PosY, t) FROM './data/trips.csv';
 
@@ -25,8 +27,9 @@ SELECT TripId, VehicleId,
         tgeompoint(
         ST_Transform(
             ST_Point(PosX, PosY),
+            'EPSG:4326',
             'EPSG:3857',
-            'EPSG:5676'
+            always_xy := true
         )::WKB_BLOB, t
         )
         ORDER BY t
@@ -36,7 +39,11 @@ GROUP BY VehicleId, TripId
 ORDER BY VehicleId, TripId;
 
 INSERT INTO Trips(TripId, VehicleId, Trip)
-SELECT TripId, VehicleId, tgeompointSeq(Tgeom) FROM TripsTmp;
+SELECT TripId, VehicleId, tgeompointSeq(Tgeom) FROM TripsTmp
+ORDER BY VehicleId, TripId;
+
+UPDATE Trips
+SET Traj = trajectory(Trip);
 
 CREATE OR REPLACE VIEW Trips1 AS
     SELECT * FROM Trips

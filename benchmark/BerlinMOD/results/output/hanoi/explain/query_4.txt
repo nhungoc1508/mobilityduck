@@ -3,10 +3,10 @@
 ││    Query Profiling Information    ││
 │└───────────────────────────────────┘│
 └─────────────────────────────────────┘
-EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehicles v, Points p WHERE     t.VehicleId = v.VehicleId     AND t.Trip && stbox(p.Geom::WKB_BLOB)     AND ST_Intersects(trajectory(t.Trip)::GEOMETRY, p.Geom) ORDER BY p.PointId, v.Licence;
+EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehicles v, Points p WHERE     t.VehicleId = v.VehicleId     AND ST_Intersects(trajectory(t.Trip)::GEOMETRY, p.Geom) ORDER BY p.PointId, v.Licence;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 53.76s              ││
+││               Total Time: 2.24s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -107,19 +107,17 @@ EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehic
 │          (0.00s)          │
 └─────────────┬─────────────┘
 ┌─────────────┴─────────────┐
-│     BLOCKWISE_NL_JOIN     │
+│         EXTENSION         │
 │    ────────────────────   │
 │      Join Type: INNER     │
 │                           │
-│         Condition:        │
-│ ((Trip && stbox(CAST(Geom │
-│     AS WKB_BLOB))) AND    ├───────────────────────────────────────────┐
-│     ST_Intersects(CAST    │                                           │
+│        Conditions:        │
+│     ST_Intersects(CAST    ├───────────────────────────────────────────┐
 │    (trajectory(Trip) AS   │                                           │
-│      GEOMETRY), Geom))    │                                           │
+│      GEOMETRY), Geom)     │                                           │
 │                           │                                           │
 │           0 Rows          │                                           │
-│          (53.63s)         │                                           │
+│          (2.12s)          │                                           │
 └─────────────┬─────────────┘                                           │
 ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
 │         HASH_JOIN         │                             │         TABLE_SCAN        │

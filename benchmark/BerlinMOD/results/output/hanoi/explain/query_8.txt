@@ -6,7 +6,7 @@
 EXPLAIN ANALYZE SELECT l.Licence, p.PeriodId, p.Period,     SUM(length(atTime(t.Trip, p.Period))) AS Dist FROM Trips t, Licences1 l, Periods1 p WHERE t.VehicleId = l.VehicleId AND t.Trip && p.Period GROUP BY l.Licence, p.PeriodId, p.Period ORDER BY l.Licence, p.PeriodId;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 0.176s              ││
+││              Total Time: 0.167s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌───────────────────────────┐
@@ -89,7 +89,7 @@ EXPLAIN ANALYZE SELECT l.Licence, p.PeriodId, p.Period,     SUM(length(atTime(t.
 │             ))            │
 │                           │
 │          182 Rows         │
-│          (0.12s)          │
+│          (0.11s)          │
 └─────────────┬─────────────┘
 ┌─────────────┴─────────────┐
 │         PROJECTION        │
@@ -124,7 +124,7 @@ EXPLAIN ANALYZE SELECT l.Licence, p.PeriodId, p.Period,     SUM(length(atTime(t.
 │   VehicleId = VehicleId   │              │                                           │                           │
 │                           │              │                                           │                           │
 │          84 Rows          │              │                                           │          10 Rows          │
-│          (0.01s)          │              │                                           │          (0.00s)          │
+│          (0.00s)          │              │                                           │          (0.00s)          │
 └─────────────┬─────────────┘              │                                           └─────────────┬─────────────┘
 ┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
 │         TABLE_SCAN        ││         PROJECTION        │                             │          ORDER_BY         │

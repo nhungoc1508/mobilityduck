@@ -3,10 +3,10 @@
 ││    Query Profiling Information    ││
 │└───────────────────────────────────┘│
 └─────────────────────────────────────┘
-EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1, l2.Licence AS Licence2 FROM Trips t1, Licences1 l1, Trips t2, Licences2 l2, Periods1 p, Regions1 r WHERE     t1.VehicleId = l1.VehicleId     AND t2.VehicleId = l2.VehicleId     AND l1.Licence < l2.Licence     AND t1.Trip && stbox(r.Geom::WKB_BLOB, p.Period)     AND t2.Trip && stbox(r.Geom::WKB_BLOB, p.Period)     AND ST_Intersects(trajectory(atTime(t1.Trip, p.Period))::GEOMETRY, r.Geom)     AND ST_Intersects(trajectory(atTime(t2.Trip, p.Period))::GEOMETRY, r.Geom)     AND aDisjoint(atTime(t1.Trip, p.Period), atTime(t2.Trip, p.Period)) ORDER BY PeriodId, RegionId, Licence1, Licence2;
+EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1, l2.Licence AS Licence2 FROM Trips t1, Licences1 l1, Trips t2, Licences2 l2, Periods1 p, Regions1 r WHERE     t1.VehicleId = l1.VehicleId     AND t2.VehicleId = l2.VehicleId     AND l1.Licence < l2.Licence     -- AND t1.Trip && stbox(r.Geom::WKB_BLOB, p.Period)     -- AND t2.Trip && stbox(r.Geom::WKB_BLOB, p.Period)     AND ST_Intersects(trajectory(atTime(t1.Trip, p.Period))::GEOMETRY, r.Geom)     AND ST_Intersects(trajectory(atTime(t2.Trip, p.Period))::GEOMETRY, r.Geom)     AND aDisjoint(atTime(t1.Trip, p.Period), atTime(t2.Trip, p.Period)) ORDER BY PeriodId, RegionId, Licence1, Licence2;
 ┌────────────────────────────────────────────────┐
 │┌──────────────────────────────────────────────┐│
-││              Total Time: 38.46s              ││
+││              Total Time: 21.95s              ││
 │└──────────────────────────────────────────────┘│
 └────────────────────────────────────────────────┘
 ┌─────────────────────┐
@@ -33,7 +33,7 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │__internal_decompress│
 │     _string(#4)     │
 │                     │
-│       26 Rows       │
+│       24 Rows       │
 │       (0.00s)       │
 └──────────┬──────────┘
 ┌──────────┴──────────┐
@@ -44,7 +44,7 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │    l1.Licence ASC   │
 │    l2.Licence ASC   │
 │                     │
-│       26 Rows       │
+│       24 Rows       │
 │       (0.00s)       │
 └──────────┬──────────┘
 ┌──────────┴──────────┐
@@ -62,7 +62,7 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │__internal_compress_s│
 │  tring_ubigint(#4)  │
 │                     │
-│       26 Rows       │
+│       24 Rows       │
 │       (0.00s)       │
 └──────────┬──────────┘
 ┌──────────┴──────────┐
@@ -74,7 +74,7 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │       Licence1      │
 │       Licence2      │
 │                     │
-│       26 Rows       │
+│       24 Rows       │
 │       (0.00s)       │
 └──────────┬──────────┘
 ┌──────────┴──────────┐
@@ -87,21 +87,15 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │ (ST_Intersects(CAST │
 │  (trajectory(atTime │
 │  (Trip, Period)) AS │
-│   GEOMETRY), Geom)  │
-│  AND (ST_Intersects │
-│   (CAST(trajectory  │
-│ (atTime(Trip, Period├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│   GEOMETRY), Geom)  ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│   AND ST_Intersects │                                                                                                                                                                            │
+│   (CAST(trajectory  │                                                                                                                                                                            │
+│ (atTime(Trip, Period│                                                                                                                                                                            │
 │   )) AS GEOMETRY),  │                                                                                                                                                                            │
-│  Geom) AND ((Trip &&│                                                                                                                                                                            │
-│  stbox(CAST(Geom AS │                                                                                                                                                                            │
-│  WKB_BLOB), Period))│                                                                                                                                                                            │
-│  AND (Trip && stbox │                                                                                                                                                                            │
-│    (CAST(Geom AS    │                                                                                                                                                                            │
-│  WKB_BLOB), Period))│                                                                                                                                                                            │
-│         )))         │                                                                                                                                                                            │
+│        Geom))       │                                                                                                                                                                            │
 │                     │                                                                                                                                                                            │
-│       26 Rows       │                                                                                                                                                                            │
-│       (24.35s)      │                                                                                                                                                                            │
+│       24 Rows       │                                                                                                                                                                            │
+│       (8.76s)       │                                                                                                                                                                            │
 └──────────┬──────────┘                                                                                                                                                                            │
 ┌──────────┴──────────┐                                                                                                                                                                 ┌──────────┴──────────┐
 │  BLOCKWISE_NL_JOIN  │                                                                                                                                                                 │      PROJECTION     │
@@ -115,8 +109,8 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │  atTime(Trip, Period│                                                                                                                              │                                  │                     │
 │          ))         │                                                                                                                              │                                  │                     │
 │                     │                                                                                                                              │                                  │                     │
-│       271 Rows      │                                                                                                                              │                                  │       10 Rows       │
-│       (13.95s)      │                                                                                                                              │                                  │       (0.00s)       │
+│       269 Rows      │                                                                                                                              │                                  │       10 Rows       │
+│       (13.04s)      │                                                                                                                              │                                  │       (0.00s)       │
 └──────────┬──────────┘                                                                                                                              │                                  └──────────┬──────────┘
 ┌──────────┴──────────┐                                                                                                                   ┌──────────┴──────────┐                       ┌──────────┴──────────┐
 │      HASH_JOIN      │                                                                                                                   │      PROJECTION     │                       │       ORDER_BY      │
@@ -146,7 +140,7 @@ EXPLAIN ANALYZE SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1,
 │     VehicleId>=3    ││                     │           │                                                                                │                     │                       │                     │
 │                     ││                     │           │                                                                                │                     │                       │                     │
 │       443 Rows      ││       372 Rows      │           │                                                                                │       10 Rows       │                       │       10 Rows       │
-│       (0.09s)       ││       (0.00s)       │           │                                                                                │       (0.00s)       │                       │       (0.00s)       │
+│       (0.08s)       ││       (0.00s)       │           │                                                                                │       (0.00s)       │                       │       (0.00s)       │
 └─────────────────────┘└──────────┬──────────┘           │                                                                                └──────────┬──────────┘                       └──────────┬──────────┘
                        ┌──────────┴──────────┐┌──────────┴──────────┐                                                                     ┌──────────┴──────────┐                       ┌──────────┴──────────┐
                        │      TABLE_SCAN     ││ PIECEWISE_MERGE_JOIN│                                                                     │      PROJECTION     │                       │      HASH_JOIN      │

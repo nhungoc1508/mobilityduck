@@ -20,8 +20,9 @@ SELECT RegionId, ST_MakePolygon(
         array_agg(
         ST_Transform(
             ST_Point(XPos, YPos),
+            'EPSG:4326',
             'EPSG:3857',
-            'EPSG:5676'
+            always_xy := true
         )
         ORDER BY PointNo
         )

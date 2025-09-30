@@ -7,8 +7,8 @@ WHERE
     t1.VehicleId = l1.VehicleId
     AND t2.VehicleId = l2.VehicleId
     AND l1.Licence < l2.Licence
-    AND t1.Trip && stbox(r.Geom::WKB_BLOB, p.Period)
-    AND t2.Trip && stbox(r.Geom::WKB_BLOB, p.Period)
+    -- AND t1.Trip && stbox(r.Geom::WKB_BLOB, p.Period)
+    -- AND t2.Trip && stbox(r.Geom::WKB_BLOB, p.Period)
     AND ST_Intersects(trajectory(atTime(t1.Trip, p.Period))::GEOMETRY, r.Geom)
     AND ST_Intersects(trajectory(atTime(t2.Trip, p.Period))::GEOMETRY, r.Geom)
     AND aDisjoint(atTime(t1.Trip, p.Period), atTime(t2.Trip, p.Period))
