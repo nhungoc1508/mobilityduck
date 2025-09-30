@@ -431,6 +431,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             TemporalFunctions::Temporal_at_value_tbool
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "whenTrue",
+            {TemporalTypes::TBOOL()},
+            SpansetTypes::tstzspanset(),
+            TemporalFunctions::Tbool_when_true
+        )
+    );
 }
 
 } // namespace duckdb

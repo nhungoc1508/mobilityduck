@@ -65,6 +65,11 @@ SELECT ST_AsText(startValue(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-
 POINT (1 1)
 
 query I
+SELECT ST_AsText(endValue(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY);
+----
+POINT (3 3)
+
+query I
 SELECT duration(tgeompoint 'Point(1 1)@2000-01-01', true);
 ----
 00:00:00

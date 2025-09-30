@@ -259,6 +259,49 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
     }
 }
 
+void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    // Adapted from Temporal_end_value
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                return string_t();
+            }
+
+            Datum end_datum = temporal_end_value(temp);
+            GSERIALIZED *end_geom = DatumGetGserializedP(end_datum);
+            if (!end_geom) {
+                free(temp);
+                throw InvalidInputException("Failed to get end value from TGEOMPOINT");
+            }
+
+            size_t ewkb_size;
+            uint8_t *ewkb_data = geo_as_ewkb(end_geom, NULL, &ewkb_size);
+            if (!ewkb_data) {
+                free(temp);
+                throw InvalidInputException("Failed to convert end geometry to EWKB");
+            }
+
+            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
+
+            free(ewkb_data);
+            free(temp);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 /* ***************************************************
  * Conversion functions
  ****************************************************/

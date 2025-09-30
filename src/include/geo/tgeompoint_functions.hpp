@@ -30,6 +30,7 @@ struct TgeompointFunctions {
     static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // getTime: Temporal_time
     static void Tgeompoint_start_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeompoint_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     // duration: Temporal_duration
     // startTimestamp: Temporal_start_timestamptz
 

@@ -77,6 +77,11 @@ struct TemporalFunctions {
     static void Temporal_at_value_tbool(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Boolean operators
+     ****************************************************/
+    static void Tbool_when_true(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -143,6 +143,16 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "endValue",
+            {TGEOMPOINT()},
+            WKB_BLOB(),
+            TgeompointFunctions::Tgeompoint_end_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "duration",
             {TGEOMPOINT(), LogicalType::BOOLEAN},
             LogicalType::INTERVAL,
