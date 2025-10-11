@@ -53,7 +53,7 @@ struct StboxFunctions {
     /* ***************************************************
      * Conversion functions + cast functions: STBOX -> [TYPE]
      ****************************************************/
-    // static void Stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result);
     // static void Stbox_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
@@ -62,6 +62,7 @@ struct StboxFunctions {
     // static void Stbox_hasx(DataChunk &args, ExpressionState &state, Vector &result);
     // static void Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result);
     // static void Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_area(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Transformation functions
@@ -74,6 +75,7 @@ struct StboxFunctions {
      * Topological operators
      ****************************************************/
     static void Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 }

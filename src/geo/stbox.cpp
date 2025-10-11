@@ -144,6 +144,26 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "geometry",
+            {STBOX()},
+            WKB_BLOB(),
+            StboxFunctions::Stbox_to_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "area",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_area
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "expandSpace",
             {STBOX(), LogicalType::DOUBLE},
             STBOX(),
@@ -158,6 +178,16 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {STBOX(), STBOX()},
             LogicalType::BOOLEAN,
             StboxFunctions::Overlaps_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "@>", // contains
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Contains_stbox_stbox
         )
     );
 }

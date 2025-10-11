@@ -3,6 +3,7 @@
 
 #include "geo/stbox_functions.hpp"
 #include "time_util.hpp"
+#include <cfloat>
 
 #include "duckdb/common/exception.hpp"
 
@@ -393,6 +394,88 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
     return true;
 }
 
+/* ***************************************************
+ * Conversion functions + cast functions: STBOX -> [TYPE]
+ ****************************************************/
+
+ void StboxFunctions::Stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_expand_space: unable to cast binary to stbox");
+            }
+
+            GSERIALIZED *gs = stbox_to_geo(stbox);
+            size_t ewkb_size = 0;
+            uint8_t *ewkb_data = geo_as_ewkb_duckdb(gs, NULL, &ewkb_size);
+            if (!ewkb_data) {
+                free(stbox);
+                throw InvalidInputException("Failed to convert stbox to geometry");
+            }
+            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
+
+            free(ewkb_data);
+            free(gs);
+            free(stbox);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Accessor functions
+ ****************************************************/
+
+void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_as_hexwkb: unable to cast binary to stbox");
+            }
+            bool spheroid = true; // default value, TODO: handle argument
+            double ret = stbox_area(stbox, spheroid);
+            if (ret == DBL_MAX) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Transformation functions
+ ****************************************************/
+
 void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -434,6 +517,10 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
     }
 }
 
+/* ***************************************************
+ * Topological operators
+ ****************************************************/
+
 void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
@@ -465,6 +552,47 @@ void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &stat
             }
 
             bool ret = overlaps_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Contains_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Overlaps_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                throw InternalException("Failure in Overlaps_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = contains_stbox_stbox(stbox1, stbox2);
             free(stbox1);
             free(stbox2);
             return ret;
