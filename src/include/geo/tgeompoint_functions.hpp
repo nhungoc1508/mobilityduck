@@ -53,6 +53,7 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
+    // static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
@@ -72,6 +73,13 @@ struct TgeompointFunctions {
     static void Temporal_overlaps_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Distance function
+     ****************************************************/
+    // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
+    // static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
+    // static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

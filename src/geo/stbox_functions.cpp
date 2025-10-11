@@ -417,7 +417,7 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
 
             GSERIALIZED *gs = stbox_to_geo(stbox);
             size_t ewkb_size = 0;
-            uint8_t *ewkb_data = geo_as_ewkb_duckdb(gs, NULL, &ewkb_size);
+            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
             if (!ewkb_data) {
                 free(stbox);
                 throw InvalidInputException("Failed to convert stbox to geometry");
