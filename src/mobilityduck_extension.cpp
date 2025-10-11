@@ -81,20 +81,12 @@ static void ConfigureMeosSridCsvOnce() {
     });
 }
 
-static void geos_message_handler(const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vprintf(fmt, ap);
-    va_end(ap);
-}
-
 static void LoadInternal(DatabaseInstance &instance) {
 	ConfigureMeosSridCsvOnce();
 	// Initialize MEOS
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
-        initGEOS(geos_message_handler, geos_message_handler);
     });
 
 	Connection con(instance);
