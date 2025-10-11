@@ -1,0 +1,34 @@
+{
+    "00_cleanup.sql": {
+        "elapsed": 532.4039459228516,
+        "validation_result": null
+    },
+    "01_instants.sql": {
+        "elapsed": 285.14695167541504,
+        "validation_result": "count_star() = 100"
+    },
+    "02_periods.sql": {
+        "elapsed": 266.62158966064453,
+        "validation_result": "count_star() = 100"
+    },
+    "03_points.sql": {
+        "elapsed": 271.96598052978516,
+        "validation_result": "count_star() = 100"
+    },
+    "04_regions.sql": {
+        "elapsed": 334.2928886413574,
+        "validation_result": "count_star() = 100"
+    },
+    "05_vehicles.sql": {
+        "elapsed": 277.42981910705566,
+        "validation_result": "count_star() = 89"
+    },
+    "06_licences.sql": {
+        "elapsed": 186.86556816101074,
+        "validation_result": "count_star() = 100"
+    },
+    "07_trips.sql": {
+        "elapsed": 22582.100868225098,
+        "validation_result": "count_star() = 758"
+    }
+}
